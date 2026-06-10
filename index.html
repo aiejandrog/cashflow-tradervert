@@ -2691,14 +2691,25 @@ function triggerSpace(sp){
     const cf=monthlyCF();G.cash+=cf;
     // Same safety net as onPayday — auto-borrow if negative CF pushed cash below zero
     if(G.cash<0)ensureCash(0,'recovery turn shortfall');
-    if(G.skipTurns===0){
+    const back=G.skipTurns===0;
+    if(back){
       if(G._disabilitySalCut){G.salaryBoost=(G.salaryBoost||0)+G._disabilitySalCut;delete G._disabilitySalCut;}
       if(G._layoffSalCut){G.salaryBoost=(G.salaryBoost||0)+G._layoffSalCut;delete G._layoffSalCut;}
       addLog('💪',`Back on your feet — CF this turn: ${cf>=0?'+':''}$${fmt(cf)}. Full salary restored.`,'gold');
     }else{
       addLog('💀',`Recovering — ${G.skipTurns} turn${G.skipTurns!==1?'s':''} left. CF: ${cf>=0?'+':''}$${fmt(cf)}`,'b');
     }
-    endTurn();return;
+    // Show a CARD, not just a log line — a silent skip looks like the space is broken
+    showEventCard(back?'life':'setback',
+      back?'💪 Back on Your Feet!':'💀 Recovering — Turn Skipped',
+      back
+        ?`Recovery complete. Full salary restored — the ${sp.label?sp.label.replace(/\n/g,' '):'board'} space has no effect this turn, but you're back in the game next roll.`
+        :`You're still out of commission, so the ${sp.label?sp.label.replace(/\n/g,' '):'board'} space you landed on has NO effect. ${G.skipTurns} more turn${G.skipTurns!==1?'s':''} until you're back.`,
+      "Setbacks cost you turns, not just money. Emergency reserves and passive income keep working even when you can't.",
+      [['CF Collected',`${cf>=0?'+':''}$${fmt(cf)}`,cf>=0?'green':'red'],['Cash','$'+fmt(G.cash),''],
+       ['Status',back?'✅ Recovered':`💀 ${G.skipTurns} turn${G.skipTurns!==1?'s':''} left`,back?'green':'red']],
+      [{label:back?"Let's go 💪":'Wait it out',cls:back?'btn-gold':'btn-tan',fn:endTurn}]);
+    return;
   }
   dispatchSpace(sp);
 }
