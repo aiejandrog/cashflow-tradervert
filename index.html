@@ -7343,7 +7343,7 @@ function netRelay(msg){
 }
 function _setLobbyNetStatus(txt){
   const ph=$('mp-lobby-pass-hint');
-  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt;
+  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v2-relay';
 }
 function peerHostStart(){
   _sbStart(_mpRoomName); // websocket relay — works even where P2P can't
@@ -7715,7 +7715,7 @@ function mpSubmitJoin(){
   const playerName=($('mp-join-name-inp')||{}).value?.trim()||'Guest';
   if(!roomName){_bcJoinStatus('Enter the room name.','#fb7185');return;}
   const btn=$('mp-join-btn');if(btn){btn.textContent='Connecting...';btn.disabled=true;}
-  _bcJoinStatus('Looking for room "'+roomName+'"...','rgba(34,211,238,.8)');
+  _bcJoinStatus('Looking for room "'+roomName+'"... (v2-relay)','rgba(34,211,238,.8)');
   if(_bc)_bc.close();
   _bc=new BroadcastChannel(_bcChannelName(roomName));
   _bcRole='joiner';_bcLobbyPhase=true;
