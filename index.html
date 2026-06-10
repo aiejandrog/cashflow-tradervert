@@ -853,9 +853,17 @@ body{
   .mb-row{font-size:.78rem}
   .mb-actions{flex-direction:column;gap:6px}
   .btn-og{width:100%;font-size:.8rem;padding:9px 10px}
-  #top-bar{padding:0 8px;gap:6px}
-  .pc-name{font-size:.72rem}
+  #top-bar{padding:0 6px;gap:5px}
+  .pc-name{font-size:.68rem}
+  .pc-status{font-size:.55rem}
+  .pc-av{width:26px;height:26px;font-size:.95rem}
   .tb-cash{font-size:.82rem}
+  /* Credit chip: compact — score only, tier label hidden */
+  #credit-chip{padding:3px 8px;gap:4px}
+  #credit-chip #pc-credit{font-size:.66rem}
+  #credit-chip #pc-credit-tier{display:none}
+  /* FS button shrinks to icon-ish size */
+  #top-bar .btn-og{padding:5px 8px!important;font-size:.62rem!important;letter-spacing:0!important}
   #fs-panel{max-height:60vh}
   #ev-popup{bottom:0;left:0;right:0;top:auto;transform:none;border-radius:12px 12px 0 0;max-width:100%;width:100%}
   #chat-log{bottom:0;left:0!important;right:0;width:100%!important;border-radius:12px 12px 0 0;position:fixed;transform:none}
@@ -863,6 +871,11 @@ body{
   #win-view{padding:16px 10px}
   .win-grid{grid-template-columns:1fr 1fr;gap:8px}
   .win-box{padding:10px 8px}
+  /* Lobby + room browser fit narrow screens */
+  #mp-lobby{padding:14px 10px}
+  #room-browser{max-width:94vw}
+  /* Multiplayer waiting screen scorecards stack */
+  #mp-wait-scores{flex-wrap:wrap;justify-content:center}
 }
 
 /* ── MYSTERY BOX ── */
@@ -2298,10 +2311,22 @@ function fitBoard(){
   // Available space = board-area minus 16px breathing room
   const availW=area.clientWidth-16;
   const availH=area.clientHeight-16;
-  const scale=Math.min(1,availW/BOARD_PX,availH/BOARD_PX);
+  // Area hidden or not laid out yet (resize on splash/lobby) — retry once visible.
+  // Without this guard the scale went NEGATIVE and exploded the board.
+  if(availW<=0||availH<=0){setTimeout(fitBoard,250);return;}
+  const scale=Math.max(0.2,Math.min(1,availW/BOARD_PX,availH/BOARD_PX));
   document.documentElement.style.setProperty('--board-scale',scale.toFixed(4));
 }
 window.addEventListener('resize',fitBoard);
+window.addEventListener('orientationchange',()=>setTimeout(fitBoard,150)); // phone rotation
+// ResizeObserver covers every path that reveals or reshapes the board area —
+// screen switches, FS panel open/close, mobile keyboard, split-screen drags
+if(typeof ResizeObserver!=='undefined'){
+  document.addEventListener('DOMContentLoaded',()=>{
+    const ba=document.getElementById('board-area');
+    if(ba)new ResizeObserver(()=>fitBoard()).observe(ba);
+  });
+}
 
 function placeToken(pos,anim=true){
   const{x,y}=getBXY(pos);
