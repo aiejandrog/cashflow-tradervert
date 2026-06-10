@@ -679,8 +679,13 @@ body{
 .ec-num .nv{font-size:.88rem;font-weight:900;font-family:Georgia,serif;color:var(--txt);word-break:break-word}
 .ec-num .nl{font-size:.58rem;color:#777;text-transform:uppercase;letter-spacing:.5px;font-family:Arial,sans-serif}
 .nv.green{color:#1a6a1a}.nv.red{color:#8b1a1a}.nv.gold{color:#7a5000}
-.ecm-acts{padding:10px 16px;border-top:2px solid var(--parch-b);display:flex;gap:8px;flex-wrap:wrap}
-.ecm-acts .btn-og,.mbox-acts .btn-og{flex:1;min-width:120px}
+.ecm-acts{padding:10px 16px;border-top:2px solid var(--parch-b);display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+/* Prompt buttons: equal height in a row, text centered both axes, clean wrapping */
+.ecm-acts .btn-og,.mbox-acts .btn-og,.mb-actions .btn-og{
+  flex:1;min-width:120px;min-height:46px;
+  display:flex;align-items:center;justify-content:center;
+  text-align:center;line-height:1.25;padding:8px 12px;
+}
 
 /* Generic modal — backdrop below FS (138), card wrapper above FS */
 #modal-bg{position:fixed;inset:0;z-index:110;display:none;background:rgba(0,0,0,.6);backdrop-filter:blur(2px)}
