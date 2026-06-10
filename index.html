@@ -1732,6 +1732,10 @@ body{
 <!-- PeerJS: remote multiplayer transport (WebRTC). Game degrades gracefully to
      same-machine tab multiplayer if this CDN is unreachable. -->
 <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<!-- Supabase Realtime: websocket relay transport. WebRTC needs a clear P2P path
+     (or a paid TURN server) — strict home-router NAT silently kills it. This
+     relay rides a normal wss:// connection, which no consumer firewall blocks. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <script>
 // ══════════════════════════════════════════════════════
@@ -7328,19 +7332,22 @@ function netSend(msg){
   _seenMids.add(msg._mid); // never re-process our own message if the host relays it back
   try{if(_bc)_bc.postMessage(msg);}catch(e){}
   _peerConns.forEach(c=>{try{if(c.open)c.send(msg);}catch(e){}});
+  _sbSend(msg);
 }
 // Forward a message verbatim (same _mid) — host uses this to relay one joiner's
 // turn events to the other joiners without creating echo loops
 function netRelay(msg){
   try{if(_bc)_bc.postMessage(msg);}catch(e){}
   _peerConns.forEach(c=>{try{if(c.open)c.send(msg);}catch(e){}});
+  _sbSend(msg);
 }
 function _setLobbyNetStatus(txt){
   const ph=$('mp-lobby-pass-hint');
   if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt;
 }
 function peerHostStart(){
-  if(typeof Peer==='undefined'){_setLobbyNetStatus('⚠ Online play unavailable (network blocked) — same-WiFi tabs only');return;}
+  _sbStart(_mpRoomName); // websocket relay — works even where P2P can't
+  if(typeof Peer==='undefined'){if(!_sbReady)_setLobbyNetStatus('⚠ Online play unavailable (network blocked) — same-WiFi tabs only');return;}
   try{if(_peer)_peer.destroy();}catch(e){}
   _peerConns=[];
   _peer=new Peer(_peerRoomId(_mpRoomName),_PEER_CFG);
@@ -7355,7 +7362,7 @@ function peerHostStart(){
   _peer.on('error',err=>{
     if(err&&err.type==='unavailable-id'){
       _setLobbyNetStatus('⚠ Room name already hosted online — pick a more unique name.');
-    }else{
+    }else if(!_sbReady){ // relay still carries the room — only warn if that's down too
       _setLobbyNetStatus('⚠ Online connection issue ('+(err&&err.type||'network')+') — same-WiFi tabs still work');
     }
   });
@@ -7397,6 +7404,35 @@ function peerJoinStart(roomName){
       setTimeout(_tryConnect,2500);
     }
   });
+}
+
+// ── SUPABASE REALTIME TRANSPORT (websocket relay) ───────
+// Third transport alongside BroadcastChannel (same machine) and PeerJS (P2P).
+// Every message already carries _mid dedup, so adding a transport is free:
+// whichever pipe delivers first wins, the copies are dropped.
+let _sb=null,_sbChan=null,_sbReady=false;
+function _sbStart(roomName){
+  try{
+    if(typeof supabase==='undefined')return;
+    if(!_sb)_sb=supabase.createClient(ROOMS_URL.replace(/\/rest\/v1\/.*$/,''),ROOMS_KEY);
+    if(_sbChan){try{_sb.removeChannel(_sbChan);}catch(e){}}
+    _sbReady=false;
+    _sbChan=_sb.channel('cf_room_'+_bcChannelName(roomName),{config:{broadcast:{self:false}}});
+    _sbChan.on('broadcast',{event:'msg'},p=>{if(p&&p.payload)_netRecv(p.payload);});
+    _sbChan.subscribe(st=>{
+      if(st==='SUBSCRIBED'){
+        _sbReady=true;
+        if(_bcRole==='host'){_setLobbyNetStatus('🌐 Online — friends can join from anywhere');window._peerOnline=true;}
+        // Joiner: the seat request may have gone out before this pipe opened — resend it here
+        if(_bcRole==='joiner'&&_bc&&_bc._pendingReqId){
+          _sbSend({type:'join-request',reqId:_bc._pendingReqId,pass:_pendingJoinPass,playerName:_pendingJoinName,_mid:_msgId()});
+        }
+      }
+    });
+  }catch(e){}
+}
+function _sbSend(msg){
+  try{if(_sbChan&&_sbReady)_sbChan.send({type:'broadcast',event:'msg',payload:msg});}catch(e){}
 }
 
 // ── PUBLIC ROOM DIRECTORY ────────────────────────────────
@@ -7689,6 +7725,7 @@ function mpSubmitJoin(){
   _pendingJoinPass=pass;_pendingJoinName=playerName;
   netSend({type:'join-request',reqId,pass,playerName});
   peerJoinStart(roomName); // also search for the host over the internet
+  _sbStart(roomName);      // and over the websocket relay (resends the request on subscribe)
   // 30s: cross-internet WebRTC (broker signup + ICE + TURN fallback + retries)
   // routinely needs 10-20s; the old 9s deadline gave up while still connecting
   _bc._joinTimeout=setTimeout(()=>{
