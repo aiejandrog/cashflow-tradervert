@@ -1194,7 +1194,7 @@ body{
 /* Spectator HUD: non-blocking top banner so the waiting player WATCHES the live
    board behind it instead of a blackout. Backdrop ignores clicks; only the card
    captures them. A faint cyan tint signals "spectating, not your turn." */
-#mp-wait{position:fixed;inset:0;background:rgba(10,6,22,.18);z-index:8900;display:none;align-items:flex-start;justify-content:center;flex-direction:column;pointer-events:none;box-shadow:inset 0 0 0 3px rgba(34,211,238,.35)}
+#mp-wait{position:fixed;inset:0;background:rgba(10,6,22,.12);z-index:8900;display:none;align-items:center;justify-content:flex-start;flex-direction:column;pointer-events:none;box-shadow:inset 0 0 0 3px rgba(34,211,238,.35)}
 .mp-wait-inner{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:10px 18px 12px;max-width:440px;width:auto;margin:10px auto 0;pointer-events:auto;background:linear-gradient(180deg,rgba(18,11,34,.96),rgba(18,11,34,.88));border:1px solid rgba(34,211,238,.3);border-radius:0 0 16px 16px;box-shadow:0 8px 28px rgba(0,0,0,.5);backdrop-filter:blur(4px)}
 .mp-wait-spinner{width:26px;height:26px;border:3px solid rgba(34,211,238,.2);border-top-color:rgba(34,211,238,.85);border-radius:50%;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -7400,7 +7400,7 @@ function netRelay(msg){
 }
 function _setLobbyNetStatus(txt){
   const ph=$('mp-lobby-pass-hint');
-  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v6-spectate';
+  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v6b-spectate';
 }
 function peerHostStart(){
   _sbStart(_mpRoomName); // websocket relay — works even where P2P can't
@@ -7783,7 +7783,7 @@ function mpSubmitJoin(){
   const playerName=($('mp-join-name-inp')||{}).value?.trim()||'Guest';
   if(!roomName){_bcJoinStatus('Enter the room name.','#fb7185');return;}
   const btn=$('mp-join-btn');if(btn){btn.textContent='Connecting...';btn.disabled=true;}
-  _bcJoinStatus('Looking for room "'+roomName+'"... (v6-spectate)','rgba(34,211,238,.8)');
+  _bcJoinStatus('Looking for room "'+roomName+'"... (v6b-spectate)','rgba(34,211,238,.8)');
   if(_bc)_bc.close();
   _bc=new BroadcastChannel(_bcChannelName(roomName));
   _bcRole='joiner';_bcLobbyPhase=true;
