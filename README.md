@@ -1,4 +1,4 @@
-# Cashflow — Tradervert Edition 🎲
+# Freedom Race — Tradervert Edition 🎲
 
 A single-file financial board game: escape the rat race by building passive income, then chase your dream on the Fast Track.
 

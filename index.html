@@ -140,16 +140,14 @@ body{
 }
 @keyframes bPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
 
-/* ── Express toggle row ── */
-.sp-express-row{
-  display:flex;align-items:center;gap:10px;
-  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
-  border-radius:8px;padding:8px 12px;margin-top:6px;
+/* ── Secondary options row (express · players · join) — quiet, one line ── */
+.sp-options-row{
+  display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+  margin-top:12px;padding:8px 10px;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;
 }
-.sp-express-row .sp-ex-lbl{
-  flex:1;font-size:.68rem;color:rgba(255,255,255,.42);font-style:italic;
-  line-height:1.35;font-family:Georgia,serif;
-}
+.sp-options-row>div{margin:0!important;padding:0!important;background:none!important;border:none!important}
+.sp-express-row{display:flex;align-items:center;gap:10px}
 #btn-express{
   flex:0 0 auto;font-size:.7rem;padding:6px 14px;border-radius:6px;
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
@@ -889,6 +887,14 @@ body{
   #mp-wait-scores{flex-wrap:wrap;justify-content:center}
 }
 
+/* ── ACCESSIBILITY ── */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important;
+  }
+}
+
 /* ── MYSTERY BOX ── */
 #mystery-overlay{
   position:fixed;inset:0;z-index:5000;
@@ -1267,21 +1273,23 @@ body{
       <div id="spin-reel"></div>
     </div>
     <button class="btn-spin" id="btn-spin">🎯 Spin to Pick Your Path</button>
-    <div class="sp-express-row">
-      <button id="btn-express" onclick="toggleExpress()">⚡ Express: OFF</button>
-      <div class="sp-ex-lbl">3 dice · same rules · faster pace</div>
-    </div>
-    <div class="sp-mp-row">
-      <div class="sp-mp-lbl">Players:</div>
-      <div class="sp-mp-btns">
-        <button class="sp-mp-btn active" id="mp-btn-1" onclick="mpSetCount(1)">👤 1</button>
-        <button class="sp-mp-btn" id="mp-btn-2" onclick="mpSetCount(2)">👥 2</button>
-        <button class="sp-mp-btn" id="mp-btn-3" onclick="mpSetCount(3)">👥 3</button>
-        <button class="sp-mp-btn" id="mp-btn-4" onclick="mpSetCount(4)">👥 4</button>
+    <!-- Secondary options: one quiet row — Spin stays the only hero action -->
+    <div class="sp-options-row">
+      <div class="sp-express-row">
+        <button id="btn-express" onclick="toggleExpress()" title="3 dice · same rules · faster pace">⚡ Express: OFF</button>
       </div>
-    </div>
-    <div class="sp-join-row">
-      <button id="btn-join-room" onclick="mpOpenJoinModal()">🚪 Join Existing Room</button>
+      <div class="sp-mp-row">
+        <div class="sp-mp-lbl">Players:</div>
+        <div class="sp-mp-btns">
+          <button class="sp-mp-btn active" id="mp-btn-1" onclick="mpSetCount(1)">👤 1</button>
+          <button class="sp-mp-btn" id="mp-btn-2" onclick="mpSetCount(2)">👥 2</button>
+          <button class="sp-mp-btn" id="mp-btn-3" onclick="mpSetCount(3)">👥 3</button>
+          <button class="sp-mp-btn" id="mp-btn-4" onclick="mpSetCount(4)">👥 4</button>
+        </div>
+      </div>
+      <div class="sp-join-row">
+        <button id="btn-join-room" onclick="mpOpenJoinModal()">🚪 Join Room</button>
+      </div>
     </div>
     <!-- Live public room directory — hidden until at least one room is active -->
     <div id="room-browser" style="display:none;max-width:420px;margin:14px auto 0;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(240,192,32,.25);border-radius:12px">
