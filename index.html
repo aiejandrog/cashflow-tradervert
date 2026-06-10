@@ -7299,6 +7299,22 @@ let _bcHeartbeatTimer=null;
 
 function _bcChannelName(r){return 'cf_room_'+r.toLowerCase().replace(/[^a-z0-9]+/g,'_');}
 
+// ── THROTTLE-PROOF TICKER ───────────────────────────────
+// Background tabs get their setInterval clamped to ~1/min, which starved the
+// presence heartbeats and made idle players look disconnected. Worker timers
+// keep firing in background tabs, so heartbeats ride one when available.
+function makeTicker(fn,ms){
+  try{
+    const w=new Worker(URL.createObjectURL(new Blob(
+      ['setInterval(()=>postMessage(1),'+ms+');'],{type:'application/javascript'})));
+    w.onmessage=fn;
+    return {stop:()=>{try{w.terminate();}catch(e){}}};
+  }catch(e){
+    const id=setInterval(fn,ms);
+    return {stop:()=>clearInterval(id)};
+  }
+}
+
 // ── REMOTE TRANSPORT (PeerJS / WebRTC) ──────────────────
 // BroadcastChannel only reaches tabs on the SAME machine. PeerJS extends the
 // same message protocol across the internet: host registers a peer id derived
@@ -7343,7 +7359,7 @@ function netRelay(msg){
 }
 function _setLobbyNetStatus(txt){
   const ph=$('mp-lobby-pass-hint');
-  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v2-relay';
+  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v3-stable';
 }
 function peerHostStart(){
   _sbStart(_mpRoomName); // websocket relay — works even where P2P can't
@@ -7584,7 +7600,8 @@ function mpLobbyStartGame(){
 // Game-alive heartbeat — used at game start AND when a host resumes from a refresh
 function bcStartGameHeartbeat(){
   clearInterval(_bcHeartbeatTimer);
-  _bcHeartbeatTimer=setInterval(()=>{
+  if(window._gameHbTicker)window._gameHbTicker.stop();
+  window._gameHbTicker=makeTicker(()=>{
     roomsAnnounce(); // directory shows "in game" status while playing
     if(_bc&&_bcRole==='host')netSend({type:'room-alive',
       slots:PLAYERS.map((p,i)=>({name:p.name,color:p.color,idx:i,joined:_bcJoinedSlots.has(i)})),
@@ -7595,6 +7612,13 @@ function bcStartGameHeartbeat(){
     bcHostCheckPresence();
   },3000);
 }
+// Heartbeats also resume instantly when the tab regains focus
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)return;
+  try{
+    if(_bcRole==='joiner'&&!_bcLobbyPhase)netSend({type:'player-ping',playerIdx:_bcMyIdx});
+  }catch(e){}
+});
 
 // ── HOST: detect joiners who closed their tab / lost connection ──
 function bcHostCheckPresence(){
@@ -7604,7 +7628,10 @@ function bcHostCheckPresence(){
   for(let i=1;i<PLAYERS.length;i++){
     if(!_bcJoinedSlots.has(i)||PLAYERS[i]._left||PLAYERS[i].won)continue;
     if(window._lastPing[i]===undefined)window._lastPing[i]=now; // grace period from first check
-    if(now-window._lastPing[i]>15000){
+    // 75s, not 15s: a worker keeps pings at 3s normally, but if the worker is
+    // unavailable the browser may clamp a background tab to one timer/min —
+    // the threshold has to clear that worst case or idle players flap left/rejoined
+    if(now-window._lastPing[i]>75000){
       PLAYERS[i]._left=true;
       _bcJoinedSlots.delete(i);
       addLog('🚪',PLAYERS[i].name+' left the game — their turns are skipped','b');
@@ -7715,7 +7742,7 @@ function mpSubmitJoin(){
   const playerName=($('mp-join-name-inp')||{}).value?.trim()||'Guest';
   if(!roomName){_bcJoinStatus('Enter the room name.','#fb7185');return;}
   const btn=$('mp-join-btn');if(btn){btn.textContent='Connecting...';btn.disabled=true;}
-  _bcJoinStatus('Looking for room "'+roomName+'"... (v2-relay)','rgba(34,211,238,.8)');
+  _bcJoinStatus('Looking for room "'+roomName+'"... (v3-stable)','rgba(34,211,238,.8)');
   if(_bc)_bc.close();
   _bc=new BroadcastChannel(_bcChannelName(roomName));
   _bcRole='joiner';_bcLobbyPhase=true;
@@ -7805,19 +7832,21 @@ function bcJoinerHandleJoinResponse(msg){
 // ── JOINER: presence ping + host-loss watchdog ──────────
 function mpStartJoinerPing(){
   clearInterval(window._joinerPingTimer);
+  if(window._joinerPingTicker)window._joinerPingTicker.stop();
   window._lastHostBeat=Date.now();
   window._hostLossWarned=false;
-  window._joinerPingTimer=setInterval(()=>{
+  window._joinerPingTicker=makeTicker(()=>{
     if(_bcRole!=='joiner')return;
     if(!_bcLobbyPhase)netSend({type:'player-ping',playerIdx:_bcMyIdx});
-    // Host heartbeats arrive every 3s — silence means the host tab is gone
+    // Host heartbeats arrive every 3s — but allow for a background-throttled
+    // host tab (timers clamp to ~1/min) before declaring the connection lost
     const quiet=Date.now()-(window._lastHostBeat||Date.now());
     const sub=$('mp-wait-sub');
-    if(quiet>20000&&sub){
+    if(quiet>75000&&sub){
       sub.textContent='⚠ Host connection lost — waiting for them to come back...';
       sub.style.color='#fb7185';
     }
-    if(quiet>60000&&!window._hostLossWarned){
+    if(quiet>150000&&!window._hostLossWarned){
       window._hostLossWarned=true;
       openModal({band:'gray',title:'🚪 Host Left the Game',
         desc:'No signal from the host for a minute. If they reopen the game, you can rejoin the room with your name — your progress is saved on their side.',
