@@ -7303,6 +7303,16 @@ function _bcChannelName(r){return 'cf_room_'+r.toLowerCase().replace(/[^a-z0-9]+
 let _peer=null,_peerConns=[];
 let _pendingJoinPass='',_pendingJoinName='';
 const _seenMids=new Set();
+// STUN finds the public IP; TURN relays traffic when strict NAT (Comcast/CGNAT/
+// hotel WiFi) blocks the direct P2P path. Without TURN, the host registers fine
+// but cross-internet joins silently fail for many home networks.
+const _PEER_CFG={debug:0,config:{iceServers:[
+  {urls:'stun:stun.l.google.com:19302'},
+  {urls:'stun:stun1.l.google.com:19302'},
+  {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+]}};
 function _peerRoomId(r){return 'cfgame-'+_bcChannelName(r);}
 function _msgId(){return Math.random().toString(36).slice(2)+Date.now().toString(36);}
 function _netRecv(msg){
@@ -7333,7 +7343,7 @@ function peerHostStart(){
   if(typeof Peer==='undefined'){_setLobbyNetStatus('⚠ Online play unavailable (network blocked) — same-WiFi tabs only');return;}
   try{if(_peer)_peer.destroy();}catch(e){}
   _peerConns=[];
-  _peer=new Peer(_peerRoomId(_mpRoomName),{debug:0});
+  _peer=new Peer(_peerRoomId(_mpRoomName),_PEER_CFG);
   _peer.on('open',()=>{_setLobbyNetStatus('🌐 Online — friends can join from anywhere');window._peerOnline=true;});
   _peer.on('disconnected',()=>{try{_peer.reconnect();}catch(e){}}); // broker dropped us — reconnect keeps the room joinable
   _peer.on('connection',conn=>{
@@ -7362,6 +7372,12 @@ function peerJoinStart(roomName){
     conn.on('open',()=>{
       if(!_peerConns.includes(conn))_peerConns.push(conn);
       _bcJoinStatus('Found the room online — requesting a seat...','rgba(34,211,238,.8)');
+      // Connection is live — replace the search deadline with a shorter approval window
+      if(_bc&&_bc._joinTimeout){clearTimeout(_bc._joinTimeout);
+        _bc._joinTimeout=setTimeout(()=>{
+          _bcJoinStatus('Connected, but the host did not answer — ask them to keep the lobby screen open.','#fb7185');
+          const b=$('mp-join-btn');if(b){b.textContent='Join Room →';b.disabled=false;}
+        },12000);}
       // Re-send join-request over the remote pipe (no-op if a local host already approved us)
       if(_bc&&_bc._pendingReqId){
         conn.send({type:'join-request',reqId:_bc._pendingReqId,pass:_pendingJoinPass,playerName:_pendingJoinName,_mid:_msgId()});
@@ -7371,13 +7387,13 @@ function peerJoinStart(roomName){
     conn.on('close',()=>{_peerConns=_peerConns.filter(c=>c!==conn);});
     conn.on('error',()=>{_peerConns=_peerConns.filter(c=>c!==conn);});
   };
-  _peer=new Peer({debug:0}); // auto-assigned id for the joiner
+  _peer=new Peer(_PEER_CFG); // auto-assigned id for the joiner
   _peer.on('open',_tryConnect);
   _peer.on('error',err=>{
     // peer-unavailable = host not registered (yet). Retry — hosts often finish
     // their lobby setup a few seconds after the joiner starts looking.
-    if(err&&err.type==='peer-unavailable'&&_attempts<3&&_bc&&_bc._pendingReqId){
-      _bcJoinStatus(`Room not online yet — retrying (${_attempts}/3)...`,'rgba(200,175,120,.8)');
+    if(err&&err.type==='peer-unavailable'&&_attempts<8&&_bc&&_bc._pendingReqId){
+      _bcJoinStatus(`Room not online yet — retrying (${_attempts}/8)...`,'rgba(200,175,120,.8)');
       setTimeout(_tryConnect,2500);
     }
   });
@@ -7673,10 +7689,12 @@ function mpSubmitJoin(){
   _pendingJoinPass=pass;_pendingJoinName=playerName;
   netSend({type:'join-request',reqId,pass,playerName});
   peerJoinStart(roomName); // also search for the host over the internet
+  // 30s: cross-internet WebRTC (broker signup + ICE + TURN fallback + retries)
+  // routinely needs 10-20s; the old 9s deadline gave up while still connecting
   _bc._joinTimeout=setTimeout(()=>{
     _bcJoinStatus('No host found locally or online — check the room name (and that the host screen is open).','#fb7185');
     const b=$('mp-join-btn');if(b){b.textContent='Join Room →';b.disabled=false;}
-  },9000);
+  },30000);
 }
 
 function _bcJoinStatus(msg,color){
