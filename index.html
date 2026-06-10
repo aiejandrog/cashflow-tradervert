@@ -6931,6 +6931,19 @@ function mpCancelPassword(){
   clearSave();location.reload();
 }
 
+// Leave the room/game from any waiting screen → back to the main menu.
+// The other side notices on its own: host marks us "left" when pings stop;
+// joiners get the host-loss watchdog if the host leaves.
+function mpLeaveRoom(){
+  if(!confirm(_bcRole==='host'
+    ?'Close this room and go back to the menu? Other players will be disconnected.'
+    :'Leave this game and go back to the menu? You can rejoin later with the same name.'))return;
+  try{clearInterval(_bcHeartbeatTimer);clearInterval(window._joinerPingTimer);}catch(e){}
+  try{if(_bc)_bc.close();}catch(e){}
+  try{if(_peer)_peer.destroy();}catch(e){}
+  clearSave();location.reload();
+}
+
 function mpAfterDreamGo(){
   // Host sets up ONLY themselves — one pass, then the lobby opens immediately.
   // Joiners pick their own name/profession/dream when they enter the room.
@@ -8147,6 +8160,7 @@ function endTutorial(){
       ▶ Start Game
     </button>
     <div class="mp-lobby-wait-msg" id="mp-lobby-wait-msg">Waiting for players to join...</div>
+    <button onclick="mpLeaveRoom()" style="margin-top:14px;width:100%;padding:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(200,175,120,.7);font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit">← Leave Room — Back to Menu</button>
   </div>
 </div>
 
@@ -8183,6 +8197,7 @@ function endTutorial(){
     <div class="mp-wait-sub" id="mp-wait-sub">It's not your turn yet</div>
     <div class="mp-wait-scores" id="mp-wait-scores"></div>
     <div style="font-size:.64rem;color:rgba(200,175,120,.3);margin-top:16px">This screen will update automatically when it's your turn.</div>
+    <button onclick="mpLeaveRoom()" style="margin-top:14px;padding:8px 18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(200,175,120,.6);font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit">🚪 Leave Game</button>
   </div>
 </div>
 
