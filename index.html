@@ -6757,29 +6757,30 @@ function mpSetCount(n){
 function mpRefreshSetupHdr(){
   const hdr=$('mp-setup-hdr');
   if(!hdr||_mpCount<=1)return;
-  const color=MP_COLORS[_mpSetupIdx]||'#f0c020';
-  const name=_mpPlayerNames[_mpSetupIdx]||('Player '+(_mpSetupIdx+1));
+  const name=_mpPlayerNames[0]||'Player 1';
   const roomTag=_mpRoomName?`<span style="color:rgba(200,175,120,.5);font-weight:400"> · ${_mpRoomName}</span>`:'';
-  hdr.innerHTML=`<span style="color:${color};font-weight:900">● ${name}</span>${roomTag} — choose profession, city &amp; dream. (${_mpSetupIdx+1} of ${_mpCount})`;
+  hdr.innerHTML=`<span style="color:${MP_COLORS[0]};font-weight:900">● ${name}</span>${roomTag} — choose YOUR profession, city &amp; dream. Friends pick theirs when they join.`;
   hdr.style.display='';
   const btn=$('btn-dream-go');
-  if(btn){
-    if(_mpSetupIdx<_mpCount-1){btn.textContent=`${name} Done — Next Player ›`;}
-    else{btn.textContent='All Set — Start Game →';}
-  }
+  if(btn)btn.textContent='Create Room — Open Lobby →';
 }
 
 function mpShowRoomSetup(){
+  // Classic flow: the host only enters THEIR OWN name — every joiner names
+  // themselves and picks their own profession when they enter the room.
   const wrap=$('mp-rs-names');
   if(wrap){
-    wrap.innerHTML=Array.from({length:_mpCount},(_,i)=>`
+    wrap.innerHTML=`
       <div class="mp-rs-name-row">
-        <div class="mp-rs-dot" style="background:${MP_COLORS[i]}"></div>
-        <input class="mp-rs-inp" id="mp-rs-name-${i}" type="text"
-          placeholder="${i===0?'Your name':'Optional — they pick their name when joining'}" maxlength="16"
-          value="${(_mpPlayerNames[i]||'').replace(/"/g,'&quot;')}"
-          onkeydown="if(event.key==='Enter'){const nx=document.getElementById('mp-rs-name-${i+1}');if(nx)nx.focus();else mpConfirmRoomSetup();}">
-      </div>`).join('');
+        <div class="mp-rs-dot" style="background:${MP_COLORS[0]}"></div>
+        <input class="mp-rs-inp" id="mp-rs-name-0" type="text"
+          placeholder="Your name" maxlength="16"
+          value="${(_mpPlayerNames[0]||'').replace(/"/g,'&quot;')}"
+          onkeydown="if(event.key==='Enter')mpConfirmRoomSetup();">
+      </div>
+      <div style="font-size:.68rem;color:rgba(200,175,120,.5);font-style:italic;margin-top:6px;text-align:center">
+        The other ${_mpCount-1} player${_mpCount>2?'s':''} pick their own name &amp; profession when they join.
+      </div>`;
   }
   const nameInp=$('mp-room-name-inp');
   if(nameInp)nameInp.value=_mpRoomName||'Game Night';
@@ -6795,10 +6796,9 @@ function mpConfirmRoomSetup(){
   const passInp=$('mp-room-pass-inp');
   _mpRoomName=(nameInp?nameInp.value.trim():'')||'Game Night';
   _mpRoomPass=passInp?passInp.value:'';
-  _mpPlayerNames=Array.from({length:_mpCount},(_,i)=>{
-    const inp=document.getElementById('mp-rs-name-'+i);
-    return (inp?inp.value.trim():'')||('Player '+(i+1));
-  });
+  const hostInp=document.getElementById('mp-rs-name-0');
+  _mpPlayerNames=Array.from({length:_mpCount},(_,i)=>
+    i===0?((hostInp?hostInp.value.trim():'')||'Player 1'):('Player '+(i+1)));
   const rs=$('mp-room-setup');if(rs)rs.style.display='none';
   _mpSetupIdx=0;
   PLAYERS=[]; // fresh setup ALWAYS starts a fresh roster — re-running setup used to append duplicates
@@ -6845,26 +6845,25 @@ function mpCancelPassword(){
 }
 
 function mpAfterDreamGo(){
-  // Build this player's G and snapshot it
+  // Host sets up ONLY themselves — one pass, then the lobby opens immediately.
+  // Joiners pick their own name/profession/dream when they enter the room.
   initGame(selectedProf, selectedLocation);
-  const player={name:_mpPlayerNames[_mpSetupIdx]||('Player '+(_mpSetupIdx+1)), color:MP_COLORS[_mpSetupIdx]||'#f0c020',
+  PLAYERS=[{name:_mpPlayerNames[0]||'Player 1', color:MP_COLORS[0],
     profRef:selectedProf, locRef:selectedLocation, dreamRef:selectedDream, won:false,
-    G:JSON.parse(JSON.stringify(G))};
-  PLAYERS[_mpSetupIdx]=player; // assign by slot (not push) — redoing a step can never duplicate
-  PLAYERS.length=Math.min(PLAYERS.length,_mpCount); // and the roster can never exceed the chosen count
-  _mpSetupIdx++;
-  if(_mpSetupIdx<_mpCount){
-    // More players — reset to splash for next player
-    selectedProf=null; selectedLocation=null; selectedDream=null;
-    resetToSpin();
-    showScreen('splash');
-    // Hide player count row — can't change count mid-setup
-    const mpRow=document.querySelector('.sp-mp-row');
-    if(mpRow)mpRow.style.display='none';
-    mpRefreshSetupHdr();
-  } else {
-    mpLaunchGame();
+    G:JSON.parse(JSON.stringify(G))}];
+  // Placeholder profiles for the other slots (random profession, same city) —
+  // replaced the moment each joiner submits their own picks. If the host starts
+  // before someone finishes picking, they still have a playable hand.
+  for(let i=1;i<_mpCount;i++){
+    const rp=PROFS[Math.floor(Math.random()*PROFS.length)];
+    initGame(rp, selectedLocation);
+    PLAYERS.push({name:_mpPlayerNames[i]||('Player '+(i+1)), color:MP_COLORS[i]||'#f0c020',
+      profRef:rp, locRef:selectedLocation, dreamRef:G.dream, won:false,
+      G:JSON.parse(JSON.stringify(G))});
   }
+  G=JSON.parse(JSON.stringify(PLAYERS[0].G)); // restore host's G (placeholder builds overwrote the global)
+  _mpSetupIdx=0;
+  mpLaunchGame();
 }
 
 function mpLaunchGame(){
@@ -7318,6 +7317,16 @@ function bcHostHandleTurnDone(msg){
   mpAdvanceTurn();
 }
 
+// ── HOST: a joiner submitted their own profile ──────────
+function bcHostHandlePlayerProfile(msg){
+  if(_bcRole!=='host')return;
+  const idx=msg.playerIdx;
+  if(typeof idx!=='number'||idx<=0||idx>=PLAYERS.length)return;
+  if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
+  if(msg.name)PLAYERS[idx].name=msg.name;
+  bcUpdateLobbySlots();bcUpdateLobbyStartBtn();bcHostBroadcastLobby();mpUpdateStrip();saveGame();
+}
+
 // ── HOST: a remote joiner escaped the rat race ──────────
 function bcHostHandlePlayerWon(msg){
   if(_bcRole!=='host')return;
@@ -7379,6 +7388,7 @@ function bcHandleMessage(msg){
     if(msg.type==='join-request')bcHostHandleJoinRequest(msg);
     if(msg.type==='turn-done')bcHostHandleTurnDone(msg);
     if(msg.type==='player-won')bcHostHandlePlayerWon(msg);
+    if(msg.type==='player-profile')bcHostHandlePlayerProfile(msg);
   } else if(_bcRole==='joiner'){
     if(msg.type==='join-response')bcJoinerHandleJoinResponse(msg);
     if(msg.type==='lobby-update')bcJoinerHandleLobbyUpdate(msg);
@@ -7404,14 +7414,44 @@ function bcJoinerHandleJoinResponse(msg){
   _mpRoomName=($('mp-join-room-inp')||{}).value?.trim()||'Game';
   mpCloseJoinModal();
   if(msg.lobbyPhase){
-    // Show joiner lobby view
-    bcJoinerShowLobby(msg);
+    // Approved — now pick YOUR OWN profession/city/dream before entering the lobby
+    mpJoinerPickProfile(msg);
   } else {
     // Game already started — go straight to game
     showScreen('game');buildBoard();updateUI();setTimeout(fitBoard,80);mpUpdateStrip();
     if(msg.activeIdx===_bcMyIdx){bcJoinerActivateMyTurn();}
     else{bcShowWaiting(PLAYERS[msg.activeIdx]?.name||'someone');}
   }
+}
+
+// ── JOINER: pick your own profile after approval ────────
+function mpJoinerPickProfile(msg){
+  window._joinerProfileMode=true;
+  window._joinerLobbyMsg=msg;
+  selectedProf=null;selectedLocation=null;selectedDream=null;
+  resetToSpin();
+  showScreen('splash');
+  // Hide host-only controls — this pass is purely "build YOUR character"
+  const mpRow=document.querySelector('.sp-mp-row');if(mpRow)mpRow.style.display='none';
+  const jr=document.querySelector('.sp-join-row');if(jr)jr.style.display='none';
+  const rb=$('room-browser');if(rb)rb.style.display='none';
+  const hdr=$('mp-setup-hdr');
+  if(hdr){
+    hdr.innerHTML=`<span style="color:#22d3ee;font-weight:900">● You're in "${_mpRoomName}"</span> — spin for YOUR profession, then pick city &amp; dream.`;
+    hdr.style.display='';
+  }
+  const btn=$('btn-dream-go');if(btn)btn.textContent='Ready — Enter Lobby →';
+}
+function mpJoinerProfileDone(){
+  window._joinerProfileMode=false;
+  initGame(selectedProf,selectedLocation); // builds a fresh G (dream comes from selectedDream)
+  if(PLAYERS[_bcMyIdx]){
+    PLAYERS[_bcMyIdx].G=JSON.parse(JSON.stringify(G));
+    PLAYERS[_bcMyIdx].name=_pendingJoinName||PLAYERS[_bcMyIdx].name;
+  }
+  netSend({type:'player-profile',playerIdx:_bcMyIdx,name:_pendingJoinName,G:JSON.parse(JSON.stringify(G))});
+  const hdr=$('mp-setup-hdr');if(hdr)hdr.style.display='none';
+  bcJoinerShowLobby(window._joinerLobbyMsg||{players:PLAYERS.map(p=>({name:p.name,color:p.color}))});
 }
 
 // ── JOINER: lobby view ──────────────────────────────────
@@ -7452,6 +7492,7 @@ function bcJoinerHandleLobbyUpdate(msg){
 // ── JOINER: host started the game ───────────────────────
 function bcJoinerHandleGameStart(msg){
   _bcLobbyPhase=false;
+  window._joinerProfileMode=false; // host started while we were still picking — placeholder hand applies
   // Load my player's state from the start snapshot
   if(msg.players&&msg.players[_bcMyIdx]){
     const myPlayer=msg.players[_bcMyIdx];
@@ -7635,8 +7676,11 @@ function pickDream(d,card){
 }
 $('btn-dream-go').addEventListener('click',()=>{
   if(!selectedProf||!selectedLocation||!selectedDream)return;
-  if(_mpCount>1){
-    // Multiplayer: collect this player's setup then continue
+  if(window._joinerProfileMode){
+    // Remote joiner finishing their own profile → submit to host, enter lobby
+    mpJoinerProfileDone();
+  } else if(_mpCount>1){
+    // Multiplayer host: one profile pass, then the lobby opens
     mpAfterDreamGo();
   } else {
     clearSave();startGame(selectedProf,selectedLocation);
