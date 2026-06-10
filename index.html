@@ -5409,6 +5409,11 @@ function replaySameProfession(){
   const prof=G.prof,loc=G.location||G.loc;
   PLAYERS=[];ACTIVE_PLAYER_IDX=0;_mpCount=1;_mpSetupIdx=0; // reset MP state
   clearSave();
+  // Tear down Fast Track remains — without this, ob-mode stays on #game and
+  // buildBoard skips rebuilding the outer ring (mangled board on replay after a win)
+  const gEl=$('game');if(gEl)gEl.classList.remove('ob-mode');
+  const obp=$('ob-game-panel');if(obp)obp.style.display='none';
+  const bi=$('board-inner');if(bi)bi.style.cssText='';
   // Re-init with same profession + location, skip splash
   initGame(prof,loc);_prevCash=null;
   const bkOv=$('bankruptcy-overlay');if(bkOv)bkOv.style.display='none';
