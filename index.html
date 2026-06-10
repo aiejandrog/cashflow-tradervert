@@ -6603,7 +6603,7 @@ function saveGame(){
   if(!G)return;
   try{
     const save={G,expressMode,ts:Date.now()};
-    if(PLAYERS.length>1){save.PLAYERS=PLAYERS;save.ACTIVE_PLAYER_IDX=ACTIVE_PLAYER_IDX;save._mpCount=_mpCount;save._mpRoomName=_mpRoomName;save._mpRoomPass=_mpRoomPass;save._mpPlayerNames=_mpPlayerNames;}
+    if(PLAYERS.length>1){save.PLAYERS=PLAYERS;save.ACTIVE_PLAYER_IDX=ACTIVE_PLAYER_IDX;save._mpCount=_mpCount;save._mpRoomName=_mpRoomName;save._mpRoomPass=_mpRoomPass;save._mpPlayerNames=_mpPlayerNames;save._bcRole=_bcRole;}
     localStorage.setItem(SAVE_KEY,JSON.stringify(save));
   }catch(e){}
 }
@@ -6616,7 +6616,11 @@ function loadSave(){
     if(s.PLAYERS&&s.PLAYERS.length>1){
       PLAYERS=s.PLAYERS;ACTIVE_PLAYER_IDX=s.ACTIVE_PLAYER_IDX||0;_mpCount=s._mpCount||PLAYERS.length;
       _mpRoomName=s._mpRoomName||'Game Night';_mpRoomPass=s._mpRoomPass||'';_mpPlayerNames=s._mpPlayerNames||[];
-    } else {PLAYERS=[];ACTIVE_PLAYER_IDX=0;_mpCount=1;_mpRoomName='Game Night';_mpRoomPass='';_mpPlayerNames=[];}
+      window._savedBcRole=s._bcRole||null;
+      // Repair rosters corrupted by the old append-on-redo bug (e.g. 6 slots in a 2-player room)
+      if(PLAYERS.length>_mpCount)PLAYERS=PLAYERS.slice(0,_mpCount);
+      if(ACTIVE_PLAYER_IDX>=PLAYERS.length)ACTIVE_PLAYER_IDX=0;
+    } else {PLAYERS=[];ACTIVE_PLAYER_IDX=0;_mpCount=1;_mpRoomName='Game Night';_mpRoomPass='';_mpPlayerNames=[];window._savedBcRole=null;}
     // always reset mid-turn lock on load — closures don't survive serialization
     G.rolling=false;_resumeFn=null;window._chainAfterCard=null;
     // back-compat: ensure new fields exist on old saves
@@ -6708,6 +6712,18 @@ function resumeGame(){
   syncDie2Lock();
   mpUpdateStrip(); // show player strip if this was a multiplayer save
   if(PLAYERS.length>1){
+    // Host refresh recovery: re-open the room so joiners can reconnect by name —
+    // without this, a reload left a dead room and forced a full re-setup.
+    if(window._savedBcRole==='host'&&_mpRoomName){
+      if(_bc)_bc.close();
+      _bc=new BroadcastChannel(_bcChannelName(_mpRoomName));
+      _bc.onmessage=e=>_netRecv(e.data);
+      _bcRole='host';_bcMyIdx=0;_bcLobbyPhase=false;
+      _bcJoinedSlots=new Set([0]); // joiners reclaim their slot by rejoining with the same name
+      peerHostStart();
+      bcStartGameHeartbeat();
+      addLog('🌐',`Room "${_mpRoomName}" re-opened — players rejoin with their name`,'gold');
+    }
     // Resume multiplayer with handoff screen
     setTimeout(()=>mpShowHandoff(),300);
   } else {
@@ -6785,6 +6801,7 @@ function mpConfirmRoomSetup(){
   });
   const rs=$('mp-room-setup');if(rs)rs.style.display='none';
   _mpSetupIdx=0;
+  PLAYERS=[]; // fresh setup ALWAYS starts a fresh roster — re-running setup used to append duplicates
   const hdr=$('mp-setup-hdr');if(hdr)hdr.style.display='';
   mpRefreshSetupHdr();
 }
@@ -6833,7 +6850,8 @@ function mpAfterDreamGo(){
   const player={name:_mpPlayerNames[_mpSetupIdx]||('Player '+(_mpSetupIdx+1)), color:MP_COLORS[_mpSetupIdx]||'#f0c020',
     profRef:selectedProf, locRef:selectedLocation, dreamRef:selectedDream, won:false,
     G:JSON.parse(JSON.stringify(G))};
-  PLAYERS.push(player);
+  PLAYERS[_mpSetupIdx]=player; // assign by slot (not push) — redoing a step can never duplicate
+  PLAYERS.length=Math.min(PLAYERS.length,_mpCount); // and the roster can never exceed the chosen count
   _mpSetupIdx++;
   if(_mpSetupIdx<_mpCount){
     // More players — reset to splash for next player
@@ -7234,7 +7252,12 @@ function mpLobbyStartGame(){
   G=JSON.parse(JSON.stringify(PLAYERS[0].G));
   buildBoard();updateUI();setTimeout(fitBoard,80);mpUpdateStrip();
   setTimeout(()=>mpShowHandoff(),200);
-  // Restart heartbeat as game-alive
+  bcStartGameHeartbeat();
+}
+
+// Game-alive heartbeat — used at game start AND when a host resumes from a refresh
+function bcStartGameHeartbeat(){
+  clearInterval(_bcHeartbeatTimer);
   _bcHeartbeatTimer=setInterval(()=>{
     roomsAnnounce(); // directory shows "in game" status while playing
     if(_bc&&_bcRole==='host')netSend({type:'room-alive',
