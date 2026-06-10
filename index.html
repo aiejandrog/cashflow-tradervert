@@ -4649,26 +4649,33 @@ function checkTenantEvents(){
   reAssets.forEach(a=>{
     const state=G._propState[a.uid];
     if(!state||!state.tenants)return;
+    const managed=!!state.managed;
     state.tenants.forEach((t,i)=>{
       if(!t)return;
       t.months=(t.months||0)+1;
-      // Tenant leaves
-      const leaveChance=t.risk==='high'?0.07:t.risk==='med'?0.04:0.02;
+      // Tenant leaves (managed properties retain tenants better — managers handle complaints)
+      let leaveChance=t.risk==='high'?0.07:t.risk==='med'?0.04:0.02;
+      if(managed)leaveChance*=0.7;
       if(Math.random()<leaveChance){
         state.tenants[i]=null;
         const lost=t.rent;
-        // Net CF = gross rents - mortgage
-        // Primary home: mortgage tracked in expenses() — don't double-deduct (same guard as recalcCF)
-        const gross=state.tenants.filter(Boolean).reduce((s,x)=>s+(x?.rent||0),0);
-        a.cf=Math.max(0,a.isPrimaryHome?gross:gross-(a.mortgagePmt||0));
-        delete a._crashCutCF; // CF recomputed from scratch — crash delta no longer valid; recovery would phantom-boost vacant CF
-        delete a._preRecessionCF; // same reason: recession stored old (higher) CF; restoring it would ignore this vacancy
+        if(managed&&!t.isOwner){
+          // Manager refills the unit immediately with a screened tenant
+          const potCF=a._potentialCF||a.cf||0;
+          const baseRent=Math.max(250,Math.round((potCF+(a.mortgagePmt||0))/Math.max(1,state.units||1)/50)*50);
+          state.tenants[i]=_mgmtTenant(baseRent);
+          _propRecalcCF(a,state);
+          addLog('👔',`${t.name} left ${a.name} Unit ${i+1} — manager placed ${state.tenants[i].name} same month. Net CF $${fmt(a.cf)}/mo`,'gold');
+          return;
+        }
+        _propRecalcCF(a,state); // fee-aware: gross - mortgage - mgmt fee
         addLog('🚪',`${t.name} vacated ${a.name} Unit ${i+1} — $${fmt(lost)}/mo lost | Net CF now $${fmt(a.cf)}/mo`,'r');
         if(!queued)queued={type:'left',tname:t.name,prop:a.name,uid:a.uid,unit:i+1,lost};
         return;
       }
-      // Property damage (low chance)
-      const dmgChance=t.risk==='high'?0.04:t.risk==='med'?0.015:0.005;
+      // Property damage (low chance; managers screen + inspect, halving incidents)
+      let dmgChance=t.risk==='high'?0.04:t.risk==='med'?0.015:0.005;
+      if(managed)dmgChance*=0.5;
       if(Math.random()<dmgChance){
         const cost=Math.round((800+Math.random()*2200)/100)*100;
         ensureCash(cost,'property damage repair');
@@ -4706,20 +4713,70 @@ function manageTenant(uid){
   const strategyTag=state.strategy==='airbnb'?'🏖 Airbnb':'🏘 Rental';
   // Evict buttons — one per occupied unit (must be outside openModal object literal)
   const evictBtns=state.tenants.map((t,i)=>t?{label:`🚫 Evict ${t.name} (Unit ${i+1})`,cls:'btn-tan',fn:()=>evictTenant(uid,i)}:null).filter(Boolean);
+  const mgmtFee=_mgmtFeeFor(a);
   openModal({band:'green',title:`🏘 ${a.name}`,
-    desc:`${units}-unit · ${occupied}/${units} occupied · ${strategyTag}`,
+    desc:`${units}-unit · ${occupied}/${units} occupied · ${strategyTag}${state.managed?' · 👔 Managed':''}`,
     rows:[
       [`${occupied}/${units} Occupied`,totalRent>0?'+$'+fmt(totalRent)+'/mo':'$0/mo'],
+      ...(state.managed?[['👔 Property Manager','-$'+fmt(state.mgmtFee||0)+'/mo','red']]:[]),
       ...unitRows,
     ],
     actions:[
-      ...vacantUnits.map(i=>({label:`🔍 List Unit ${i+1}`,cls:'btn-gold',fn:()=>showTenantSearch(uid,i)})),
+      // Manager hire/fire — for 2+ unit properties (solo houses don't need one)
+      ...(!state.managed&&units>=2?[{label:`👔 Hire Property Manager — $${fmt(mgmtFee)}/mo (fills & manages all units)`,cls:'btn-gold',fn:()=>hirePropertyManager(uid)}]:[]),
+      ...(state.managed?[{label:'👔 Fire Manager — handle units yourself',cls:'btn-tan',fn:()=>firePropertyManager(uid)}]:[]),
+      // Per-unit listing only when self-managing — the manager fills units automatically
+      ...(!state.managed?vacantUnits.map(i=>({label:`🔍 List Unit ${i+1}`,cls:'btn-gold',fn:()=>showTenantSearch(uid,i)})):[]),
       ...evictBtns,
       ...(units===1&&state.strategy!=='airbnb'?[{label:'🏖 Switch to Airbnb',cls:'btn-tan',fn:()=>{state.strategy='airbnb';saveGame();manageTenant(uid);}}]:[]),
       ...(state.strategy==='airbnb'?[{label:'🏘 Back to Rental',cls:'btn-tan',fn:()=>{state.strategy='rental';saveGame();manageTenant(uid);}}]:[]),
       {label:'Done',cls:'btn-tan',fn:()=>updateUI()},
     ]
   });
+}
+
+// ── PROPERTY MANAGER ─────────────────────────────────────
+// Hire a manager: monthly fee (8% of gross potential rents, min $100), in
+// exchange every vacancy is filled instantly with a screened low-risk tenant,
+// future move-outs auto-refill, and damage risk is halved. Beats clicking
+// "List Unit" 24 times on the big complexes.
+function _mgmtFeeFor(a){
+  const potCF=a._potentialCF||a.cf||0;
+  const gross=potCF+(a.mortgagePmt||0);
+  return Math.max(100,Math.round(gross*0.08/25)*25);
+}
+function _mgmtTenant(baseRent){
+  // Managers screen hard: good quality, 700+ credit, low risk, near-market rent
+  return{name:TENANT_NAMES[Math.floor(Math.random()*TENANT_NAMES.length)],quality:'good',
+    credit:700+Math.floor(Math.random()*100),pets:Math.random()<0.15,risk:'low',
+    rent:Math.round(baseRent*(0.95+Math.random()*0.15)/50)*50,months:0};
+}
+function _propRecalcCF(a,state){
+  const gross=state.tenants.filter(Boolean).reduce((s,t)=>s+(t?.rent||0),0);
+  const fee=state.managed?(state.mgmtFee||0):0;
+  a.cf=Math.max(0,(a.isPrimaryHome?gross:gross-(a.mortgagePmt||0))-fee);
+  delete a._crashCutCF;delete a._preRecessionCF;
+}
+function hirePropertyManager(uid){
+  const a=G.assets.find(x=>x.uid===uid);if(!a)return;
+  const state=G._propState[uid];if(!state)return;
+  const fee=_mgmtFeeFor(a);
+  const potCF=a._potentialCF||a.cf||0;
+  const baseRent=Math.max(250,Math.round((potCF+(a.mortgagePmt||0))/Math.max(1,state.units)/50)*50);
+  state.managed=true;state.mgmtFee=fee;
+  let filled=0;
+  state.tenants=state.tenants.map(t=>{if(t)return t;filled++;return _mgmtTenant(baseRent);});
+  _propRecalcCF(a,state);
+  addLog('👔',`Property manager hired for ${a.name} — $${fmt(fee)}/mo. ${filled?`Filled ${filled} unit${filled!==1?'s':''} with screened tenants. `:''}Net CF $${fmt(a.cf)}/mo`,'gold');
+  updateUI();checkWin();saveGame();manageTenant(uid);
+}
+function firePropertyManager(uid){
+  const a=G.assets.find(x=>x.uid===uid);if(!a)return;
+  const state=G._propState[uid];if(!state)return;
+  state.managed=false;state.mgmtFee=0;
+  _propRecalcCF(a,state);
+  addLog('👔',`Fired the manager at ${a.name} — fee saved, but vacancies are on you now. Net CF $${fmt(a.cf)}/mo`,'');
+  updateUI();saveGame();manageTenant(uid);
 }
 
 function evictTenant(uid,unitIdx){
@@ -4739,10 +4796,7 @@ function evictTenant(uid,unitIdx){
       {label:`🚫 Confirm Eviction — $${fmt(legalCost)}`,cls:'btn-tan',fn:()=>{
         ensureCash(legalCost,'eviction filing');G.cash-=legalCost;
         state.tenants[unitIdx]=null;
-        // Recalc CF from scratch (same logic as recalcCF in showTenantSearch)
-        const gross=state.tenants.filter(Boolean).reduce((s,x)=>s+(x?.rent||0),0);
-        a.cf=Math.max(0,a.isPrimaryHome?gross:gross-(a.mortgagePmt||0));
-        delete a._crashCutCF;delete a._preRecessionCF; // snapshots stale after full CF recompute
+        _propRecalcCF(a,state); // fee-aware shared recalc (gross - mortgage - mgmt fee)
         boostCredit(-3); // eviction dispute dings credit slightly
         addLog('🚫',`Evicted ${t.name} from ${a.name} Unit ${unitIdx+1} | -$${fmt(legalCost)} legal | CF now $${fmt(a.cf)}/mo`,'r');
         updateUI();saveGame();manageTenant(uid);
@@ -4765,7 +4819,8 @@ function showTenantSearch(uid,unitIdx){
     const gross=state.tenants.filter(Boolean).reduce((s,t)=>s+(t?.rent||0),0);
     // Primary home: mortgage is already tracked in expenses() — don't double-deduct.
     // Investment property: mortgage isn't in expenses, so subtract it from gross CF.
-    a.cf=Math.max(0, a.isPrimaryHome ? gross : gross-mortPmt);
+    const _fee=state.managed?(state.mgmtFee||0):0; // fee-aware (evict path can run while managed)
+    a.cf=Math.max(0,(a.isPrimaryHome ? gross : gross-mortPmt)-_fee);
     // CF recomputed from scratch — stored crash/recession snapshots are now stale.
     // Delete both so recovery events don't phantom-boost the freshly-computed CF.
     delete a._crashCutCF;      // outer board crash: recovery adds back old cut amount
