@@ -1191,13 +1191,18 @@ body{
 .mp-js-title{font-size:1.02rem;font-weight:900;color:rgba(34,211,238,.9);text-align:center;margin-bottom:18px;font-family:Georgia,serif;letter-spacing:.03em}
 .mp-js-status{font-size:.72rem;min-height:18px;text-align:center;margin-bottom:10px;font-weight:700}
 /* ── WAITING FOR TURN OVERLAY ── */
-#mp-wait{position:fixed;inset:0;background:rgba(10,6,22,.97);z-index:8900;display:none;align-items:center;justify-content:center;flex-direction:column}
-.mp-wait-inner{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:32px 24px;max-width:380px;width:100%}
-.mp-wait-spinner{width:44px;height:44px;border:3px solid rgba(34,211,238,.2);border-top-color:rgba(34,211,238,.85);border-radius:50%;animation:spin .9s linear infinite}
+/* Spectator HUD: non-blocking top banner so the waiting player WATCHES the live
+   board behind it instead of a blackout. Backdrop ignores clicks; only the card
+   captures them. A faint cyan tint signals "spectating, not your turn." */
+#mp-wait{position:fixed;inset:0;background:rgba(10,6,22,.18);z-index:8900;display:none;align-items:flex-start;justify-content:center;flex-direction:column;pointer-events:none;box-shadow:inset 0 0 0 3px rgba(34,211,238,.35)}
+.mp-wait-inner{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:10px 18px 12px;max-width:440px;width:auto;margin:10px auto 0;pointer-events:auto;background:linear-gradient(180deg,rgba(18,11,34,.96),rgba(18,11,34,.88));border:1px solid rgba(34,211,238,.3);border-radius:0 0 16px 16px;box-shadow:0 8px 28px rgba(0,0,0,.5);backdrop-filter:blur(4px)}
+.mp-wait-spinner{width:26px;height:26px;border:3px solid rgba(34,211,238,.2);border-top-color:rgba(34,211,238,.85);border-radius:50%;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.mp-wait-name{font-size:1.4rem;font-weight:900;color:#fff;font-family:Georgia,serif}
-.mp-wait-sub{font-size:.8rem;color:rgba(200,175,120,.65)}
-.mp-wait-scores{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px;width:100%}
+.mp-wait-name{font-size:1.05rem;font-weight:900;color:#fff;font-family:Georgia,serif}
+.mp-wait-sub{font-size:.7rem;color:rgba(200,175,120,.65)}
+.mp-wait-scores{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:2px;width:100%}
+/* Live token of whoever is currently taking their turn (spectator view) */
+#spectate-token{position:absolute;width:26px;height:26px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:14px;z-index:60;border:2px solid #fff;box-shadow:0 0 12px rgba(34,211,238,.9);transition:left .32s cubic-bezier(.4,0,.2,1),top .32s cubic-bezier(.4,0,.2,1);pointer-events:none}
 /* ── OUTER BOARD SCREEN ── */
 #outerboard{flex-direction:column;align-items:center;justify-content:flex-start;min-height:100vh;padding:14px;background:radial-gradient(ellipse at 50% 20%,#1a1200,#0a0800);position:relative}
 .ob-header{width:100%;max-width:900px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -1400,6 +1405,7 @@ body{
             <svg id="board-svg"></svg>
             <div id="board-spaces"></div>
             <div id="player-token"></div>
+            <div id="spectate-token"></div>
             <div id="board-center">
               <div class="bc-logo"><span class="bc-cash">FREEDOM</span><span class="bc-flow">RACE</span></div>
               <div id="dice-row">
@@ -2389,7 +2395,26 @@ function placeToken(pos,anim=true){
   tok.textContent=G?G.prof.icon:'';
   document.querySelectorAll('.bs').forEach(e=>e.classList.remove('cur'));
   document.getElementById(`bs${pos}`)?.classList.add('cur');
+  // MP: stream my token position to spectators so they watch me move live
+  if(PLAYERS.length>1&&!_bcLobbyPhase&&_bcRole&&ACTIVE_PLAYER_IDX===_bcMyIdx){
+    try{netSend({type:'spectate-pos',pos,icon:G?G.prof.icon:'•',color:PLAYERS[_bcMyIdx]?.color||'#22d3ee',from:_bcMyIdx});}catch(e){}
+  }
 }
+
+// Spectator: render the active player's token on MY board as they move it.
+// Uses a separate #spectate-token so my own token/position is never disturbed.
+function placeSpectateToken(pos,icon,color){
+  const tok=$('spectate-token');if(!tok)return;
+  const{x,y}=getBXY(pos);
+  tok.style.display='flex';
+  tok.style.left=(x-13)+'px';tok.style.top=(y-13)+'px';
+  tok.style.background=color||'#22d3ee';
+  tok.textContent=icon||'•';
+  document.querySelectorAll('.bs').forEach(e=>e.classList.remove('cur'));
+  document.getElementById(`bs${pos}`)?.classList.add('cur');
+  flashSpace(pos);
+}
+function hideSpectateToken(){const tok=$('spectate-token');if(tok)tok.style.display='none';}
 
 function flashSpace(pos){
   const el=document.getElementById(`bs${pos}`);if(!el)return;
@@ -5379,7 +5404,7 @@ function mpEscapeWin(pass,exp){
   }
   setTimeout(()=>{
     checkOuterWin(); // builds + shows the win screen, saves
-    $('mp-wait').style.display='none'; // clear any waiting overlay that slipped in
+    $('mp-wait').style.display='none';hideSpectateToken(); // clear any waiting overlay that slipped in
     const r=$('win-rat-lbl');if(r)r.textContent='YOU ESCAPED THE RAT RACE';
     const f=$('win-freedom-lbl');if(f)f.textContent='FREEDOM ACHIEVED';
     const s=$('win-sub');if(s)s.textContent=`Passive $${fmt(pass)}/mo covers expenses $${fmt(exp)}/mo — done in ${G.turn} turns as ${G.prof.name}.`;
@@ -7203,7 +7228,7 @@ function mpAdvanceTurn(){
       bcShowWaiting(PLAYERS[ACTIVE_PLAYER_IDX].name);
       return;
     }
-    $('mp-wait').style.display='none'; // our turn (or a local pass-device slot) — clear any waiting screen
+    $('mp-wait').style.display='none';hideSpectateToken(); // our turn (or a local pass-device slot) — clear any waiting screen
   }
   mpShowHandoff();
 }
@@ -7375,7 +7400,7 @@ function netRelay(msg){
 }
 function _setLobbyNetStatus(txt){
   const ph=$('mp-lobby-pass-hint');
-  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v5-fit';
+  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v6-spectate';
 }
 function peerHostStart(){
   _sbStart(_mpRoomName); // websocket relay — works even where P2P can't
@@ -7758,7 +7783,7 @@ function mpSubmitJoin(){
   const playerName=($('mp-join-name-inp')||{}).value?.trim()||'Guest';
   if(!roomName){_bcJoinStatus('Enter the room name.','#fb7185');return;}
   const btn=$('mp-join-btn');if(btn){btn.textContent='Connecting...';btn.disabled=true;}
-  _bcJoinStatus('Looking for room "'+roomName+'"... (v5-fit)','rgba(34,211,238,.8)');
+  _bcJoinStatus('Looking for room "'+roomName+'"... (v6-spectate)','rgba(34,211,238,.8)');
   if(_bc)_bc.close();
   _bc=new BroadcastChannel(_bcChannelName(roomName));
   _bcRole='joiner';_bcLobbyPhase=true;
@@ -7789,6 +7814,14 @@ function bcHandleMessage(msg){
   if(msg.type==='turn-event'){
     _showTurnEvent(msg);
     if(_bcRole==='host')netRelay(msg); // pass it on to the other joiners
+    return;
+  }
+  // Both roles: live token movement on the spectator's board
+  if(msg.type==='spectate-pos'){
+    if(msg.from!==_bcMyIdx&&$('mp-wait')&&$('mp-wait').style.display!=='none'){
+      placeSpectateToken(msg.pos,msg.icon,msg.color);
+    }
+    if(_bcRole==='host')netRelay(msg); // relay to the other joiners
     return;
   }
   // Both roles: presence tracking
@@ -8013,7 +8046,7 @@ function bcJoinerHandleAlive(msg){
 // ── JOINER: game over ────────────────────────────────────
 function bcJoinerHandleGameOver(msg){
   clearInterval(_bcHeartbeatTimer);
-  $('mp-wait').style.display='none'; // clear waiting screen so standings are visible
+  $('mp-wait').style.display='none';hideSpectateToken(); // clear waiting screen so standings are visible
   openModal({band:'gold',title:'🏆 Final Standings',desc:'Game over!',
     rows:(msg.standings||[]).map((p,i)=>[`${['🥇','🥈','🥉','  '][i]||'  '} ${p.name}`,
       `$${fmt(p.pass)}/mo${p.won?' 🏆':''}`]),
@@ -8022,7 +8055,7 @@ function bcJoinerHandleGameOver(msg){
 
 // ── JOINER: activate my turn ─────────────────────────────
 function bcJoinerActivateMyTurn(){
-  $('mp-wait').style.display='none';
+  $('mp-wait').style.display='none';hideSpectateToken();
   const lobby=$('mp-lobby');if(lobby)lobby.style.display='none';
   G.rolling=false;_resumeFn=null;
   updateUI();mpUpdateStrip();
@@ -8033,8 +8066,20 @@ function bcJoinerActivateMyTurn(){
 function bcShowWaiting(playerName){
   const nameEl=$('mp-wait-name'),subEl=$('mp-wait-sub');
   if(nameEl)nameEl.textContent=playerName+"'s Turn";
-  if(subEl)subEl.textContent='"'+_mpRoomName+'" · Waiting for them to finish...';
+  if(subEl)subEl.textContent='"'+_mpRoomName+'" · Watching live...';
   bcRefreshWaitScores();
+  // Keep the GAME board on screen behind the HUD so the spectator watches live.
+  // (Earlier the blackout overlay hid everything.) Ensure the board is built and
+  // showing MY own state; the opponent rides the separate #spectate-token.
+  const gameScreen=$('game');
+  if(gameScreen&&!gameScreen.classList.contains('active')){
+    showScreen('game');buildBoard();if(G)placeToken(G.position||0,false);updateUI();forceFitBoard(3000);
+  }
+  // Park the active player's spectate token at their last known position
+  const act=PLAYERS[ACTIVE_PLAYER_IDX];
+  if(act&&act!==PLAYERS[_bcMyIdx]&&act.G){
+    placeSpectateToken(act.G.position||0,act.G.prof?.icon||'•',act.color);
+  }
   $('mp-wait').style.display='flex';
 }
 
@@ -8479,12 +8524,16 @@ function endTutorial(){
 <!-- ══ WAITING FOR TURN ══ -->
 <div id="mp-wait">
   <div class="mp-wait-inner">
-    <div class="mp-wait-spinner"></div>
-    <div class="mp-wait-name" id="mp-wait-name">Waiting...</div>
-    <div class="mp-wait-sub" id="mp-wait-sub">It's not your turn yet</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="mp-wait-spinner"></div>
+      <div style="text-align:left">
+        <div class="mp-wait-name" id="mp-wait-name">Waiting...</div>
+        <div class="mp-wait-sub" id="mp-wait-sub">It's not your turn yet</div>
+      </div>
+    </div>
     <div class="mp-wait-scores" id="mp-wait-scores"></div>
-    <div style="font-size:.64rem;color:rgba(200,175,120,.3);margin-top:16px">This screen will update automatically when it's your turn.</div>
-    <button onclick="mpLeaveRoom()" style="margin-top:14px;padding:8px 18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(200,175,120,.6);font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit">🚪 Leave Game</button>
+    <div style="font-size:.6rem;color:rgba(34,211,238,.6);margin-top:2px">👀 Watching the board live — your turn starts automatically</div>
+    <button onclick="mpLeaveRoom()" style="margin-top:4px;padding:5px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(200,175,120,.6);font-size:.64rem;font-weight:700;cursor:pointer;font-family:inherit">🚪 Leave Game</button>
   </div>
 </div>
 
