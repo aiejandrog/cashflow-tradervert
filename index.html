@@ -13,7 +13,14 @@
   --amb:#d97706; --teal:#1e5a6e; --brn:#7a4a1a; --red-d:#8b1a1a;
   --pink:#8a3060; --lime:#4a7a10; --navy:#2d4a7a;
   --txt:#2a1a04;
+  /* CSS fallback board scale by viewport height — keeps the board fitting even
+     before/without the JS fitBoard pass (prevents the unscaled-overflow board
+     on short laptop windows). JS overrides this inline once it measures. */
+  --board-scale:0.52;
 }
+@media (min-height:680px){:root{--board-scale:0.62}}
+@media (min-height:820px){:root{--board-scale:0.78}}
+@media (min-height:1000px){:root{--board-scale:0.92}}
 *{box-sizing:border-box;margin:0;padding:0}
 body{
   background:var(--wood);
@@ -7446,7 +7453,7 @@ function netRelay(msg){
 }
 function _setLobbyNetStatus(txt){
   const ph=$('mp-lobby-pass-hint');
-  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v8-speclock';
+  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v9-cssfit';
 }
 function peerHostStart(){
   _sbStart(_mpRoomName); // websocket relay — works even where P2P can't
@@ -7829,7 +7836,7 @@ function mpSubmitJoin(){
   const playerName=($('mp-join-name-inp')||{}).value?.trim()||'Guest';
   if(!roomName){_bcJoinStatus('Enter the room name.','#fb7185');return;}
   const btn=$('mp-join-btn');if(btn){btn.textContent='Connecting...';btn.disabled=true;}
-  _bcJoinStatus('Looking for room "'+roomName+'"... (v8-speclock)','rgba(34,211,238,.8)');
+  _bcJoinStatus('Looking for room "'+roomName+'"... (v9-cssfit)','rgba(34,211,238,.8)');
   if(_bc)_bc.close();
   _bc=new BroadcastChannel(_bcChannelName(roomName));
   _bcRole='joiner';_bcLobbyPhase=true;
