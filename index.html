@@ -887,6 +887,15 @@ body{
   #mp-wait-scores{flex-wrap:wrap;justify-content:center}
 }
 
+/* Fast Track board shake on disasters */
+@keyframes obShake{
+  0%,100%{transform:translate(0,0)}
+  20%{transform:translate(-8px,4px)}
+  40%{transform:translate(7px,-5px)}
+  60%{transform:translate(-6px,-3px)}
+  80%{transform:translate(5px,4px)}
+}
+
 /* ── ACCESSIBILITY ── */
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{
@@ -1418,6 +1427,10 @@ body{
               <div class="ob-stat-box"><div class="ob-stat-label">Surplus</div><div class="ob-stat-val" id="ob-surplus">$0/mo</div></div>
               <div class="ob-stat-box"><div class="ob-stat-label">Net Worth</div><div class="ob-stat-val" id="ob-networth">$0</div></div>
               <div class="ob-stat-box" style="grid-column:1/-1"><div class="ob-stat-label">Credit Score</div><div class="ob-stat-val" id="ob-credit">—</div></div>
+            </div>
+            <div style="display:flex;gap:12px;justify-content:center;margin:6px 0 2px">
+              <div class="die" id="ob-die-1" style="width:46px;height:46px">⚀</div>
+              <div class="die" id="ob-die-2" style="width:46px;height:46px">⚀</div>
             </div>
             <button class="ob-roll-btn" id="ob-roll-btn" onclick="obRoll()" style="max-width:270px;margin-top:2px;padding:10px">🎲 ROLL — FAST TRACK</button>
             <div style="display:flex;gap:5px;width:100%;max-width:270px">
@@ -5633,6 +5646,14 @@ function obUpdateStats(){
   const on=$('ob-networth');if(on)on.textContent=(netWorth>=0?'$':'-$')+fmt(Math.abs(netWorth));
   const os=$('ob-surplus');if(os){os.textContent=(surplus>=0?'+$':'-$')+fmt(Math.abs(surplus))+'/mo';os.style.color=surplus>=0?'#4caf50':'#ef5350';}
   const ocr=$('ob-credit');if(ocr){const tier=creditTier(G.creditScore||650);ocr.textContent=`${G.creditScore||650} · ${tier.label}`;ocr.style.color=G.creditScore>=720?'#4caf50':G.creditScore>=660?'#f0c040':'#ef5350';}
+  // Dream proximity — countdown builds tension as you close in
+  const di=OUTER_SPACES.findIndex(s=>s.type==='dream');
+  const badge=$('ob-dream-badge');
+  if(di>=0&&badge&&G.dream){
+    const dist=(di-(G._outerPos||0)+OUTER_SPACES.length)%OUTER_SPACES.length;
+    badge.innerHTML=`🎯 Dream: ${G.dream.icon} ${G.dream.name} · <span style="color:${dist<=6?'#f0c040':'rgba(255,255,255,.55)'};font-weight:900">${dist===0?'⭐ YOU\'RE HERE!':'⭐ '+dist+' space'+(dist!==1?'s':'')+' away'}</span>`;
+    badge.style.animation=dist>0&&dist<=6?'giftPulse .7s ease-in-out infinite alternate':'';
+  }
   checkMilestones(); // fire credit/net-worth milestone banners on outer board too
   saveGame(); // persist outer board state on every stat update
 }
@@ -5643,6 +5664,31 @@ function obAddLog(msg){
   line.textContent=msg;
   log.appendChild(line);
   log.scrollTop=log.scrollHeight;
+  // Juice: money outcomes float up over the panel; disasters shake the board
+  if(/CRASH|SETBACK|Setback/i.test(msg))obShake();
+  const m=String(msg).match(/([+\-])\$([\d,]+)/);
+  if(m&&typeof obFloat==='function')obFloat(m[1]+'$'+m[2],m[1]==='+'?'#6ee06e':'#ff6a6a');
+}
+
+// Floating outcome text over the Fast Track panel (uses the existing .flt floatUp anim)
+function obFloat(txt,color){
+  if(document.hidden)return;
+  const panel=$('ob-game-panel');if(!panel)return;
+  const r=panel.getBoundingClientRect();
+  const el=document.createElement('div');
+  el.className='flt';
+  el.style.left=(r.left+r.width/2)+'px';el.style.top=(r.top+70)+'px';
+  el.style.color=color||'#f0dc90';
+  el.style.cssText+=';transform:translateX(-50%);font-size:1.6rem;text-shadow:0 2px 14px rgba(0,0,0,.85);z-index:9500';
+  el.textContent=txt;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1600);
+}
+// Screen shake for disasters
+function obShake(){
+  const b=$('board-inner');if(!b||document.hidden)return;
+  b.style.animation='obShake .5s ease';
+  setTimeout(()=>{b.style.animation='';},550);
 }
 
 function obRoll(){
@@ -5650,9 +5696,28 @@ function obRoll(){
   const btn=$('ob-roll-btn');if(btn)btn.disabled=true;
   G._outerRolling=true;
   driftStocks(); // keep stock prices drifting on outer board too
-  const roll=Math.ceil(Math.random()*6)+Math.ceil(Math.random()*6);
-  obAddLog(`🎲 Rolled ${roll} — moving…`);
-  if(document.hidden){obMove(roll);}else{setTimeout(()=>obMove(roll),500);}
+  const v1=Math.ceil(Math.random()*6),v2=Math.ceil(Math.random()*6);
+  const roll=v1+v2;
+  const d1=$('ob-die-1'),d2=$('ob-die-2');
+  if(document.hidden||!d1||!d2){
+    obAddLog(`🎲 Rolled ${roll} — moving…`);obMove(roll);return;
+  }
+  // Animated dice tumble before the move — same feel as the inner board
+  d1.classList.add('roll');d2.classList.add('roll');
+  let ticks=0;
+  const tm=setInterval(()=>{
+    setDieVal(d1,Math.ceil(Math.random()*6));
+    setDieVal(d2,Math.ceil(Math.random()*6));
+    if(++ticks>=10){
+      clearInterval(tm);
+      d1.classList.remove('roll');d2.classList.remove('roll');
+      setDieVal(d1,v1);setDieVal(d2,v2);
+      d1.classList.add('land-glow');d2.classList.add('land-glow');
+      setTimeout(()=>{d1.classList.remove('land-glow');d2.classList.remove('land-glow');},500);
+      obAddLog(`🎲 Rolled ${roll} — moving…`);
+      setTimeout(()=>obMove(roll),250);
+    }
+  },70);
 }
 
 function obMove(steps){
@@ -5674,6 +5739,7 @@ function obMove(steps){
     }
     G._outerPos=(G._outerPos+1)%total;
     moved++;
+    playClick(); // audible tick per step — movement you can feel
     buildOuterBoard(); // rebuild outer ring after each step — guaranteed sync, no class drift
     saveGame(); // persist position after each step — crash-safe
     setTimeout(step,180);
