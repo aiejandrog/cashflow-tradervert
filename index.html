@@ -7359,7 +7359,7 @@ function netRelay(msg){
 }
 function _setLobbyNetStatus(txt){
   const ph=$('mp-lobby-pass-hint');
-  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v3-stable';
+  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v4-rejoin';
 }
 function peerHostStart(){
   _sbStart(_mpRoomName); // websocket relay — works even where P2P can't
@@ -7742,7 +7742,7 @@ function mpSubmitJoin(){
   const playerName=($('mp-join-name-inp')||{}).value?.trim()||'Guest';
   if(!roomName){_bcJoinStatus('Enter the room name.','#fb7185');return;}
   const btn=$('mp-join-btn');if(btn){btn.textContent='Connecting...';btn.disabled=true;}
-  _bcJoinStatus('Looking for room "'+roomName+'"... (v3-stable)','rgba(34,211,238,.8)');
+  _bcJoinStatus('Looking for room "'+roomName+'"... (v4-rejoin)','rgba(34,211,238,.8)');
   if(_bc)_bc.close();
   _bc=new BroadcastChannel(_bcChannelName(roomName));
   _bcRole='joiner';_bcLobbyPhase=true;
@@ -7821,9 +7821,24 @@ function bcJoinerHandleJoinResponse(msg){
     // Approved — now pick YOUR OWN profession/city/dream before entering the lobby
     mpJoinerPickProfile(msg);
   } else {
-    // Game already started — go straight to game
+    // Game already started — full restore, same sequence as resumeGame().
+    // The old slim path skipped lobbyPhase/dice/token restore and produced a
+    // half-initialized, mangled board for mid-game rejoiners.
+    _bcLobbyPhase=false; // CRITICAL: pings are gated on this — without it the host flags us "left" again
     mpStartJoinerPing(); // presence ping + host-loss watchdog
-    showScreen('game');buildBoard();updateUI();setTimeout(fitBoard,80);mpUpdateStrip();
+    if(G._outerBoard){
+      _launchOuterBoard(); // rejoiner was on the Fast Track — inner board would mangle
+    }else{
+      showScreen('game');buildBoard();placeToken(G.position||0,false);updateUI();
+      setDieVal($('die-1'),1);setDieVal($('die-2'),1);setDieVal($('die-3'),1);
+      const d3=$('die-3');if(d3)d3.style.display=expressMode?'':'none';
+      const badge=$('express-badge');if(badge)badge.style.display=expressMode?'':'none';
+      if(typeof syncDie2Lock==='function')syncDie2Lock();
+      // Safari can report a zero-size board area for a beat after the screen
+      // swap — refit a few times until the layout has truly settled
+      setTimeout(fitBoard,80);setTimeout(fitBoard,400);setTimeout(fitBoard,1200);
+    }
+    mpUpdateStrip();
     if(msg.activeIdx===_bcMyIdx){bcJoinerActivateMyTurn();}
     else{bcShowWaiting(PLAYERS[msg.activeIdx]?.name||'someone');}
   }
