@@ -5217,6 +5217,12 @@ function fsPayModal(liabKey){
   if(box){
     window._mboxSavedHTML=box.innerHTML;window._mboxSavedStyle=box.getAttribute('style')||'';
     box.innerHTML=html;box.style.maxWidth='360px';box.style.width='min(360px,92vw)';
+    // This modal's palette (white labels, neon red/green values) is designed for
+    // a DARK panel — on the default parchment everything washes out. Restore on close
+    // is automatic via _mboxSavedStyle.
+    box.style.background='linear-gradient(168deg,#241140 0%,#170b2e 100%)';
+    box.style.border='2px solid rgba(150,100,220,.45)';
+    box.style.boxShadow='0 14px 50px rgba(0,0,0,.7),0 0 30px rgba(107,63,168,.25)';
   }
   modal.classList.add('vis');$('modal-bg').classList.add('vis');
   requestAnimationFrame(()=>{makeDraggable(document.querySelector('.mbox'),document.querySelector('.mbox-band'));if(canPay)updatePayPreview(liabKey,cur,cash);});
