@@ -1118,9 +1118,9 @@ body{
 .mp-ho-scores{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px;width:100%}
 .mp-ho-score{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;font-size:.7rem;text-align:center;flex:1;min-width:70px}
 .mp-ho-score strong{display:block;font-size:.95rem;font-weight:900;color:#f0dc90}
-#mp-strip{display:none;gap:6px;align-items:center;padding:3px 10px;background:rgba(0,0,0,.2);overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.06)}
-.mp-pip{display:flex;align-items:center;gap:4px;padding:3px 7px;border-radius:20px;border:1.5px solid transparent;font-size:.62rem;font-weight:700;transition:all .2s;white-space:nowrap;opacity:.45;font-family:Arial,sans-serif}
-.mp-pip.active{opacity:1;border-color:currentColor}
+#mp-strip{display:none;gap:8px;align-items:center;padding:5px 12px;background:rgba(15,8,32,.55);overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;border-bottom:2px solid rgba(0,0,0,.3);box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.mp-pip{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1.5px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);font-size:.64rem;font-weight:700;transition:all .2s;white-space:nowrap;opacity:.5;font-family:Arial,sans-serif}
+.mp-pip.active{opacity:1;border-color:currentColor;background:rgba(255,255,255,.12);box-shadow:0 0 10px currentColor}
 .mp-pip-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
 /* ── MP ROOM SETUP MODAL ── */
 #mp-room-setup{position:fixed;inset:0;background:rgba(10,6,22,.96);z-index:9100;display:none;align-items:center;justify-content:center}
@@ -1358,7 +1358,7 @@ body{
     <div class="tb-space"></div>
     <div id="express-badge" style="display:none;background:#6040b0;border:1px solid #9060e0;border-radius:10px;padding:2px 9px;font-size:.62rem;font-weight:900;color:#e0c8ff;letter-spacing:1px;font-family:Arial,sans-serif">⚡ EXPRESS</div>
     <button class="btn-og btn-gold" onclick="toggleFS()" style="padding:6px 14px;font-size:.75rem;letter-spacing:.5px">📊 Financial Statement</button>
-    <div class="tb-btn" title="Sound">🔊</div>
+    <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
 
   <!-- Multiplayer player strip (hidden in solo mode) -->
@@ -2211,6 +2211,7 @@ function doSpin(){
     isSpinning=false;
     stage.classList.remove('go');
     // soft chime
+    if(!window._muted)
     try{const ctx=new AudioContext(),o=ctx.createOscillator(),g=ctx.createGain();
       o.connect(g);g.connect(ctx.destination);o.type='sine';
       o.frequency.setValueAtTime(880,ctx.currentTime);o.frequency.linearRampToValueAtTime(1047,ctx.currentTime+.12);
@@ -2351,13 +2352,39 @@ function flashSpace(pos){
 }
 
 // ── AUDIO ─────────────────────────────────────────────
+// ── SOUND SYSTEM ──────────────────────────────────────
+// One shared AudioContext (creating one per click leaks contexts and
+// trips browser autoplay limits) + a mute toggle persisted across sessions.
+window._muted=localStorage.getItem('cf_muted')==='1';
+let _audioCtx=null;
+function _ctx(){
+  if(window._muted)return null;
+  try{
+    if(!_audioCtx)_audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(_audioCtx.state==='suspended')_audioCtx.resume();
+    return _audioCtx;
+  }catch(e){return null;}
+}
+function toggleMute(){
+  window._muted=!window._muted;
+  localStorage.setItem('cf_muted',window._muted?'1':'0');
+  const b=$('btn-sound');
+  if(b){b.textContent=window._muted?'🔇':'🔊';b.style.opacity=window._muted?'.55':'1';}
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const b=$('btn-sound');
+  if(b&&window._muted){b.textContent='🔇';b.style.opacity='.55';}
+});
+
 function playClick(){
-  try{const ctx=new AudioContext(),buf=ctx.createBuffer(1,ctx.sampleRate*.04,ctx.sampleRate),data=buf.getChannelData(0);
+  const ctx=_ctx();if(!ctx)return;
+  try{const buf=ctx.createBuffer(1,ctx.sampleRate*.04,ctx.sampleRate),data=buf.getChannelData(0);
     for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/(ctx.sampleRate*.01));
     const src=ctx.createBufferSource();src.buffer=buf;const g=ctx.createGain();g.gain.value=.14;
     src.connect(g);g.connect(ctx.destination);src.start();}catch(e){}
 }
 function playLand(){
+  if(window._muted)return;
   try{const ctx=new AudioContext(),osc=ctx.createOscillator(),g=ctx.createGain();
     osc.connect(g);g.connect(ctx.destination);
     const sp=BOARD_SPACES[G.position];
@@ -5987,6 +6014,7 @@ function showMilestone(ico,title,msg){
   document.body.appendChild(el);
   requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('show')));
   setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),650);},4200);
+  if(!window._muted)
   try{const ctx=new AudioContext(),osc=ctx.createOscillator(),g=ctx.createGain();
     osc.connect(g);g.connect(ctx.destination);osc.type='sine';
     osc.frequency.setValueAtTime(659,ctx.currentTime);osc.frequency.setValueAtTime(880,ctx.currentTime+.12);osc.frequency.setValueAtTime(1047,ctx.currentTime+.24);
