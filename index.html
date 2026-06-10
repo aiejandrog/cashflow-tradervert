@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cashflow — Tradervert Edition</title>
+<title>Freedom Race — Tradervert Edition</title>
 <style>
 :root{
   --wood:#c4934a; --wood2:#a67c38; --parch:#e8d4a8; --parch2:#d4bc88; --parch-b:#b89864;
@@ -1256,8 +1256,8 @@ body{
           <rect x="194" y="26" width="26" height="12"/>
         </g>
       </svg>
-      <span class="logo-cash">CA$H</span>
-      <span class="logo-gear">FLOW</span>
+      <span class="logo-cash">FREEDOM</span>
+      <span class="logo-gear">RACE</span>
     </div>
     <div class="logo-sub">Tradervert Edition</div>
   </div>
@@ -1384,7 +1384,7 @@ body{
             <div id="board-spaces"></div>
             <div id="player-token"></div>
             <div id="board-center">
-              <div class="bc-logo"><span class="bc-cash">CA$H</span><span class="bc-flow">FLOW</span></div>
+              <div class="bc-logo"><span class="bc-cash">FREEDOM</span><span class="bc-flow">RACE</span></div>
               <div id="dice-row">
                 <div class="die" id="die-1" onclick="rollDice()" style="cursor:pointer" title="Tap to roll">⚀</div>
                 <div class="die" id="die-2" onclick="toggleDie2()" style="cursor:pointer" title="Tap to toggle 2nd dice">⚀</div>
@@ -1604,7 +1604,7 @@ body{
     <div class="ecm-body">
       <div class="ecm-story" id="ecm-story"></div>
       <div class="ecm-tip" id="ecm-tip" style="display:none">
-        <div class="ecm-tip-lbl">Rich Dad says:</div>
+        <div class="ecm-tip-lbl">Your mentor says:</div>
         <div class="ecm-tip-txt" id="ecm-tip-txt"></div>
       </div>
       <div class="ecm-nums" id="ecm-nums"></div>
@@ -1726,7 +1726,7 @@ const PROFS = [
   { id:'police',    name:'Police Officer', icon:'👮', age:28, salary:3000,  taxes:530,  mortgage:500,  school:0,    car:100, cc:50,  retail:20, other:270,  children:0, ccDebt:3500,  carLoan:8000,  mortgage_d:40000,  schoolDebt:0,      savings:60,  desc:'No school debt. Passive income is real freedom.' },
   { id:'truck',     name:'Truck Driver',   icon:'🚛', age:30, salary:2900,  taxes:480,  mortgage:400,  school:0,    car:80,  cc:40,  retail:10, other:240,  children:0, ccDebt:2500,  carLoan:5000,  mortgage_d:30000,  schoolDebt:0,      savings:40,  desc:'Low overhead is your superpower. Small deals stack fast.' },
   { id:'secretary', name:'Secretary',      icon:'📋', age:24, salary:2500,  taxes:380,  mortgage:350,  school:0,    car:70,  cc:30,  retail:10, other:190,  children:0, ccDebt:2000,  carLoan:4000,  mortgage_d:25000,  schoolDebt:0,      savings:30,  desc:'One property can flip the entire game. Patience required.' },
-  { id:'janitor',   name:'Janitor',        icon:'🧹', age:23, salary:1600,  taxes:190,  mortgage:300,  school:0,    car:60,  cc:30,  retail:10, other:140,  children:0, ccDebt:2000,  carLoan:3000,  mortgage_d:20000,  schoolDebt:0,      savings:20,  desc:'Legend difficulty. Rich Dad himself started here. Every dollar counts.' },
+  { id:'janitor',   name:'Janitor',        icon:'🧹', age:23, salary:1600,  taxes:190,  mortgage:300,  school:0,    car:60,  cc:30,  retail:10, other:140,  children:0, ccDebt:2000,  carLoan:3000,  mortgage_d:20000,  schoolDebt:0,      savings:20,  desc:'Legend difficulty. Your mentor himself started here. Every dollar counts.' },
   // ── New professions ─────────────────────────────────────────────────────────
   { id:'electrician',name:'Electrician',    icon:'⚡', age:28, salary:5200,  taxes:980,  mortgage:750,  school:0,    car:180, cc:100, retail:30, other:420,  children:0, ccDebt:4500,  carLoan:10000, mortgage_d:72000,  schoolDebt:0,      savings:120, desc:'Trades money with no student debt. Every dollar not spent is a deal funded.' },
   { id:'chef',       name:'Head Chef',      icon:'👨‍🍳',age:30, salary:4800,  taxes:880,  mortgage:700,  school:0,    car:150, cc:120, retail:50, other:480,  children:0, ccDebt:6000,  carLoan:8000,  mortgage_d:65000,  schoolDebt:0,      savings:90,  desc:'High spend temptation. Build assets outside the industry you work in.' },
@@ -1756,14 +1756,14 @@ const BOARD_SPACES = [
   {type:'market',  label:'MARKET',         color:'#1e5a6e', icon:'📈'},
   {type:'baby',    label:'BABY',           color:'#8a3060', icon:'👶'},
   {type:'deal',    label:'SMALL\nDEAL',    color:'#3d7a34', icon:'🤝'},
-  {type:'tip',     label:'RICH\nDAD TIP',  color:'#2a5a3a', icon:'📖'},  // financial education
+  {type:'tip',     label:'MENTOR\nTIP',  color:'#2a5a3a', icon:'📖'},  // financial education
   {type:'payday',  label:'CASHFLOW\nDAY',  color:'#c97308', icon:'🌾'},  // payday #2
   {type:'deal',    label:'DEAL\nHUB',        color:'#1e5a1e', icon:'🏆'},
   {type:'lawsuit', label:'LAWSUIT',         color:'#6b1a1a', icon:'⚖️'},
   {type:'charity', label:'CHARITY',        color:'#4a7a10', icon:'❤️'},
   {type:'market',  label:'MARKET',         color:'#1e5a6e', icon:'📈'},
   {type:'deal',    label:'SMALL\nDEAL',    color:'#3d7a34', icon:'🤝'},
-  {type:'tip',     label:'RICH\nDAD TIP',  color:'#2a5a3a', icon:'📖'},  // financial education
+  {type:'tip',     label:'MENTOR\nTIP',  color:'#2a5a3a', icon:'📖'},  // financial education
   {type:'layoff',  label:'LAYOFF',         color:'#8b1a1a', icon:'💀'},
   {type:'payday',  label:'CASHFLOW\nDAY',  color:'#c97308', icon:'🌾'},  // payday #3
   {type:'deal',    label:'SMALL\nDEAL',    color:'#3d7a34', icon:'🤝'},
@@ -4056,10 +4056,10 @@ function showTipEvent(){
   const hasCF=monthlyCF()>0;
   const bonus=hasCF&&Math.random()<0.3?Math.round(monthlyCF()*0.5/50)*50:0;
   if(bonus>0){G.cash+=bonus;saveGame();} // persist bonus before card
-  showEventCard('tip','📖 Rich Dad Lesson',t.body,null,
+  showEventCard('tip','📖 Your mentor Lesson',t.body,null,
     bonus>0?[['Insight Bonus','+$'+fmt(bonus),'green'],['💡','Put it to work.','']]:null,
     [{label:bonus>0?'Bank it & move on':'Got it',cls:'btn-tan',fn:endTurn}]);
-  addLog('📖','Rich Dad: '+t.title+(bonus>0?` +$${fmt(bonus)} bonus`:''),'');
+  addLog('📖','Your mentor: '+t.title+(bonus>0?` +$${fmt(bonus)} bonus`:''),'');
 }
 
 // ── EVENT CARD ────────────────────────────────────────
@@ -5383,7 +5383,7 @@ function showToast(msg,bg,dur){
 function shareResult(txt,btnEl,fallbackLabel){
   const orig=btnEl?btnEl.textContent:null;
   if(navigator.share){
-    navigator.share({title:'CA$H FLOW — Tradervert Edition',text:txt,url:location.href}).catch(()=>{});
+    navigator.share({title:'FREEDOM RACE — Tradervert Edition',text:txt,url:location.href}).catch(()=>{});
   }else{
     navigator.clipboard.writeText(txt)
       .then(()=>{
@@ -5403,7 +5403,7 @@ function copyWinResults(e){
   const assetVal=G.assets.reduce((s,a)=>s+(a.totalCost||a.cost||0),0);
   const nw=G.cash+assetVal-totalLiabilities();
   const grade=getWinGrade(G.turn);
-  const txt=`🏆 CA$H FLOW — Tradervert Edition\n`+
+  const txt=`🏆 FREEDOM RACE — Tradervert Edition\n`+
     `${icon} ${dream} achieved in ${G.turn} turns! ${grade.rank} ${grade.label}\n`+
     `👤 ${G.prof?.name||'Trader'} · 🌆 ${(G.location||G.loc)?.name||'Miami'}\n`+
     `💰 Passive: $${fmt(pass)}/mo  |  Net Worth: $${fmt(nw)}\n`+
