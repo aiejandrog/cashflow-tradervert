@@ -2354,6 +2354,22 @@ function fitBoard(){
   const scale=Math.max(0.2,Math.min(1,availW/BOARD_PX,availH/BOARD_PX));
   document.documentElement.style.setProperty('--board-scale',scale.toFixed(4));
 }
+// Self-healing fit: hammers fitBoard on animation frames until the board-area
+// reports real dimensions, then a couple of settle passes. Safari can leave the
+// area at 0×0 for several frames after a screen swap (esp. mid-game rejoin),
+// which left the board unscaled (full 704px) and overflowing — this guarantees
+// the scale lands no matter how late the layout settles.
+function forceFitBoard(maxMs){
+  const deadline=performance.now()+(maxMs||3000);
+  let settled=0;
+  (function loop(){
+    const a=$('board-area');
+    const ok=a&&a.clientWidth>0&&a.clientHeight>0;
+    if(ok){fitBoard();settled++;}
+    if(settled<4&&performance.now()<deadline){requestAnimationFrame(loop);}
+    else{fitBoard();}
+  })();
+}
 window.addEventListener('resize',fitBoard);
 window.addEventListener('orientationchange',()=>setTimeout(fitBoard,150)); // phone rotation
 // ResizeObserver covers every path that reveals or reshapes the board area —
@@ -5438,7 +5454,7 @@ function replaySameProfession(){
   // Re-init with same profession + location, skip splash
   initGame(prof,loc);_prevCash=null;
   const bkOv=$('bankruptcy-overlay');if(bkOv)bkOv.style.display='none';
-  showScreen('game');buildBoard();placeToken(G.position,false);updateUI();setTimeout(fitBoard,80);
+  showScreen('game');buildBoard();placeToken(G.position,false);updateUI();forceFitBoard(3000);
   setDieVal($('die-1'),1);setDieVal($('die-2'),1);
   syncDie2Lock();
   addLog('🔄','New run — same profession. Beat your record!','gold');
@@ -5625,7 +5641,7 @@ function _launchOuterBoard(){
   const dream=G.dream||DREAMS[0];
   const badge=$('ob-dream-badge');if(badge)badge.textContent=`🎯 Dream: ${dream.icon} ${dream.name}`;
   obUpdateStats();
-  setTimeout(fitBoard,80); // ensure board scales correctly after transition
+  forceFitBoard(3000); // ensure board scales correctly after transition
   if(G._waivedNextPayday) obAddLog('🎫 Expenses waived on next Payday — enjoy it!');
   if(G._charityBonus) obAddLog('🎁 Charity bonus active — +50% CF on next Payday!');
 }
@@ -6832,7 +6848,7 @@ function startGame(prof,loc){
   initGame(prof,loc);_prevCash=null;
   // Hide bankruptcy overlay in case player is starting fresh after going bankrupt
   const bkOv=$('bankruptcy-overlay');if(bkOv)bkOv.style.display='none';
-  showScreen('game');buildBoard();updateUI();setTimeout(fitBoard,80);
+  showScreen('game');buildBoard();updateUI();forceFitBoard(3000);
   setDieVal($('die-1'),1);setDieVal($('die-2'),1);setDieVal($('die-3'),1);
   $('die-3').style.display='none';
   syncDie2Lock();
@@ -6962,7 +6978,7 @@ function resumeGame(){
     addLog('💾','Game resumed — Fast Track (Outer Board)','gold');
     return;
   }
-  showScreen('game');buildBoard();placeToken(G.position,false);updateUI();setTimeout(fitBoard,80);
+  showScreen('game');buildBoard();placeToken(G.position,false);updateUI();forceFitBoard(3000);
   setDieVal($('die-1'),1);setDieVal($('die-2'),1);setDieVal($('die-3'),1);
   $('die-3').style.display=expressMode?'':'none';
   const badge=$('express-badge');if(badge)badge.style.display=expressMode?'':'none';
@@ -7143,7 +7159,7 @@ function mpLaunchGame(){
   G=JSON.parse(JSON.stringify(PLAYERS[0].G));
   _prevCash=null;
   const bkOv=$('bankruptcy-overlay');if(bkOv)bkOv.style.display='none';
-  showScreen('game');buildBoard();updateUI();setTimeout(fitBoard,80);
+  showScreen('game');buildBoard();updateUI();forceFitBoard(3000);
   setDieVal($('die-1'),1);setDieVal($('die-2'),1);setDieVal($('die-3'),1);
   $('die-3').style.display='none';
   syncDie2Lock();
@@ -7174,7 +7190,7 @@ function mpAdvanceTurn(){
   G=JSON.parse(JSON.stringify(PLAYERS[nextIdx].G));
   _prevCash=null;
   saveGame(); // save AFTER advancing — resume will land on the right player
-  buildBoard();updateUI();setTimeout(fitBoard,80);
+  buildBoard();updateUI();forceFitBoard(3000);
   syncDie2Lock();
   mpUpdateStrip();
   scheduleCloseFS();
@@ -7359,7 +7375,7 @@ function netRelay(msg){
 }
 function _setLobbyNetStatus(txt){
   const ph=$('mp-lobby-pass-hint');
-  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v4-rejoin';
+  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v5-fit';
 }
 function peerHostStart(){
   _sbStart(_mpRoomName); // websocket relay — works even where P2P can't
@@ -7592,7 +7608,7 @@ function mpLobbyStartGame(){
   $('mp-lobby').style.display='none';
   ACTIVE_PLAYER_IDX=0;
   G=JSON.parse(JSON.stringify(PLAYERS[0].G));
-  buildBoard();updateUI();setTimeout(fitBoard,80);mpUpdateStrip();
+  buildBoard();updateUI();forceFitBoard(3000);mpUpdateStrip();
   setTimeout(()=>mpShowHandoff(),200);
   bcStartGameHeartbeat();
 }
@@ -7742,7 +7758,7 @@ function mpSubmitJoin(){
   const playerName=($('mp-join-name-inp')||{}).value?.trim()||'Guest';
   if(!roomName){_bcJoinStatus('Enter the room name.','#fb7185');return;}
   const btn=$('mp-join-btn');if(btn){btn.textContent='Connecting...';btn.disabled=true;}
-  _bcJoinStatus('Looking for room "'+roomName+'"... (v4-rejoin)','rgba(34,211,238,.8)');
+  _bcJoinStatus('Looking for room "'+roomName+'"... (v5-fit)','rgba(34,211,238,.8)');
   if(_bc)_bc.close();
   _bc=new BroadcastChannel(_bcChannelName(roomName));
   _bcRole='joiner';_bcLobbyPhase=true;
@@ -7834,9 +7850,9 @@ function bcJoinerHandleJoinResponse(msg){
       const d3=$('die-3');if(d3)d3.style.display=expressMode?'':'none';
       const badge=$('express-badge');if(badge)badge.style.display=expressMode?'':'none';
       if(typeof syncDie2Lock==='function')syncDie2Lock();
-      // Safari can report a zero-size board area for a beat after the screen
-      // swap — refit a few times until the layout has truly settled
-      setTimeout(fitBoard,80);setTimeout(fitBoard,400);setTimeout(fitBoard,1200);
+      // Safari can report a zero-size board area for several frames after the
+      // screen swap — self-healing loop fits the board the instant it's laid out
+      forceFitBoard(4000);
     }
     mpUpdateStrip();
     if(msg.activeIdx===_bcMyIdx){bcJoinerActivateMyTurn();}
@@ -7952,7 +7968,7 @@ function bcJoinerHandleGameStart(msg){
     G:i===_bcMyIdx?G:p.G}));
   ACTIVE_PLAYER_IDX=msg.activeIdx||0;
   const lobby=$('mp-lobby');if(lobby)lobby.style.display='none';
-  showScreen('game');buildBoard();updateUI();setTimeout(fitBoard,80);mpUpdateStrip();
+  showScreen('game');buildBoard();updateUI();forceFitBoard(3000);mpUpdateStrip();
   if(ACTIVE_PLAYER_IDX===_bcMyIdx){bcJoinerActivateMyTurn();}
   else{bcShowWaiting(PLAYERS[ACTIVE_PLAYER_IDX]?.name||'Host');}
 }
