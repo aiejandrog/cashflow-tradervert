@@ -1749,20 +1749,20 @@ const BOARD_SPACES = [
 const SMALL_DEALS = [
   { id:'s1', type:'re', name:'3BR/2BA House', cost:65000, down:5000, cf:150, story:'A foreclosing family needs out fast. The 3-bedroom cash flows $150/month after mortgage.', tip:'Cash flow is king. A house that puts $150/month in your pocket is an asset.' },
   { id:'s2', type:'re', name:'Duplex (2-Unit)', cost:55000, down:4500, cf:200, story:'A tired landlord lists a duplex. Both units rented. $4,500 gets you in, two checks start flowing.', tip:'The rich buy assets that produce income. Two tenants = two income streams from one decision.' },
-  { id:'s3', type:'re', name:'4-Plex Apartment', cost:89000, down:5000, cf:400, story:'Out-of-state investor needs to liquidate. 4-unit building, all occupied, $5,000 down.', tip:'Each unit is a separate income stream. 4-plexes are the first step into commercial real estate thinking.' },
+  { id:'s3', type:'re', name:'4-Plex Apartment', cost:89000, down:5000, cf:250, story:'Out-of-state investor needs to liquidate. 4-unit building, all occupied, $5,000 down.', tip:'Each unit is a separate income stream. 4-plexes are the first step into commercial real estate thinking.' },
   { id:'s4', type:'re', name:'Condo Unit', cost:42000, down:3500, cf:120, story:'A condo in a solid rental area. HOA handles maintenance. One tenant, $120/month coming in.', tip:'Low-maintenance real estate frees up your time. The goal is systems that generate income without your attention.' },
-  { id:'s5', type:'note', name:'Mortgage Note (8%)', cost:18000, down:1800, cf:300, story:'Someone needs cash now — sells you their mortgage note at a discount. $300/month for life of the loan.', tip:'Mortgage notes = you become the bank. No toilets, no tenants. Just a check while you sleep.' },
-  { id:'s6', type:'biz', name:'Car Wash (25%)', cost:15000, down:2000, cf:250, story:'A friend buying out a partner needs capital. $2,000 gets you 25% and $250/month in distributions.', tip:'You don\'t need to own 100% to earn 100% passively. Minority stakes in cash-flowing businesses are a powerful tool.' },
+  { id:'s5', type:'note', name:'Mortgage Note (8%)', cost:18000, down:1800, cf:90, story:'Someone needs cash now — sells you their mortgage note at a discount. $300/month for life of the loan.', tip:'Mortgage notes = you become the bank. No toilets, no tenants. Just a check while you sleep.' },
+  { id:'s6', type:'biz', name:'Car Wash (25%)', cost:15000, down:2000, cf:100, story:'A friend buying out a partner needs capital. $2,000 gets you 25% and $250/month in distributions.', tip:'You don\'t need to own 100% to earn 100% passively. Minority stakes in cash-flowing businesses are a powerful tool.' },
   { id:'s7', type:'stock', name:'GFI Corp — 100 shares', cost:20, shares:100, cf:0, priceLow:5, priceHigh:40, story:'Mid-cap company at $20/share. No dividends, but strong growth play.', tip:'Stocks are liquid but pay only on exit. No cash flow means you\'re speculating on price, not building income.' },
   { id:'s8', type:'stock', name:'MZ Shares — 200 shares', cost:10, shares:200, cf:0, priceLow:2, priceHigh:28, story:'Small-cap biotech at $10/share. High risk — if their FDA pipeline clears, this could double.', tip:'Never invest in anything you don\'t understand. Speculation without conviction is gambling with financial terms.' },
   { id:'s9', type:'re', name:'4BR/2BA House', cost:80000, down:5000, cf:175, story:'Larger family home in a working-class neighborhood. Higher rents, longer-term tenants.', tip:'Bigger properties attract more stable tenants. Stability has financial value beyond the numbers.' },
-  { id:'s10', type:'biz', name:'Laundromat (50%)', cost:20000, down:3000, cf:280, story:'Retiring partner sells you half his neighborhood laundromat. Coins drop whether you show up or not.', tip:'Cash businesses with repeat customers are printing machines. The wealthy own systems, not jobs.' },
-  { id:'s11', type:'stock', name:'PYP Dividend Fund', cost:8, shares:500, cf:60, priceLow:4, priceHigh:14, story:'Dividend-focused index fund at $8/share. Quarterly dividends auto-deposit — $60/month passive.', tip:'Dividend stocks bridge middle class and wealth. Liquid like stocks but pay like assets.' },
-  { id:'s12', type:'stock', name:'Utility REIT', cost:22, shares:200, cf:110, priceLow:12, priceHigh:34, story:'A REIT holding utility infrastructure. Required by law to distribute 90% of income. $110/month like clockwork.', tip:'REITs let you own real estate income without landlord headaches. Scale without sweat.' },
+  { id:'s10', type:'biz', name:'Laundromat (50%)', cost:20000, down:3000, cf:150, story:'Retiring partner sells you half his neighborhood laundromat. Coins drop whether you show up or not.', tip:'Cash businesses with repeat customers are printing machines. The wealthy own systems, not jobs.' },
+  { id:'s11', type:'stock', name:'PYP Dividend Fund', cost:8, shares:500, cf:30, priceLow:4, priceHigh:14, story:'Dividend-focused index fund at $8/share. Quarterly dividends auto-deposit — $60/month passive.', tip:'Dividend stocks bridge middle class and wealth. Liquid like stocks but pay like assets.' },
+  { id:'s12', type:'stock', name:'Utility REIT', cost:22, shares:200, cf:45, priceLow:12, priceHigh:34, story:'A REIT holding utility infrastructure. Required by law to distribute 90% of income. $110/month like clockwork.', tip:'REITs let you own real estate income without landlord headaches. Scale without sweat.' },
   // More RE/biz small deals
-  { id:'s13', type:'re', name:'Mobile Home Lot', cost:18000, down:2000, cf:180, story:'A landlord retiring from mobile home parks. Tenant owns their home, pays lot rent. $180/month, you own the land.', tip:'Land ownership with minimal landlord duties. Tenant maintains their structure — you collect rent on dirt.' },
-  { id:'s14', type:'re', name:'Airbnb Condo', cost:48000, down:4000, cf:320, story:'A downtown condo owner needs liquidity. Short-term rentals generate $320/month net after fees and occasional vacancies.', tip:'Airbnb properties cash flow higher but require more management. A property manager at 20% can make this passive.' },
-  { id:'s15', type:'biz', name:'Vending Route (3 machines)', cost:9000, down:1500, cf:220, story:'Route operator retiring. 3 machines placed in offices, averages $220/month. No employees, minimal time.', tip:'Vending machines are micro-businesses. Scale the route to 10 machines and you have a full income stream.' },
+  { id:'s13', type:'re', name:'Mobile Home Lot', cost:18000, down:2000, cf:100, story:'A landlord retiring from mobile home parks. Tenant owns their home, pays lot rent. $180/month, you own the land.', tip:'Land ownership with minimal landlord duties. Tenant maintains their structure — you collect rent on dirt.' },
+  { id:'s14', type:'re', name:'Airbnb Condo', cost:48000, down:4000, cf:200, story:'A downtown condo owner needs liquidity. Short-term rentals generate $320/month net after fees and occasional vacancies.', tip:'Airbnb properties cash flow higher but require more management. A property manager at 20% can make this passive.' },
+  { id:'s15', type:'biz', name:'Vending Route (3 machines)', cost:9000, down:1500, cf:75, story:'Route operator retiring. 3 machines placed in offices, averages $220/month. No employees, minimal time.', tip:'Vending machines are micro-businesses. Scale the route to 10 machines and you have a full income stream.' },
   { id:'s16', type:'note', name:'Tax Lien Certificate (12%)', cost:8000, down:8000, cf:80, story:'County auction. You buy the tax lien — owner has 2 years to redeem. If not, you could acquire the property. $80/month accruing.', tip:'Tax liens are secured by real property. 12% return guaranteed by law. The county is your enforcer.' },
   // ── Digital / Trader / Entrepreneur deals ───────────────────────────────────
   { id:'s17', type:'biz', name:'Prop Firm Funded Account', cost:14000, down:14000, cf:650, story:'You passed the evaluation. A prop firm funds you with $100k. After fees and risk parameters, your consistent 0.5%/month net pulls $650/month in distributed profits. No outside capital required after evaluation.', tip:'Funded accounts let you trade institutional size with limited personal risk. The edge: discipline, not prediction.' },
@@ -1773,27 +1773,27 @@ const SMALL_DEALS = [
   { id:'s22', type:'biz', name:'Affiliate Site (SEO)', cost:7000, down:7000, cf:310, story:'A 40-article niche review site ranking page 1 for 6 buying-intent keywords. Amazon Associates + one direct affiliate deal pays $310/month consistently.', tip:'SEO affiliate sites are slow to build and near-permanent once ranked. The traffic is free, the commissions are recurring.' },
   { id:'s23', type:'note', name:'Seller-Financed Note (10%)', cost:22000, down:22000, cf:350, story:'You seller-financed a small business sale. The buyer pays you $350/month for 8 years at 10%. You\'re the bank — no property, no tenants, just a wire transfer.', tip:'Seller financing lets you become the lender without a banking license. Secured against the business — buyer defaults, you get the business back.' },
   // Salary raise deals — boost active income, no capital required
-  { id:'r1', type:'raise', name:'Part-Time Consulting', cost:0, down:0, cf:500, story:'A firm needs your expertise 10 hours a week. $500/month added to your income — no capital required, just time.', tip:'Active income bridges gaps. Use the extra $500/month to fund your next passive deal faster.' },
-  { id:'r2', type:'raise', name:'Weekend Side Gig', cost:0, down:0, cf:300, story:'Driving nights and weekends adds $300/month. No capital — just hours. Every dollar of that goes into your next deal.', tip:'A side hustle buys options. One funded deal makes the hustle optional.' },
-  { id:'r3', type:'raise', name:'Promotion — Senior Role', cost:0, down:0, cf:800, story:'Your performance gets noticed. A promotion adds $800/month to your base. No investment — just results.', tip:'Earned raises compound fast — they permanently lower the bar on every deal you need.' },
+  { id:'r1', type:'raise', name:'Part-Time Consulting', cost:0, down:0, cf:250, story:'A firm needs your expertise 10 hours a week. $500/month added to your income — no capital required, just time.', tip:'Active income bridges gaps. Use the extra $500/month to fund your next passive deal faster.' },
+  { id:'r2', type:'raise', name:'Weekend Side Gig', cost:0, down:0, cf:150, story:'Driving nights and weekends adds $300/month. No capital — just hours. Every dollar of that goes into your next deal.', tip:'A side hustle buys options. One funded deal makes the hustle optional.' },
+  { id:'r3', type:'raise', name:'Promotion — Senior Role', cost:0, down:0, cf:400, story:'Your performance gets noticed. A promotion adds $800/month to your base. No investment — just results.', tip:'Earned raises compound fast — they permanently lower the bar on every deal you need.' },
 ];
 
 const BIG_DEALS = [
-  { id:'b1', type:'re', name:'8-Plex Apartment', cost:265000, down:20000, cf:1200, story:'Your attorney calls about an 8-unit building going to auction. Needs $20k down. All 8 occupied.', tip:'At $1,200/month, this single deal could cover rent for most people. One deal. Every month.' },
-  { id:'b2', type:'re', name:'12-Unit Apartment', cost:320000, down:35000, cf:1800, story:'12-unit complex in a stable neighborhood. Retiring owner. $35k down, $1,800/month CF.', tip:'12 units = 12 income streams. If one tenant leaves, 11 keep paying.' },
+  { id:'b1', type:'re', name:'8-Plex Apartment', cost:265000, down:20000, cf:1000, story:'Your attorney calls about an 8-unit building going to auction. Needs $20k down. All 8 occupied.', tip:'At $1,200/month, this single deal could cover rent for most people. One deal. Every month.' },
+  { id:'b2', type:'re', name:'12-Unit Apartment', cost:320000, down:35000, cf:1750, story:'12-unit complex in a stable neighborhood. Retiring owner. $35k down, $1,800/month CF.', tip:'12 units = 12 income streams. If one tenant leaves, 11 keep paying.' },
   { id:'b3', type:'re', name:'24-Unit Complex', cost:495000, down:65000, cf:3100, story:'Commercial broker brings you a 24-unit deal. $3,100/month would cover most people\'s total expenses.', tip:'A single deal of this size separates the rat race from freedom for most people.' },
-  { id:'b4', type:'biz', name:'Pizza Franchise', cost:300000, down:55000, cf:4000, story:'Established franchise location available. Systems, brand, customers — all in place. $4k/month.', tip:'Franchises sell proven systems. You\'re buying predictable cash flow, not a job.' },
-  { id:'b5', type:'biz', name:'Partner Business (50%)', cost:150000, down:25000, cf:2500, story:'Business owner needs capital partner. $25k for 50% equity, $2,500/month in distributions.', tip:'Partnerships let you buy into existing cash flow and expertise. The key is a clear operating agreement.' },
-  { id:'b6', type:'re', name:'Strip Mall (2 stores)', cost:400000, down:35000, cf:2800, story:'2-tenant strip mall, long-term commercial leases. Tenants handle maintenance. Stable CF.', tip:'Commercial leases run 5–10 years. Net leases mean tenants pay taxes and insurance too.' },
+  { id:'b4', type:'biz', name:'Pizza Franchise', cost:300000, down:55000, cf:2750, story:'Established franchise location available. Systems, brand, customers — all in place. $4k/month.', tip:'Franchises sell proven systems. You\'re buying predictable cash flow, not a job.' },
+  { id:'b5', type:'biz', name:'Partner Business (50%)', cost:150000, down:25000, cf:1250, story:'Business owner needs capital partner. $25k for 50% equity, $2,500/month in distributions.', tip:'Partnerships let you buy into existing cash flow and expertise. The key is a clear operating agreement.' },
+  { id:'b6', type:'re', name:'Strip Mall (2 stores)', cost:400000, down:35000, cf:1750, story:'2-tenant strip mall, long-term commercial leases. Tenants handle maintenance. Stable CF.', tip:'Commercial leases run 5–10 years. Net leases mean tenants pay taxes and insurance too.' },
   { id:'b7', type:'re', name:'6-Unit Apartment', cost:210000, down:22000, cf:950, story:'Bank-owned foreclosure. 6 units, 5 occupied. $950/month with one vacancy.', tip:'Bank-owned properties can be acquired below market. The discount is where profit is created.' },
-  { id:'b8', type:'re', name:'Self-Storage (60 units)', cost:380000, down:45000, cf:2400, story:'Climate-controlled storage facility, 90% occupied. No tenants — no toilets. Rolling doors and monthly deposits. $2,400/month net.', tip:'Self-storage is recession-proof. When people downsize they need storage. When they\'re flush, they buy stuff to store.' },
-  { id:'b9', type:'re', name:'Medical Office (NNN)', cost:520000, down:60000, cf:3200, story:'Specialist medical office on a 10-year triple-net lease. Tenant pays taxes, insurance, maintenance. $3,200/month shows up clean.', tip:'Triple-net leases mean zero landlord headaches. The tenant runs the building. You cash the check.' },
-  { id:'b10', type:'biz', name:'Car Wash Chain (3 sites)', cost:420000, down:55000, cf:3800, story:'Automated express wash, 3 locations, trained managers. Revenue is weather-sensitive but averages $3,800/month net of overhead.', tip:'Automated businesses are the closest thing to passive income. Systems replace employees. Owners collect.' },
-  { id:'b11', type:'note', name:'Mortgage Note Portfolio', cost:180000, down:18000, cf:2100, story:'Package of 12 performing mortgage notes. Seasoned borrowers, consistent payments. You\'re the bank on all 12 — $2,100/month flows in.', tip:'Note portfolios scale like stocks but pay like real estate. No management. No maintenance. Just monthly deposits.' },
+  { id:'b8', type:'re', name:'Self-Storage (60 units)', cost:380000, down:45000, cf:2250, story:'Climate-controlled storage facility, 90% occupied. No tenants — no toilets. Rolling doors and monthly deposits. $2,400/month net.', tip:'Self-storage is recession-proof. When people downsize they need storage. When they\'re flush, they buy stuff to store.' },
+  { id:'b9', type:'re', name:'Medical Office (NNN)', cost:520000, down:60000, cf:3000, story:'Specialist medical office on a 10-year triple-net lease. Tenant pays taxes, insurance, maintenance. $3,200/month shows up clean.', tip:'Triple-net leases mean zero landlord headaches. The tenant runs the building. You cash the check.' },
+  { id:'b10', type:'biz', name:'Car Wash Chain (3 sites)', cost:420000, down:55000, cf:2750, story:'Automated express wash, 3 locations, trained managers. Revenue is weather-sensitive but averages $3,800/month net of overhead.', tip:'Automated businesses are the closest thing to passive income. Systems replace employees. Owners collect.' },
+  { id:'b11', type:'note', name:'Mortgage Note Portfolio', cost:180000, down:18000, cf:900, story:'Package of 12 performing mortgage notes. Seasoned borrowers, consistent payments. You\'re the bank on all 12 — $2,100/month flows in.', tip:'Note portfolios scale like stocks but pay like real estate. No management. No maintenance. Just monthly deposits.' },
   // Land deals — DSCR-eligible via lease/tower/billboard income
   { id:'b12', type:'re', name:'Infill Lot w/ Ground Lease', cost:140000, down:18000, cf:900, isLand:true, story:'A developer needs land for a 12-unit build. You buy the infill lot and sign a 25-year ground lease — they build, you own the dirt forever. $900/month ground rent, no maintenance.', tip:'Ground leases separate ownership of land from structures. You keep the land — the most permanent store of value — and collect rent forever.' },
-  { id:'b13', type:'re', name:'Rural Acreage + Cell Tower Lease', cost:95000, down:12000, cf:1200, isLand:true, story:'40 acres outside the metro. A major carrier already has a tower with a 20-year lease paying $1,200/month. You buy the land, inherit the lease. No tenants, no toilets, just a check.', tip:'Cell tower leases are the closest thing to a bond backed by real estate. Carriers rarely break leases — coverage gaps cost billions.' },
-  { id:'b14', type:'re', name:'Industrial Land + Billboard', cost:175000, down:22000, cf:1600, isLand:true, story:'Corner lot on a major corridor. One billboard facing the highway pays $1,600/month net. A developer is already asking about optioning the land for $220k. You haven\'t returned the call.', tip:'Billboards on high-traffic land are a two-layer asset — billboard cash flow today, land appreciation always.' },
+  { id:'b13', type:'re', name:'Rural Acreage + Cell Tower Lease', cost:95000, down:12000, cf:600, isLand:true, story:'40 acres outside the metro. A major carrier already has a tower with a 20-year lease paying $1,200/month. You buy the land, inherit the lease. No tenants, no toilets, just a check.', tip:'Cell tower leases are the closest thing to a bond backed by real estate. Carriers rarely break leases — coverage gaps cost billions.' },
+  { id:'b14', type:'re', name:'Industrial Land + Billboard', cost:175000, down:22000, cf:1100, isLand:true, story:'Corner lot on a major corridor. One billboard facing the highway pays $1,600/month net. A developer is already asking about optioning the land for $220k. You haven\'t returned the call.', tip:'Billboards on high-traffic land are a two-layer asset — billboard cash flow today, land appreciation always.' },
 ];
 
 const DOODADS = [
@@ -3111,45 +3111,53 @@ function showStockDealEvent(deal){
   const owned=G.assets.filter(a=>a.id===deal.id&&a.type==='stock');
   if(owned.length>0){
     const cur=G._stockPrices[deal.id]||deal.cost;
-    const rise=0.15+Math.random()*0.20; // 15–35% pop
-    const newPx=Math.round(cur*(1+rise)*100)/100;
+    // Two-sided news event: 50% surge (+15–35%), 50% dip (−15–30%).
+    // (Was a guaranteed pop — a riskless money pump that broke game balance.)
+    const isUp=Math.random()<0.5;
+    const move=isUp?(0.15+Math.random()*0.20):-(0.15+Math.random()*0.15);
+    const newPx=Math.max(Math.round(deal.cost*0.15*100)/100,Math.round(cur*(1+move)*100)/100);
     G._stockPrices[deal.id]=newPx;
-    saveGame(); // persist price update before card — crash during card replays surge on reload
+    saveGame(); // persist price update before card — crash during card replays move on reload
     const totalShares=owned.reduce((s,a)=>s+(a.shares||0),0);
     const oldVal=Math.round(cur*totalShares);
     const newVal=Math.round(newPx*totalShares);
     const gain=newVal-oldVal;
+    const pct=Math.round(Math.abs(move)*100);
     _resumeFn=()=>showStockDealEvent(deal);
-    $('ecm-band').className='ecm-band opportunity';
-    $('ecm-band').textContent=`📈 ${deal.name} — Price Surge!`;
-    $('ecm-story').textContent=`${deal.name} just got a catalyst. The stock jumped ${Math.round(rise*100)}% — your position is now worth $${fmt(newVal)}.`;
-    $('ecm-tip-txt').textContent='Markets reward patience. You bought before the move — this is how wealth compounds.';
+    $('ecm-band').className='ecm-band '+(isUp?'opportunity':'setback');
+    $('ecm-band').textContent=isUp?`📈 ${deal.name} — Price Surge!`:`📉 ${deal.name} — Price Drop!`;
+    $('ecm-story').textContent=isUp
+      ?`${deal.name} just got a catalyst. The stock jumped ${pct}% — your position is now worth $${fmt(newVal)}.`
+      :`Bad news hit ${deal.name}. The stock fell ${pct}% — your position is now worth $${fmt(newVal)}.`;
+    $('ecm-tip-txt').textContent=isUp
+      ?'Markets reward patience. You bought before the move — this is how wealth compounds.'
+      :'Paper losses only become real when you sell. Panic selling locks them in — conviction (or dollar-cost averaging) is the play.';
     $('ecm-tip').style.display='';
     $('ecm-nums').style.display='';
     $('ecm-nums').innerHTML=`
       <div class="ec-num"><div class="nv">$${cur.toFixed(2)}</div><div class="nl">Was/Share</div></div>
-      <div class="ec-num"><div class="nv green">$${newPx.toFixed(2)}</div><div class="nl">Now/Share</div></div>
+      <div class="ec-num"><div class="nv ${isUp?'green':'red'}">$${newPx.toFixed(2)}</div><div class="nl">Now/Share</div></div>
       <div class="ec-num"><div class="nv">${fmt(totalShares)}</div><div class="nl">Shares Held</div></div>
-      <div class="ec-num"><div class="nv green">+$${fmt(gain)}</div><div class="nl">Unrealized Gain</div></div>`;
+      <div class="ec-num"><div class="nv ${gain>=0?'green':'red'}">${gain>=0?'+':'-'}$${fmt(Math.abs(gain))}</div><div class="nl">Unrealized ${gain>=0?'Gain':'Loss'}</div></div>`;
     const acts=$('ecm-acts');acts.innerHTML='';
     // Sell all button
-    const sellBtn=document.createElement('button');sellBtn.className='btn-og btn-gold';
+    const sellBtn=document.createElement('button');sellBtn.className='btn-og '+(isUp?'btn-gold':'btn-tan');
     sellBtn.textContent=`💰 Sell All — $${fmt(newVal)}`;
     sellBtn.onclick=()=>{
       closeEventCard();
       owned.forEach(a=>{G.cash+=Math.round(newPx*(a.shares||0));G.assets=G.assets.filter(x=>x.uid!==a.uid);});
       delete G._stockPrices[deal.id];
-      addLog('📈',`Sold ${deal.name} at $${newPx.toFixed(2)}/sh — $${fmt(newVal)} total (+$${fmt(gain)} gain)`,'gold');
+      addLog(isUp?'📈':'📉',`Sold ${deal.name} at $${newPx.toFixed(2)}/sh — $${fmt(newVal)} total (${gain>=0?'+':'-'}$${fmt(Math.abs(gain))})`,gain>=0?'gold':'b');
       updateUI();endTurn();
     };
-    // Hold / buy more button
-    const holdBtn=document.createElement('button');holdBtn.className='btn-og btn-tan';
-    holdBtn.textContent='📊 Hold & Buy More';
+    // Hold / buy more button (buying the dip is the smart play on drops)
+    const holdBtn=document.createElement('button');holdBtn.className='btn-og '+(isUp?'btn-tan':'btn-gold');
+    holdBtn.textContent=isUp?'📊 Hold & Buy More':'📊 Buy the Dip';
     holdBtn.onclick=()=>{closeEventCard();_stockDeal=deal;_stockQty=deal.shares;_renderStockModal();};
     // Pass button
     const passBtn=document.createElement('button');passBtn.className='btn-og btn-tan';
     passBtn.textContent='Hold — Do Nothing';
-    passBtn.onclick=()=>{closeEventCard();addLog('📈',`${deal.name} up ${Math.round(rise*100)}% — held`,'gold');endTurn();};
+    passBtn.onclick=()=>{closeEventCard();addLog(isUp?'📈':'📉',`${deal.name} ${isUp?'up':'down'} ${pct}% — held`,isUp?'gold':'');endTurn();};
     acts.appendChild(sellBtn);acts.appendChild(holdBtn);acts.appendChild(passBtn);
     $('event-modal').classList.add('vis');$('event-modal-bg').classList.add('vis');
     requestAnimationFrame(()=>makeDraggable(document.querySelector('.ecm'),document.querySelector('.ecm-band')));
@@ -4042,33 +4050,10 @@ function showTurnDialog(){
   roll.textContent='🎲  ROLL THE DICE';
   roll.onclick=()=>{_resumeFn=null;closeEvPopup();rollDice();};
   foot.appendChild(row);foot.appendChild(roll);
-  // Deal-of-the-Turn hint — count affordable deals
-  const _allDeals=[...SMALL_DEALS,...BIG_DEALS];
-  const _affordable=_allDeals.filter(d=>G.cash>=(d.down||d.cost||0)&&(d.down||d.cost||0)>0);
-  if(_affordable.length>0){
-    const hint=document.createElement('div');
-    hint.style.cssText='margin-top:7px;font-size:.62rem;color:rgba(255,210,120,.55);font-style:italic;font-family:Arial,sans-serif;text-align:center;cursor:pointer;padding:2px 4px;border-radius:6px;transition:color .15s';
-    hint.textContent=`💡 ${_affordable.length} deal${_affordable.length!==1?'s':''} within reach — $${fmt(G.cash)} cash`;
-    hint.onmouseenter=()=>hint.style.color='rgba(255,210,120,.9)';
-    hint.onmouseleave=()=>hint.style.color='rgba(255,210,120,.55)';
-    hint.onclick=()=>{closeEvPopup();showDealBrowser();};
-    foot.appendChild(hint);
-  }
 }
-function showDealBrowser(){
-  const _allDeals=[...SMALL_DEALS,...BIG_DEALS];
-  const _affordable=_allDeals.filter(d=>G.cash>=(d.down||d.cost||0)&&(d.down||d.cost||0)>0).slice(0,6);
-  const rows=_affordable.map(d=>[d.name,(d.down?'$'+fmt(d.down)+' down':'$'+fmt(d.cost||0))+(d.cf?' · +$'+fmt(d.cf)+'/mo':'')]);
-  openModal({band:'green',title:'💼 Deals You Can Afford',
-    desc:`$${fmt(G.cash)} cash · ${_affordable.length} deals within reach right now.`,
-    rows,
-    actions:[
-      {label:'Browse Small Deals',cls:'btn-gold',fn:()=>showDealEvent('small')},
-      {label:'Browse Big Deals',cls:'btn-tan',fn:()=>showDealEvent('big')},
-      {label:'Roll Instead',cls:'btn-tan',fn:()=>{G.rolling=false;rollDice();}},
-    ]
-  });
-}
+// showDealBrowser removed — it let players buy any affordable deal every turn
+// without landing on a deal space, bypassing the board's scarcity entirely.
+// Deals must come from the board (or events), like the real game.
 function closeEvPopup(){$('ev-popup').classList.remove('vis');$('ev-popup').classList.remove('minimized');}
 function toggleEvPopup(){
   const pop=$('ev-popup'),btn=$('ep-min-btn');
@@ -4086,7 +4071,7 @@ function driftStocks(){
     if(seen.has(a.id))return;seen.add(a.id);
     if(Math.random()>0.30)return;
     const cur=G._stockPrices[a.id]||a.cost;
-    const dir=Math.random()<0.55?1:-1; // slight upward bias
+    const dir=Math.random()<0.5?1:-1; // fair coin — no free upward drift; gains come from buying low
     const move=Math.round(cur*0.08*100)/100;
     const next=Math.max(Math.round(a.cost*0.15*100)/100, Math.round((cur+dir*move)*100)/100);
     G._stockPrices[a.id]=next;
