@@ -222,7 +222,7 @@ body{
 }
 
 /* ── GAME ── */
-#game{flex-direction:column;height:100vh;overflow:hidden;position:relative}
+#game{flex-direction:column;height:100vh;height:100dvh;overflow:hidden;position:relative}
 
 /* Top bar */
 #top-bar{
@@ -775,7 +775,7 @@ body{
 /* ── LOCATION SCREEN ─────────────────────────────────── */
 #location{
   flex-direction:column;align-items:center;justify-content:center;
-  height:100vh;overflow:hidden;padding:14px 16px;
+  height:100vh;height:100dvh;overflow:hidden;padding:14px 16px;
   background:
     radial-gradient(ellipse 90% 55% at 50% -5%, rgba(107,63,168,.5) 0%, transparent 65%),
     radial-gradient(ellipse 50% 35% at 85% 85%, rgba(0,120,200,.18) 0%, transparent 60%),
@@ -846,6 +846,12 @@ body{
   .loc-grid{grid-template-columns:repeat(3,1fr);gap:6px}
   .lc-icon{font-size:1.5rem}
   .lc-vibe{display:none}
+  /* Phone: keep the Continue buttons reachable — clamp the detail panel,
+     give the action buttons real touch-target height */
+  .loc-detail{max-height:74px;overflow-y:auto;font-size:.62rem}
+  #btn-loc-go,#btn-dream-go{min-height:46px;font-size:.85rem!important}
+  .dream-grid{max-height:38dvh;overflow-y:auto}
+  #dream-detail{max-height:90px;overflow-y:auto}
   #board-area{padding:4px;overflow:auto}
   /* board scaling handled dynamically by fitBoard() — no override needed */
   #board-area{height:calc(100vh - 50px - 48px);align-items:flex-start;padding-top:0}
@@ -2472,6 +2478,10 @@ function rollDice(){
     },550);
     $('roll-total').textContent=total;
     $('board-msg').textContent=`Moving ${total} space${total!==1?'s':''}...`;
+    // MP spectate: dice results stream to the waiting players
+    if(PLAYERS.length>1&&!_bcLobbyPhase&&_bcRole&&ACTIVE_PLAYER_IDX===_bcMyIdx){
+      try{netSend({type:'turn-event',icon:'🎲',txt:`rolled ${total}`,from:_bcMyIdx});}catch(e){}
+    }
     // Doubles = mystery box before moving (10-turn cooldown prevents spamming free properties)
     // Normal: v1===v2 (die-2 unlocked). Express: any two dice match
     const isDoubles=useExpress?(v1===v2||v2===v3||v1===v3):(!d2locked&&v1===v2);
@@ -6462,6 +6472,30 @@ function addLog(ico,txt,cls){
   row.innerHTML=`<span class="cl-i">${ico}</span><span class="cl-t">${txt}</span>`;
   const cont=$('cl-rows');cont.insertBefore(row,cont.firstChild);
   while(cont.children.length>40)cont.removeChild(cont.lastChild);
+  // MP spectate: the active player's log lines stream to everyone's waiting screen
+  if(PLAYERS.length>1&&!_bcLobbyPhase&&_bcRole&&ACTIVE_PLAYER_IDX===_bcMyIdx&&typeof netSend==='function'){
+    try{netSend({type:'turn-event',icon:ico,txt:String(txt).slice(0,120),from:_bcMyIdx});}catch(e){}
+  }
+}
+
+// Render a remote player's action on the waiting screen feed
+function _showTurnEvent(msg){
+  if(!msg||msg.from===_bcMyIdx)return;
+  const wait=$('mp-wait');if(!wait||wait.style.display!=='flex')return;
+  let feed=$('mp-wait-feed');
+  if(!feed){
+    feed=document.createElement('div');feed.id='mp-wait-feed';
+    feed.style.cssText='margin-top:14px;max-width:420px;width:92%;max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px';
+    const scores=$('mp-wait-scores');
+    if(scores&&scores.parentElement)scores.parentElement.insertBefore(feed,scores.nextSibling);
+    else wait.appendChild(feed);
+  }
+  const row=document.createElement('div');
+  row.style.cssText='font-size:.72rem;color:rgba(240,232,200,.85);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:5px 10px;font-family:Arial,sans-serif;animation:fadeIn .25s ease';
+  const who=PLAYERS[msg.from]?.name||'They';
+  row.innerHTML=`<span style="margin-right:5px">${msg.icon||'•'}</span><b style="color:#f0c020">${who}:</b> ${msg.txt||''}`;
+  feed.insertBefore(row,feed.firstChild);
+  while(feed.children.length>8)feed.removeChild(feed.lastChild);
 }
 
 // ── CHAT PANEL ────────────────────────────────────────
@@ -6919,7 +6953,8 @@ function mpAdvanceTurn(){
   const total=PLAYERS.length;
   let nextIdx=(ACTIVE_PLAYER_IDX+1)%total;
   let loops=0;
-  while(PLAYERS[nextIdx].won&&loops<total){nextIdx=(nextIdx+1)%total;loops++;}
+  // Skip players who won AND players who left the game
+  while((PLAYERS[nextIdx].won||PLAYERS[nextIdx]._left)&&loops<total){nextIdx=(nextIdx+1)%total;loops++;}
   // If everyone remaining has won, show final standings
   const activeCount=PLAYERS.filter(p=>!p.won).length;
   if(activeCount<=0){mpShowFinalResults();return;}
@@ -7072,6 +7107,13 @@ function _netRecv(msg){
 }
 function netSend(msg){
   msg._mid=_msgId();
+  _seenMids.add(msg._mid); // never re-process our own message if the host relays it back
+  try{if(_bc)_bc.postMessage(msg);}catch(e){}
+  _peerConns.forEach(c=>{try{if(c.open)c.send(msg);}catch(e){}});
+}
+// Forward a message verbatim (same _mid) — host uses this to relay one joiner's
+// turn events to the other joiners without creating echo loops
+function netRelay(msg){
   try{if(_bc)_bc.postMessage(msg);}catch(e){}
   _peerConns.forEach(c=>{try{if(c.open)c.send(msg);}catch(e){}});
 }
@@ -7290,7 +7332,33 @@ function bcStartGameHeartbeat(){
         pass:p.G?(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0):0,
         turn:p.G?p.G.turn||0:0,won:!!p.won})),
       activeIdx:ACTIVE_PLAYER_IDX,lobbyPhase:false});
+    bcHostCheckPresence();
   },3000);
+}
+
+// ── HOST: detect joiners who closed their tab / lost connection ──
+function bcHostCheckPresence(){
+  if(_bcRole!=='host')return;
+  window._lastPing=window._lastPing||{};
+  const now=Date.now();
+  for(let i=1;i<PLAYERS.length;i++){
+    if(!_bcJoinedSlots.has(i)||PLAYERS[i]._left||PLAYERS[i].won)continue;
+    if(window._lastPing[i]===undefined)window._lastPing[i]=now; // grace period from first check
+    if(now-window._lastPing[i]>15000){
+      PLAYERS[i]._left=true;
+      _bcJoinedSlots.delete(i);
+      addLog('🚪',PLAYERS[i].name+' left the game — their turns are skipped','b');
+      mpUpdateStrip();saveGame();
+      openModal({band:'gray',title:'🚪 '+PLAYERS[i].name+' Left',
+        desc:'They disconnected. Their turns are skipped from now on — if they come back and rejoin with the same name, they pick up right where they left off.',
+        rows:[],actions:[{label:'Continue',cls:'btn-gold',fn:()=>{closeModal();
+          // If it was the leaver's turn, rotation moves on without them
+          if(PLAYERS[ACTIVE_PLAYER_IDX]?._left){
+            G=JSON.parse(JSON.stringify(PLAYERS[ACTIVE_PLAYER_IDX].G));mpAdvanceTurn();
+          }
+        }}]});
+    }
+  }
 }
 
 // ── HOST: handle join request ───────────────────────────
@@ -7316,6 +7384,8 @@ function bcHostHandleJoinRequest(msg){
     return;
   }
   _bcJoinedSlots.add(slot);
+  if(PLAYERS[slot])PLAYERS[slot]._left=false; // rejoining clears any "left the game" mark
+  window._lastPing=window._lastPing||{};window._lastPing[slot]=Date.now();
   if(msg.playerName&&PLAYERS[slot])PLAYERS[slot].name=msg.playerName;
   netSend({type:'join-response',reqId:msg.reqId,approved:true,
     playerIdx:slot,playerName:PLAYERS[slot].name,playerColor:PLAYERS[slot].color,
@@ -7409,6 +7479,25 @@ function _bcJoinStatus(msg,color){
 // ── MESSAGE ROUTER ──────────────────────────────────────
 function bcHandleMessage(msg){
   if(!msg||!msg.type)return;
+  // Both roles: live spectator feed of the active player's actions
+  if(msg.type==='turn-event'){
+    _showTurnEvent(msg);
+    if(_bcRole==='host')netRelay(msg); // pass it on to the other joiners
+    return;
+  }
+  // Both roles: presence tracking
+  if(msg.type==='player-ping'){
+    if(_bcRole==='host'&&typeof msg.playerIdx==='number'){
+      window._lastPing=window._lastPing||{};
+      window._lastPing[msg.playerIdx]=Date.now();
+      // A "left" player whose pings resume is back (e.g. tab was suspended, not closed)
+      if(PLAYERS[msg.playerIdx]&&PLAYERS[msg.playerIdx]._left){
+        PLAYERS[msg.playerIdx]._left=false;_bcJoinedSlots.add(msg.playerIdx);
+        addLog('🔄',PLAYERS[msg.playerIdx].name+' reconnected!','gold');mpUpdateStrip();
+      }
+    }
+    return;
+  }
   if(_bcRole==='host'){
     if(msg.type==='join-request')bcHostHandleJoinRequest(msg);
     if(msg.type==='turn-done')bcHostHandleTurnDone(msg);
@@ -7443,10 +7532,38 @@ function bcJoinerHandleJoinResponse(msg){
     mpJoinerPickProfile(msg);
   } else {
     // Game already started — go straight to game
+    mpStartJoinerPing(); // presence ping + host-loss watchdog
     showScreen('game');buildBoard();updateUI();setTimeout(fitBoard,80);mpUpdateStrip();
     if(msg.activeIdx===_bcMyIdx){bcJoinerActivateMyTurn();}
     else{bcShowWaiting(PLAYERS[msg.activeIdx]?.name||'someone');}
   }
+}
+
+// ── JOINER: presence ping + host-loss watchdog ──────────
+function mpStartJoinerPing(){
+  clearInterval(window._joinerPingTimer);
+  window._lastHostBeat=Date.now();
+  window._hostLossWarned=false;
+  window._joinerPingTimer=setInterval(()=>{
+    if(_bcRole!=='joiner')return;
+    if(!_bcLobbyPhase)netSend({type:'player-ping',playerIdx:_bcMyIdx});
+    // Host heartbeats arrive every 3s — silence means the host tab is gone
+    const quiet=Date.now()-(window._lastHostBeat||Date.now());
+    const sub=$('mp-wait-sub');
+    if(quiet>20000&&sub){
+      sub.textContent='⚠ Host connection lost — waiting for them to come back...';
+      sub.style.color='#fb7185';
+    }
+    if(quiet>60000&&!window._hostLossWarned){
+      window._hostLossWarned=true;
+      openModal({band:'gray',title:'🚪 Host Left the Game',
+        desc:'No signal from the host for a minute. If they reopen the game, you can rejoin the room with your name — your progress is saved on their side.',
+        rows:[],actions:[
+          {label:'Keep Waiting',cls:'btn-tan',fn:()=>{window._hostLossWarned=false;closeModal();}},
+          {label:'Leave — New Game',cls:'btn-gold',fn:()=>{clearSave();location.reload();}}
+        ]});
+    }
+  },3000);
 }
 
 // ── JOINER: pick your own profile after approval ────────
@@ -7518,6 +7635,7 @@ function bcJoinerHandleLobbyUpdate(msg){
 function bcJoinerHandleGameStart(msg){
   _bcLobbyPhase=false;
   window._joinerProfileMode=false; // host started while we were still picking — placeholder hand applies
+  mpStartJoinerPing(); // presence ping + host-loss watchdog
   // Load my player's state from the start snapshot
   if(msg.players&&msg.players[_bcMyIdx]){
     const myPlayer=msg.players[_bcMyIdx];
@@ -7535,6 +7653,7 @@ function bcJoinerHandleGameStart(msg){
 // ── JOINER: turn-start broadcast ────────────────────────
 function bcJoinerHandleTurnStart(msg){
   if(!_bc||_bcRole!=='joiner')return;
+  window._lastHostBeat=Date.now();
   if(typeof msg.activeIdx!=='number'||msg.activeIdx<0||msg.activeIdx>=PLAYERS.length)return;
   // Already won — stay on the win screen; just track whose turn it is for the strip
   if(PLAYERS[_bcMyIdx]?.won){ACTIVE_PLAYER_IDX=msg.activeIdx;mpUpdateStrip();return;}
@@ -7552,6 +7671,10 @@ function bcJoinerHandleTurnStart(msg){
 // ── JOINER: alive heartbeat ──────────────────────────────
 function bcJoinerHandleAlive(msg){
   if(!_bc||_bcRole!=='joiner')return;
+  // Host is alive — reset the loss watchdog and clear any warning banner
+  window._lastHostBeat=Date.now();
+  const ws=$('mp-wait-sub');
+  if(ws&&ws.style.color==='rgb(251, 113, 133)'){ws.style.color='';ws.textContent='"'+_mpRoomName+'" · Waiting for them to finish...';}
   if(typeof msg.activeIdx==='number'&&msg.activeIdx>=0&&msg.activeIdx<PLAYERS.length)ACTIVE_PLAYER_IDX=msg.activeIdx;
   if(msg.slots)msg.slots.forEach(s=>{if(PLAYERS[s.idx])PLAYERS[s.idx].name=s.name;});
   // Sync other players' scoreboard data (joiner only holds stub G for non-self players)
