@@ -1198,6 +1198,7 @@ body{
 .mp-wait-inner{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:10px 18px 12px;max-width:440px;width:auto;margin:10px auto 0;pointer-events:auto;background:linear-gradient(180deg,rgba(18,11,34,.96),rgba(18,11,34,.88));border:1px solid rgba(34,211,238,.3);border-radius:0 0 16px 16px;box-shadow:0 8px 28px rgba(0,0,0,.5);backdrop-filter:blur(4px)}
 .mp-wait-spinner{width:26px;height:26px;border:3px solid rgba(34,211,238,.2);border-top-color:rgba(34,211,238,.85);border-radius:50%;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 4px 14px rgba(240,192,32,.45)}50%{transform:scale(1.05);box-shadow:0 6px 20px rgba(240,192,32,.7)}}
 .mp-wait-name{font-size:1.05rem;font-weight:900;color:#fff;font-family:Georgia,serif}
 .mp-wait-sub{font-size:.7rem;color:rgba(200,175,120,.65)}
 .mp-wait-scores{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:2px;width:100%}
@@ -1417,6 +1418,8 @@ body{
               <div id="roll-total"></div>
               <div id="board-msg">Roll the dice!</div>
               <div id="board-turn-bar" style="display:flex;gap:4px;justify-content:center;align-items:center;margin-top:2px;min-height:14px"></div>
+              <!-- Safety net: appears if a card flow fails to auto-advance the turn -->
+              <button id="finish-turn-btn" onclick="forceFinishTurn()" style="display:none;margin-top:6px;background:linear-gradient(135deg,#c8910c,#f0c020);border:none;border-radius:9px;padding:7px 16px;font-size:.72rem;font-weight:900;color:#1a0800;cursor:pointer;font-family:Georgia,serif;box-shadow:0 4px 14px rgba(240,192,32,.45);animation:pulse 1.4s ease-in-out infinite">✓ Finish My Turn</button>
               <div id="panic-bar">
                 <span id="panic-cash">$0</span>
                 <div id="panic-cf-wrap"><div id="panic-cf-bar" style="width:0%"></div></div>
@@ -4239,7 +4242,46 @@ function driftStocks(){
 }
 
 // ── END TURN ──────────────────────────────────────────
+// ── STUCK-TURN SAFETY NET ─────────────────────────────
+// Some card flows can fail to chain endTurn() (e.g. an overlay dismissed an odd
+// way), leaving the player "rolling" with no card on screen and no way forward.
+// This watchdog surfaces a visible "Finish My Turn" button once that state holds
+// for ~1.6s, so a turn can never hard-lock the game.
+function _anyTurnOverlayVisible(){
+  const ids=['event-modal','modal','mystery-overlay','escape-overlay','bankruptcy-overlay'];
+  return ids.some(id=>{const el=document.getElementById(id);return el&&(el.classList.contains('vis')||(el.style&&el.style.display&&el.style.display!=='none'&&getComputedStyle(el).display!=='none'));});
+}
+function _isMyActiveTurn(){
+  if(!G)return false;
+  if(PLAYERS.length<=1)return true;            // solo
+  if(_bcLobbyPhase)return false;
+  if(!_bcRole)return true;                       // local pass-and-play
+  return ACTIVE_PLAYER_IDX===_bcMyIdx;           // online: only the active player
+}
+let _stuckSince=0;
+function _checkStuckTurn(){
+  const btn=$('finish-turn-btn');if(!btn)return;
+  const gameActive=$('game')&&$('game').classList.contains('active');
+  // "Stuck" = my turn, mid-roll, but nothing on screen to act on
+  const stuck=gameActive&&_isMyActiveTurn()&&G&&G.rolling&&!_anyTurnOverlayVisible();
+  if(stuck){
+    if(!_stuckSince)_stuckSince=Date.now();
+    if(Date.now()-_stuckSince>1600)btn.style.display='';
+  }else{
+    _stuckSince=0;btn.style.display='none';
+  }
+}
+setInterval(_checkStuckTurn,500);
+// Manual escape hatch — resume the pending card if one exists, else end the turn
+function forceFinishTurn(){
+  const btn=$('finish-turn-btn');if(btn)btn.style.display='none';
+  _stuckSince=0;
+  if(G&&G.rolling&&_resumeFn){_resumeFn();return;} // re-open the card they lost
+  if(G&&G.rolling){endTurn();return;}              // genuinely orphaned — just end it
+}
+
 function endTurn(){
+  $('finish-turn-btn').style.display='none';_stuckSince=0; // turn is ending cleanly
   // Chained space event pending (milestone/tax card interrupted a landing) —
   // run the actual space now instead of ending the turn.
   if(window._chainAfterCard){const f=window._chainAfterCard;window._chainAfterCard=null;f();return;}
@@ -7400,7 +7442,7 @@ function netRelay(msg){
 }
 function _setLobbyNetStatus(txt){
   const ph=$('mp-lobby-pass-hint');
-  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v6b-spectate';
+  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v7-finishturn';
 }
 function peerHostStart(){
   _sbStart(_mpRoomName); // websocket relay — works even where P2P can't
@@ -7783,7 +7825,7 @@ function mpSubmitJoin(){
   const playerName=($('mp-join-name-inp')||{}).value?.trim()||'Guest';
   if(!roomName){_bcJoinStatus('Enter the room name.','#fb7185');return;}
   const btn=$('mp-join-btn');if(btn){btn.textContent='Connecting...';btn.disabled=true;}
-  _bcJoinStatus('Looking for room "'+roomName+'"... (v6b-spectate)','rgba(34,211,238,.8)');
+  _bcJoinStatus('Looking for room "'+roomName+'"... (v7-finishturn)','rgba(34,211,238,.8)');
   if(_bc)_bc.close();
   _bc=new BroadcastChannel(_bcChannelName(roomName));
   _bcRole='joiner';_bcLobbyPhase=true;
