@@ -6659,6 +6659,16 @@ function showScreen(id){
 
 // ── START GAME ────────────────────────────────────────
 function startGame(prof,loc){
+  // SOLO game — hard-reset any multiplayer state that leaked in from a loaded
+  // MP save (boot loads the save for the Resume button; starting fresh solo
+  // used to keep PLAYERS=2 and route turns through multiplayer logic)
+  PLAYERS=[];ACTIVE_PLAYER_IDX=0;_mpCount=1;_mpSetupIdx=0;_bcRole=null;_bcLobbyPhase=false;
+  try{clearInterval(_bcHeartbeatTimer);clearInterval(window._joinerPingTimer);}catch(e){}
+  try{if(_bc){_bc.close();_bc=null;}}catch(e){}
+  try{if(_peer){_peer.destroy();_peer=null;}}catch(e){}
+  const strip=$('mp-strip');if(strip)strip.style.display='none';
+  const lobby=$('mp-lobby');if(lobby)lobby.style.display='none';
+  const wait=$('mp-wait');if(wait)wait.style.display='none';
   initGame(prof,loc);_prevCash=null;
   // Hide bankruptcy overlay in case player is starting fresh after going bankrupt
   const bkOv=$('bankruptcy-overlay');if(bkOv)bkOv.style.display='none';
@@ -6799,6 +6809,7 @@ function resumeGame(){
   syncDie2Lock();
   mpUpdateStrip(); // show player strip if this was a multiplayer save
   if(PLAYERS.length>1){
+    _mpCount=PLAYERS.length; // splash boot forces 1 for fresh games — restore for a real MP resume
     // Host refresh recovery: re-open the room so joiners can reconnect by name —
     // without this, a reload left a dead room and forced a full re-setup.
     if(window._savedBcRole==='host'&&_mpRoomName){
@@ -7797,6 +7808,11 @@ if(loadSave()){
     note.textContent='— or spin below to start a new game —';
     if(spCard)spCard.appendChild(note);
   },100);
+  // The save was loaded only to power the Resume button. The SPLASH starts
+  // fresh: player-count buttons show "1", so the internals must match —
+  // otherwise spinning solo routes into multiplayer room setup.
+  // resumeGame() restores the count from PLAYERS when actually resuming.
+  _mpCount=1;
 }
 showScreen('splash');
 initSpinner();
