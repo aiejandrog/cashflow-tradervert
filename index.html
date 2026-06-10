@@ -1259,6 +1259,11 @@ body{
     <div class="sp-join-row">
       <button id="btn-join-room" onclick="mpOpenJoinModal()">🚪 Join Existing Room</button>
     </div>
+    <!-- Live public room directory — hidden until at least one room is active -->
+    <div id="room-browser" style="display:none;max-width:420px;margin:14px auto 0;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(240,192,32,.25);border-radius:12px">
+      <div style="font-size:.68rem;letter-spacing:2px;text-transform:uppercase;color:rgba(240,192,32,.8);font-weight:700;font-family:Arial,sans-serif;margin-bottom:8px;text-align:center">🌐 Active Rooms — tap to join</div>
+      <div id="room-browser-list"></div>
+    </div>
   </div>
   <div id="mp-setup-hdr"></div>
   <div class="rev-card" id="rev-card">
@@ -2036,13 +2041,15 @@ function initGame(prof, location) {
   const scaledProf={
     ...prof,
     salary:    r50(prof.salary * loc.sal),
-    taxes:     r10(prof.taxes  * loc.exp),
+    // taxes/retail/other carry a 0.85 factor — post-rebalance expense relief so
+    // paydays land meaningfully without re-touching every profession's numbers
+    taxes:     r10(prof.taxes  * loc.exp * 0.85),
     mortgage:  r10(prof.mortgage* loc.exp),
     school:    r10(prof.school * loc.exp),
     car:       r10(prof.car    * loc.exp),
     cc:        r10(prof.cc     * loc.exp),
-    retail:    r10(prof.retail * loc.exp),
-    other:     r10(prof.other  * loc.exp),
+    retail:    r10(prof.retail * loc.exp * 0.85),
+    other:     r10(prof.other  * loc.exp * 0.85),
     savings:   Math.round(prof.savings * loc.sal),
     mortgage_d:r1k(prof.mortgage_d * loc.re),
     carLoan:   r100(prof.carLoan   * loc.exp),
@@ -2390,6 +2397,7 @@ function rollDice(){
     return;
   }
   G.rolling=true;closeEvPopup();
+  updateUI(); // refresh HUD/FS to the latest player state on every roll
   // Cancel any still-running gift animation from a previous doubles roll
   if(window._giftTimer){clearTimeout(window._giftTimer);window._giftTimer=null;}
   $('board-msg').textContent='Rolling...';$('roll-total').textContent='';
@@ -2445,7 +2453,10 @@ function rollDice(){
     // Track consecutive doubles for Lucky Streak achievement
     if(isDoubles){G._doublesStreak=(G._doublesStreak||0)+1;}else{G._doublesStreak=0;}
     const doublesReady=isDoubles&&((G.turn||0)-(G._lastDoublesTurn||-999)>=10);
-    if(isDoubles){
+    if(isDoubles&&doublesReady){
+      // Show the gift ONLY when the mystery box will actually open.
+      // (It used to show on every doubles, then silently skip during the 10-turn
+      // cooldown — looked like the game ate your reward.)
       const giftDie=useExpress?(v1===v2?d2:v2===v3?d3:d2):d2;
       giftDie.innerHTML='<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:1.4rem;line-height:1">🎁</div>';
       giftDie.classList.add('die-gift');
@@ -2453,13 +2464,13 @@ function rollDice(){
         window._giftTimer=null;
         giftDie.classList.remove('die-gift');
         setDieVal(giftDie,useExpress?(v1===v2?v2:v2===v3?v3:v2):v2);
-        if(doublesReady){
-          G._lastDoublesTurn=G.turn||0;
-          showMysteryBox(total,()=>{playClick();moveTokenSteps(total,()=>onLand());});
-        }else{
-          playClick();moveTokenSteps(total,()=>onLand());
-        }
+        G._lastDoublesTurn=G.turn||0;
+        showMysteryBox(total,()=>{playClick();moveTokenSteps(total,()=>onLand());});
       },750);
+    } else if(isDoubles){
+      // Doubles on cooldown — acknowledge it, no fake gift
+      $('board-msg').textContent=`🎲 Doubles! Moving ${total}...`;
+      playClick();moveTokenSteps(total,()=>onLand());
     } else {
       playClick();moveTokenSteps(total,()=>onLand());
     }
@@ -2582,10 +2593,11 @@ function triggerSpace(sp){
   saveGame();
   // Tenant events fire every turn (silent if no properties)
   checkTenantEvents();
-  // Child lifecycle milestones checked every turn (fires and returns if milestone hits)
-  if(G.skipTurns===0&&checkChildMilestones()){updateUI();return;}
-  // Quarterly tax filing every 8 turns (once per board rotation)
-  if(G.turn>0&&G.turn%8===0&&G.skipTurns===0){showQuarterlyTax();return;}
+  // Child lifecycle milestones / quarterly tax used to REPLACE the landed space
+  // (land on BABY, see only the tax card, baby never fires — looked broken).
+  // Now they chain: interrupt card first, then the space you actually landed on.
+  if(G.skipTurns===0&&checkChildMilestones()){window._chainAfterCard=()=>dispatchSpace(sp);updateUI();return;}
+  if(G.turn>0&&G.turn%8===0&&G.skipTurns===0){window._chainAfterCard=()=>dispatchSpace(sp);showQuarterlyTax();return;}
   if(G.skipTurns>0){
     G.skipTurns--;
     const cf=monthlyCF();G.cash+=cf;
@@ -2600,6 +2612,10 @@ function triggerSpace(sp){
     }
     endTurn();return;
   }
+  dispatchSpace(sp);
+}
+
+function dispatchSpace(sp){
   switch(sp.type){
     case'payday':  onPayday();break;
     case'deal':    showDealChoice();break;
@@ -4080,6 +4096,9 @@ function driftStocks(){
 
 // ── END TURN ──────────────────────────────────────────
 function endTurn(){
+  // Chained space event pending (milestone/tax card interrupted a landing) —
+  // run the actual space now instead of ending the turn.
+  if(window._chainAfterCard){const f=window._chainAfterCard;window._chainAfterCard=null;f();return;}
   G.rolling=false;
   _resumeFn=null;
   driftStocks();
@@ -4843,18 +4862,23 @@ function borrow(amt){
 }
 
 function openPayLoan(){
-  const priorResume=_resumeFn;
+  // Preserve the ORIGINAL prior overlay across re-renders (each payment re-opens
+  // this modal with fresh numbers — without this, Cancel would loop back here)
+  const priorResume=window._payLoanPrior!==undefined?window._payLoanPrior:_resumeFn;
+  window._payLoanPrior=priorResume;
+  const _done=()=>{window._payLoanPrior=undefined;_resumeFn=priorResume;if(priorResume)priorResume();};
   const tier=creditTier(G.creditScore||650);
   const debts=[];
   if(G.bankLoan>0)debts.push({name:`Bank Loan (${Math.round(tier.rate*100)}% · ${tier.label})`,amt:G.bankLoan,key:'bank'});
   G.liabilities.forEach(l=>{if(l.amt>0)debts.push({name:l.name,amt:l.amt,key:l.name});});
   if(debts.length===0){
-    openModal({band:'green',title:'🎉 Debt Free!',desc:'No outstanding debt. Your entire paycheck is yours to invest.',rows:[],actions:[{label:'Keep Building',cls:'btn-gold',fn:()=>{_resumeFn=priorResume;if(priorResume)priorResume();}}]});return;
+    openModal({band:'green',title:'🎉 Debt Free!',desc:'No outstanding debt. Your entire paycheck is yours to invest.',rows:[],actions:[{label:'Keep Building',cls:'btn-gold',fn:_done}]});return;
   }
-  // Build targeted payoff actions for top 3 debts + general options
+  // Every payment action re-renders this modal so balances/cash are always current
+  const _pay=fn=>()=>{fn();openPayLoan();};
   const targeted=debts.slice(0,2).filter(d=>G.cash>=d.amt).map(d=>({
     label:`Clear ${d.name} — $${fmt(d.amt)}`,cls:'btn-gold',
-    fn:()=>payExactDebt(d.key,d.amt)
+    fn:_pay(()=>payExactDebt(d.key,d.amt))
   }));
   openModal({band:'blue',title:'💸 Pay Down Debt',
     desc:`Credit ${G.creditScore} (${tier.label}) · Cash: $${fmt(G.cash)}. ${targeted.length?'Exact payoff available:':'Keep chipping away — every cleared debt boosts your score.'}`,
@@ -4862,11 +4886,11 @@ function openPayLoan(){
     customInput:{label:'Custom ($)',min:100,max:G.cash,value:Math.min(500,Math.max(100,G.cash)),step:100},
     actions:[
       ...targeted,
-      {label:'Pay Custom ↵',cls:'btn-gold',fn:()=>payDebt(parseInt(($('mb-custom-inp')||{value:'0'}).value)||0)},
-      {label:'Pay $1k',cls:'btn-tan',fn:()=>payDebt(1000)},
-      {label:'Pay $5k',cls:'btn-tan',fn:()=>payDebt(5000)},
-      {label:'Pay All Cash',cls:'btn-tan',fn:()=>payDebt(G.cash)},
-      {label:'Cancel',cls:'btn-tan',fn:()=>{_resumeFn=priorResume;if(priorResume)priorResume();}}
+      {label:'Pay Custom ↵',cls:'btn-gold',fn:_pay(()=>payDebt(parseInt(($('mb-custom-inp')||{value:'0'}).value)||0))},
+      {label:'Pay $1k',cls:'btn-tan',fn:_pay(()=>payDebt(1000))},
+      {label:'Pay $5k',cls:'btn-tan',fn:_pay(()=>payDebt(5000))},
+      {label:'Pay All Cash',cls:'btn-tan',fn:_pay(()=>payDebt(G.cash))},
+      {label:'Done',cls:'btn-tan',fn:_done}
     ]
   });
 }
@@ -6594,7 +6618,7 @@ function loadSave(){
       _mpRoomName=s._mpRoomName||'Game Night';_mpRoomPass=s._mpRoomPass||'';_mpPlayerNames=s._mpPlayerNames||[];
     } else {PLAYERS=[];ACTIVE_PLAYER_IDX=0;_mpCount=1;_mpRoomName='Game Night';_mpRoomPass='';_mpPlayerNames=[];}
     // always reset mid-turn lock on load — closures don't survive serialization
-    G.rolling=false;_resumeFn=null;
+    G.rolling=false;_resumeFn=null;window._chainAfterCard=null;
     // back-compat: ensure new fields exist on old saves
     if(!G._stockPrices)G._stockPrices={};
     if(G.salaryBoost===undefined)G.salaryBoost=0;
@@ -6736,7 +6760,7 @@ function mpShowRoomSetup(){
       <div class="mp-rs-name-row">
         <div class="mp-rs-dot" style="background:${MP_COLORS[i]}"></div>
         <input class="mp-rs-inp" id="mp-rs-name-${i}" type="text"
-          placeholder="Player ${i+1}" maxlength="16"
+          placeholder="${i===0?'Your name':'Optional — they pick their name when joining'}" maxlength="16"
           value="${(_mpPlayerNames[i]||'').replace(/"/g,'&quot;')}"
           onkeydown="if(event.key==='Enter'){const nx=document.getElementById('mp-rs-name-${i+1}');if(nx)nx.focus();else mpConfirmRoomSetup();}">
       </div>`).join('');
@@ -7009,11 +7033,17 @@ function netSend(msg){
   try{if(_bc)_bc.postMessage(msg);}catch(e){}
   _peerConns.forEach(c=>{try{if(c.open)c.send(msg);}catch(e){}});
 }
+function _setLobbyNetStatus(txt){
+  const ph=$('mp-lobby-pass-hint');
+  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt;
+}
 function peerHostStart(){
-  if(typeof Peer==='undefined')return; // CDN unreachable — same-machine tabs still work
+  if(typeof Peer==='undefined'){_setLobbyNetStatus('⚠ Online play unavailable (network blocked) — same-WiFi tabs only');return;}
   try{if(_peer)_peer.destroy();}catch(e){}
   _peerConns=[];
   _peer=new Peer(_peerRoomId(_mpRoomName),{debug:0});
+  _peer.on('open',()=>{_setLobbyNetStatus('🌐 Online — friends can join from anywhere');window._peerOnline=true;});
+  _peer.on('disconnected',()=>{try{_peer.reconnect();}catch(e){}}); // broker dropped us — reconnect keeps the room joinable
   _peer.on('connection',conn=>{
     conn.on('open',()=>{if(!_peerConns.includes(conn))_peerConns.push(conn);});
     conn.on('data',d=>_netRecv(d));
@@ -7022,21 +7052,24 @@ function peerHostStart(){
   });
   _peer.on('error',err=>{
     if(err&&err.type==='unavailable-id'){
-      const ph=$('mp-lobby-pass-hint');
-      if(ph)ph.textContent='⚠ Room name already hosted online — pick a more unique name for remote play.';
+      _setLobbyNetStatus('⚠ Room name already hosted online — pick a more unique name.');
+    }else{
+      _setLobbyNetStatus('⚠ Online connection issue ('+(err&&err.type||'network')+') — same-WiFi tabs still work');
     }
-    // other errors (network, server down): local-tab play continues unaffected
   });
 }
 function peerJoinStart(roomName){
   if(typeof Peer==='undefined')return;
   try{if(_peer)_peer.destroy();}catch(e){}
   _peerConns=[];
-  _peer=new Peer({debug:0}); // auto-assigned id for the joiner
-  _peer.on('open',()=>{
+  let _attempts=0;
+  const _tryConnect=()=>{
+    if(!_bc||!_bc._pendingReqId)return; // already approved (local host answered)
+    _attempts++;
     const conn=_peer.connect(_peerRoomId(roomName),{reliable:true});
     conn.on('open',()=>{
       if(!_peerConns.includes(conn))_peerConns.push(conn);
+      _bcJoinStatus('Found the room online — requesting a seat...','rgba(34,211,238,.8)');
       // Re-send join-request over the remote pipe (no-op if a local host already approved us)
       if(_bc&&_bc._pendingReqId){
         conn.send({type:'join-request',reqId:_bc._pendingReqId,pass:_pendingJoinPass,playerName:_pendingJoinName,_mid:_msgId()});
@@ -7045,9 +7078,75 @@ function peerJoinStart(roomName){
     conn.on('data',d=>_netRecv(d));
     conn.on('close',()=>{_peerConns=_peerConns.filter(c=>c!==conn);});
     conn.on('error',()=>{_peerConns=_peerConns.filter(c=>c!==conn);});
+  };
+  _peer=new Peer({debug:0}); // auto-assigned id for the joiner
+  _peer.on('open',_tryConnect);
+  _peer.on('error',err=>{
+    // peer-unavailable = host not registered (yet). Retry — hosts often finish
+    // their lobby setup a few seconds after the joiner starts looking.
+    if(err&&err.type==='peer-unavailable'&&_attempts<3&&_bc&&_bc._pendingReqId){
+      _bcJoinStatus(`Room not online yet — retrying (${_attempts}/3)...`,'rgba(200,175,120,.8)');
+      setTimeout(_tryConnect,2500);
+    }
   });
-  _peer.on('error',()=>{}); // peer-unavailable means no online host — local BC may still answer
 }
+
+// ── PUBLIC ROOM DIRECTORY ────────────────────────────────
+// Lightweight shared registry (Supabase REST, anon key — public lobby data only:
+// room name, player count, lock icon). Degrades silently if unreachable.
+const ROOMS_URL='https://dddcfwbydgtxxwdsvsvt.supabase.co/rest/v1/cf_rooms';
+const ROOMS_KEY='sb_publishable_BbzeDgUG0HJK2OBekCh8uw_267aVBhQ';
+function _roomsHdrs(){return{'apikey':ROOMS_KEY,'Authorization':'Bearer '+ROOMS_KEY,'Content-Type':'application/json'};}
+let _roomsAnnounceTick=0;
+function roomsAnnounce(){
+  // Host heartbeat → directory (heartbeats run every 2-3s; throttle to ~1 per 10s)
+  if(_bcRole!=='host'||!_mpRoomName)return;
+  if(_roomsAnnounceTick++%5!==0)return;
+  fetch(ROOMS_URL+'?on_conflict=name',{method:'POST',
+    headers:{..._roomsHdrs(),'Prefer':'resolution=merge-duplicates'},
+    body:JSON.stringify({name:_mpRoomName,has_pass:!!_mpRoomPass,
+      players:_bcJoinedSlots.size,capacity:PLAYERS.length,
+      in_game:!_bcLobbyPhase,updated_at:new Date().toISOString()})
+  }).catch(()=>{});
+}
+async function roomsList(){
+  try{
+    const cutoff=new Date(Date.now()-30000).toISOString();
+    const r=await fetch(ROOMS_URL+'?updated_at=gt.'+encodeURIComponent(cutoff)+'&select=*&order=updated_at.desc&limit=8',{headers:_roomsHdrs()});
+    if(!r.ok)return[];
+    return await r.json();
+  }catch(e){return[];}
+}
+function refreshRoomBrowser(){
+  const box=$('room-browser'),list=$('room-browser-list');
+  if(!box||!list)return;
+  roomsList().then(rooms=>{
+    if(!rooms.length){box.style.display='none';return;}
+    box.style.display='';
+    list.innerHTML=rooms.map(r=>{
+      const safeName=String(r.name||'').replace(/[<>&"]/g,'');
+      const full=(r.players||0)>=(r.capacity||2);
+      return `<div onclick="joinRoomFromBrowser('${safeName.replace(/'/g,'')}',${r.has_pass?'true':'false'})"
+        style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:9px;cursor:pointer;margin-bottom:6px;opacity:${full?'.55':'1'}">
+        <span>${r.has_pass?'🔐':'🔓'}</span>
+        <span style="flex:1;font-weight:700;color:#f0e8c8;font-size:.85rem;text-align:left">${safeName}</span>
+        <span style="font-size:.68rem;color:rgba(200,175,120,.6)">${r.players||0}/${r.capacity||2} · ${full?'full':r.in_game?'in game':'lobby'}</span>
+      </div>`;
+    }).join('');
+  });
+}
+function joinRoomFromBrowser(name,hasPass){
+  mpOpenJoinModal();
+  setTimeout(()=>{
+    const r=$('mp-join-room-inp');if(r)r.value=name;
+    // Locked room → cursor on password; open room → straight to player name
+    const tgt=hasPass?$('mp-join-pass-inp'):$('mp-join-name-inp');
+    if(tgt)tgt.focus();
+  },140);
+}
+// Poll the directory while the splash screen is up
+setInterval(()=>{const s=document.querySelector('.screen.active');if(s&&s.id==='splash')refreshRoomBrowser();},10000);
+document.addEventListener('DOMContentLoaded',()=>setTimeout(refreshRoomBrowser,500));
 
 // ── HOST ────────────────────────────────────────────────
 function bcHostStart(){
@@ -7065,6 +7164,7 @@ function bcHostStart(){
 
 function bcHostBroadcastLobby(){
   if(!_bc||_bcRole!=='host')return;
+  roomsAnnounce(); // keep the public room directory fresh
   netSend({type:'lobby-update',
     roomName:_mpRoomName,
     lobbyPhase:_bcLobbyPhase,
@@ -7136,6 +7236,7 @@ function mpLobbyStartGame(){
   setTimeout(()=>mpShowHandoff(),200);
   // Restart heartbeat as game-alive
   _bcHeartbeatTimer=setInterval(()=>{
+    roomsAnnounce(); // directory shows "in game" status while playing
     if(_bc&&_bcRole==='host')netSend({type:'room-alive',
       slots:PLAYERS.map((p,i)=>({name:p.name,color:p.color,idx:i,joined:_bcJoinedSlots.has(i)})),
       scores:PLAYERS.map(p=>({cash:p.G?p.G.cash||0:0,
