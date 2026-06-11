@@ -1344,6 +1344,35 @@ body{
   </div>
 </div>
 
+<!-- ══ CHARACTER (BitLife-style identity) ══ -->
+<div id="character" class="screen">
+  <div class="loc-wrap" style="max-width:560px">
+    <div class="loc-title">🪪 Create Your Character</div>
+    <div class="loc-sub">Who are you in this life? Pick your look, name, and starting age.</div>
+    <div style="flex:1;overflow-y:auto;min-height:0;padding:4px 2px">
+      <div style="font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(240,192,32,.85);font-weight:800;font-family:Arial,sans-serif;margin:6px 0 6px">Your Look</div>
+      <div id="char-avatar-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>
+      <div style="font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(240,192,32,.85);font-weight:800;font-family:Arial,sans-serif;margin:14px 0 6px">Your Name</div>
+      <input id="char-name" type="text" maxlength="16" placeholder="Your name" autocomplete="off"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1.5px solid rgba(240,192,32,.35);border-radius:10px;padding:10px 12px;color:#f0dc90;font-family:Georgia,serif;font-size:1rem;font-weight:700;outline:none">
+      <div style="font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(240,192,32,.85);font-weight:800;font-family:Arial,sans-serif;margin:14px 0 6px">Starting Age <span style="opacity:.5;text-transform:none;letter-spacing:0">(18–40)</span></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <input id="char-age" type="range" min="18" max="40" value="25" style="flex:1;accent-color:#f0c020">
+        <div id="char-age-val" style="font-size:1.5rem;font-weight:900;color:#f0dc90;font-family:Georgia,serif;min-width:46px;text-align:center">25</div>
+        <button class="btn-og btn-tan" onclick="charRandomize()" style="padding:8px 14px;border-radius:8px;font-size:.78rem">🎲 Randomize</button>
+      </div>
+      <div id="char-preview" style="margin-top:14px;display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.04);border:1px solid rgba(240,192,32,.25);border-radius:12px;padding:10px 14px">
+        <div id="char-prev-av" style="font-size:2.6rem;line-height:1">🧑🏽</div>
+        <div style="flex:1">
+          <div id="char-prev-name" style="font-size:.92rem;font-weight:900;color:#f0dc90;font-family:Georgia,serif">Your Name</div>
+          <div id="char-prev-sub" style="font-size:.7rem;color:rgba(200,175,120,.65);font-style:italic">Age 25 · Pick your look above</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-og btn-gold" id="btn-char-go" style="margin-top:10px;font-size:.9rem;padding:10px;border-radius:8px">Where Do You Live? →</button>
+  </div>
+</div>
+
 <!-- ══ LOCATION ══ -->
 <div id="location" class="screen">
   <div class="loc-wrap">
@@ -1393,6 +1422,7 @@ body{
         <div class="pc-status" id="pc-status">Taking Turn</div>
       </div>
     </div>
+    <div id="year-age-chip" title="Year · Age" style="display:flex;align-items:center;background:#2a3d5e;border:2px solid #4a6a96;border-radius:18px;padding:5px 12px;flex-shrink:0;font-size:.68rem;font-weight:900;font-family:Georgia,serif;color:#c8ddf0">Yr 1 · Age 25</div>
     <div id="credit-chip" title="Credit Score" style="display:none;align-items:center;gap:6px;background:#3d2a5e;border:2px solid #6a4a96;border-radius:18px;padding:5px 12px;flex-shrink:0">
       <span style="font-size:.85rem;line-height:1">💳</span>
       <span style="display:flex;flex-direction:column;line-height:1.15">
@@ -1402,7 +1432,7 @@ body{
     </div>
     <div class="tb-space"></div>
     <div id="express-badge" style="display:none;background:#6040b0;border:1px solid #9060e0;border-radius:10px;padding:2px 9px;font-size:.62rem;font-weight:900;color:#e0c8ff;letter-spacing:1px;font-family:Arial,sans-serif">⚡ EXPRESS</div>
-    <button class="btn-og btn-gold" onclick="toggleFS()" style="padding:6px 14px;font-size:.75rem;letter-spacing:.5px">📊 Financial Statement</button>
+    <button class="btn-og btn-gold" onclick="toggleFS()" style="padding:6px 14px;font-size:.75rem;letter-spacing:.5px">🪪 Life Hub</button>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
 
@@ -1514,8 +1544,32 @@ body{
 
 <!-- ══ FS PANEL — lives outside .screen so it works on inner AND outer board ══ -->
 <div id="fs-panel" class="fs-hidden" onmouseenter="openFS()" onmouseleave="scheduleCloseFS()">
-  <div id="fs-tab" onclick="toggleFS()">Financial<br>Statement</div>
+  <div id="fs-tab" onclick="toggleFS()">🪪 Life<br>Hub</div>
   <div id="fs-inner">
+
+    <!-- Life Hub profile header (v11 life-sim layer) -->
+    <div id="lh-profile" style="grid-column:1/3;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(45,74,122,.14),rgba(107,63,168,.10));border:1px solid rgba(107,63,168,.25);border-radius:10px;padding:8px 12px;margin:2px 2px 0">
+      <div id="lh-avatar" style="font-size:2.4rem;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.3))">🧑🏽</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+          <span id="lh-name" style="font-size:.92rem;font-weight:900;font-family:Georgia,serif;color:var(--txt)">Player</span>
+          <span id="lh-sub" style="font-size:.62rem;color:#6b5535;font-style:italic">Age 25 · Year 1</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:3px">
+          <span id="lh-car-chip" style="font-size:.58rem;background:rgba(45,74,122,.12);border:1px solid rgba(45,74,122,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#2d4a7a">🚙 Beater</span>
+          <span id="lh-credit-chip" style="font-size:.58rem;background:rgba(107,63,168,.12);border:1px solid rgba(107,63,168,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#6b3fa8">💳 —</span>
+          <span id="lh-delinq-chip" style="display:none;font-size:.58rem;background:rgba(180,30,30,.15);border:1px solid rgba(180,30,30,.4);border-radius:10px;padding:1px 8px;font-weight:900;color:#8b1a1a">🚨 DELINQUENT</span>
+          <span onclick="openCarDealership(false)" style="cursor:pointer;font-size:.58rem;background:rgba(200,145,12,.14);border:1px solid rgba(200,145,12,.4);border-radius:10px;padding:1px 8px;font-weight:800;color:#9a6e08">🚗 Dealership</span>
+        </div>
+      </div>
+      <div id="lh-kids" style="display:flex;gap:5px;flex-wrap:wrap;max-width:200px;justify-content:flex-end"></div>
+    </div>
+
+    <!-- Loans with due dates -->
+    <div id="lh-loans-wrap" style="grid-column:1/3;padding:0 4px;display:none">
+      <div class="fsh">🏦 Loans & Due Dates</div>
+      <div class="fst" id="lh-loans"></div>
+    </div>
 
     <!-- Income -->
     <div style="grid-column:1;padding:4px 4px 0">
@@ -1539,6 +1593,7 @@ body{
         <div class="fsr"><span class="fl">Taxes:</span><span class="fv r" id="fs-taxes">$0</span></div>
         <div class="fsr"><span class="fl" id="fs-mort-lbl">Home Mortgage Payment:</span><span class="fv r" id="fs-mortgage">$0</span></div>
         <div class="fsr"><span class="fl">Car Loan Payment:</span><span class="fv r" id="fs-car">$0</span></div>
+        <div class="fsr" id="fs-ins-row" style="display:none"><span class="fl">Car Insurance:</span><span class="fv r" id="fs-insurance">$0</span></div>
         <div class="fsr" id="fs-school-row"><span class="fl" id="fs-school-lbl">School Loan Payment:</span><span class="fv r" id="fs-school">—</span></div>
         <div class="fsr"><span class="fl">Credit Card Payment:</span><span class="fv r" id="fs-cc">$0</span></div>
         <div class="fsr"><span class="fl">Retail Payment:</span><span class="fv r" id="fs-retail">$0</span></div>
@@ -1799,30 +1854,39 @@ const PROFS = [
 ];
 
 const BOARD_SPACES = [
+  // v11 life-sim board — 32 spaces, 4 paydays, new life systems woven in.
+  // getBXY()/fitBoard() position+scale by array length, so the ring auto-adapts.
   {type:'start',   label:'START',          color:'#2d4a7a', icon:'🏁'},  // player spawns here
   {type:'payday',  label:'CASHFLOW\nDAY',  color:'#c97308', icon:'🌾'},  // payday #1
   {type:'deal',    label:'SMALL\nDEAL',    color:'#3d7a34', icon:'🤝'},
   {type:'doodad',  label:'DOODAD',         color:'#7a4a1a', icon:'🛍️'},
+  {type:'dealer',  label:'CAR\nDEALER',    color:'#1a4a7a', icon:'🚗'},  // car catalog + financing
   {type:'deal',    label:'SMALL\nDEAL',    color:'#3d7a34', icon:'🤝'},
   {type:'market',  label:'MARKET',         color:'#1e5a6e', icon:'📈'},
   {type:'baby',    label:'BABY',           color:'#8a3060', icon:'👶'},
   {type:'deal',    label:'SMALL\nDEAL',    color:'#3d7a34', icon:'🤝'},
-  {type:'tip',     label:'MENTOR\nTIP',  color:'#2a5a3a', icon:'📖'},  // financial education
+  {type:'tip',     label:'MENTOR\nTIP',    color:'#2a5a3a', icon:'📖'},  // financial education
   {type:'payday',  label:'CASHFLOW\nDAY',  color:'#c97308', icon:'🌾'},  // payday #2
-  {type:'deal',    label:'DEAL\nHUB',        color:'#1e5a1e', icon:'🏆'},
-  {type:'lawsuit', label:'LAWSUIT',         color:'#6b1a1a', icon:'⚖️'},
+  {type:'credit',  label:'CREDIT\nBUREAU', color:'#5e2a8a', icon:'💳'},  // credit score swing
+  {type:'deal',    label:'DEAL\nHUB',      color:'#1e5a1e', icon:'🏆'},
+  {type:'lawsuit', label:'LAWSUIT',        color:'#6b1a1a', icon:'⚖️'},
   {type:'charity', label:'CHARITY',        color:'#4a7a10', icon:'❤️'},
   {type:'market',  label:'MARKET',         color:'#1e5a6e', icon:'📈'},
   {type:'deal',    label:'SMALL\nDEAL',    color:'#3d7a34', icon:'🤝'},
-  {type:'tip',     label:'MENTOR\nTIP',  color:'#2a5a3a', icon:'📖'},  // financial education
-  {type:'layoff',  label:'LAYOFF',         color:'#8b1a1a', icon:'💀'},
+  {type:'lifeevent',label:'LIFE\nEVENT',   color:'#8a5030', icon:'🎲'},  // BitLife-style random life moment
+  {type:'tip',     label:'MENTOR\nTIP',    color:'#2a5a3a', icon:'📖'},
   {type:'payday',  label:'CASHFLOW\nDAY',  color:'#c97308', icon:'🌾'},  // payday #3
+  {type:'layoff',  label:'LAYOFF',         color:'#8b1a1a', icon:'💀'},
   {type:'deal',    label:'SMALL\nDEAL',    color:'#3d7a34', icon:'🤝'},
   {type:'audit',   label:'IRS\nAUDIT',     color:'#5a1a6e', icon:'🏛️'},
+  {type:'wildcard',label:'MYSTERY\nBOX',   color:'#7a106e', icon:'🎁'},  // mystery box on the ring
   {type:'recession',label:'RECESSION',     color:'#4a2200', icon:'📉'},
-  {type:'deal',    label:'DEAL\nHUB',        color:'#1e5a1e', icon:'🏆'},
+  {type:'deal',    label:'DEAL\nHUB',      color:'#1e5a1e', icon:'🏆'},
+  {type:'payday',  label:'CASHFLOW\nDAY',  color:'#c97308', icon:'🌾'},  // payday #4
   {type:'deal',    label:'SMALL\nDEAL',    color:'#3d7a34', icon:'🤝'},
+  {type:'doodad',  label:'DOODAD',         color:'#7a4a1a', icon:'🛍️'},
   {type:'crisis',  label:'CRISIS',         color:'#6b0000', icon:'🚨'},
+  {type:'charity', label:'CHARITY',        color:'#4a7a10', icon:'❤️'},
   {type:'baby',    label:'BABY',           color:'#8a3060', icon:'👶'},
 ];
 
@@ -1875,6 +1939,26 @@ const BIG_DEALS = [
   { id:'b13', type:'re', name:'Rural Acreage + Cell Tower Lease', cost:95000, down:12000, cf:600, isLand:true, story:'40 acres outside the metro. A major carrier already has a tower with a 20-year lease paying $1,200/month. You buy the land, inherit the lease. No tenants, no toilets, just a check.', tip:'Cell tower leases are the closest thing to a bond backed by real estate. Carriers rarely break leases — coverage gaps cost billions.' },
   { id:'b14', type:'re', name:'Industrial Land + Billboard', cost:175000, down:22000, cf:1100, isLand:true, story:'Corner lot on a major corridor. One billboard facing the highway pays $1,600/month net. A developer is already asking about optioning the land for $220k. You haven\'t returned the call.', tip:'Billboards on high-traffic land are a two-layer asset — billboard cash flow today, land appreciation always.' },
 ];
+
+// ── CAR CATALOG (entry → exotic, credit-gated financing) ──
+// minTier index: 0=Poor 1=Fair 2=Good 3=Very Good 4=Excellent — min tier required to FINANCE
+const CARS = [
+  { id:'civic',   name:'Honda Civic',        emoji:'🚗', price:24000,  segment:'Entry',   ins:120, minTier:0 },
+  { id:'camry',   name:'Toyota Camry',       emoji:'🚙', price:29000,  segment:'Entry',   ins:135, minTier:0 },
+  { id:'f150',    name:'Ford F-150',         emoji:'🛻', price:42000,  segment:'Mid',     ins:170, minTier:1 },
+  { id:'bmw3',    name:'BMW 3 Series',       emoji:'🏎️', price:48000,  segment:'Mid',     ins:220, minTier:2 },
+  { id:'tesla3',  name:'Tesla Model 3',      emoji:'⚡', price:46000,  segment:'Mid',     ins:200, minTier:2 },
+  { id:'rover',   name:'Range Rover Sport',  emoji:'🚐', price:92000,  segment:'Luxury',  ins:340, minTier:3 },
+  { id:'p911',    name:'Porsche 911',        emoji:'🏁', price:128000, segment:'Exotic',  ins:480, minTier:4 },
+  { id:'huracan', name:'Lamborghini Huracán',emoji:'🟡', price:265000, segment:'Exotic',  ins:900, minTier:4 },
+];
+const CAR_TIER_IDX={'Poor':0,'Fair':1,'Good':2,'Very Good':3,'Excellent':4};
+// Down-payment % by credit tier — better credit = less skin required
+const CAR_DOWN_PCT={'Poor':0.30,'Fair':0.20,'Good':0.15,'Very Good':0.10,'Excellent':0.05};
+function carMonthlyPmt(principal,apr,months){ // standard amortization
+  const r=apr/12;
+  return Math.round(principal*r/(1-Math.pow(1+r,-months)));
+}
 
 const DOODADS = [
   // choice:{cost,label,story} = cheaper alternative button; main cost = premium option
@@ -2157,6 +2241,13 @@ function initGame(prof, location) {
         ?{mortgage:Math.round(scaledProf.mortgage*0.90/25)*25||Math.round(scaledProf.mortgage*0.90)}
         :{},
     dream: selectedDream||DREAMS[0],
+    // BitLife-style identity layer — set on the character screen (solo AND mp joiner)
+    identity:(()=>{
+      const id=selectedIdentity||{name:'You',avatar:'\u{1F9D1}\u{1F3FD}',ethnicityLabel:'Medium',ageStart:Math.min(40,Math.max(18,prof.age||25))};
+      return{name:id.name||'You',avatar:id.avatar,ethnicityLabel:id.ethnicityLabel,ageStart:id.ageStart,age:id.ageStart};
+    })(),
+    gameYear:1, // 1 year passes per full board lap (turns are too granular — a lap ≈ a life chapter)
+    carOwned:null, carInsurance:0, delinq:{}, ccLateTier:0,
     rolling:false, milestones:{}, _stockPrices:{}, charityCount:0,
     childBirths:[],
     _achievements:[], _netWorthHistory:[], _doublesStreak:0,
@@ -2201,13 +2292,14 @@ function expenses() {
         school=ov.school!==undefined?ov.school:p.school,car=ov.car!==undefined?ov.car:p.car,
         cc=ov.cc!==undefined?ov.cc:p.cc,retail=p.retail,other=ov.other!==undefined?ov.other:p.other,
         children=p.children+(G.extraChildren||0),bankPmt=G.extraBankPmt||0,
-        recession=G._recessionExpSpike||0,rateHike=G._rateHikeExtra||0;
-  const base=taxes+mortgage+school+car+cc+retail+other+children+bankPmt+recession+rateHike;
+        recession=G._recessionExpSpike||0,rateHike=G._rateHikeExtra||0,
+        insurance=G.carInsurance||0; // car insurance from the dealership system
+  const base=taxes+mortgage+school+car+cc+retail+other+children+bankPmt+recession+rateHike+insurance;
   // Inflation creep: +2% every 12 turns on base living expenses (not debt payments)
   const inflPct=G._inflationPct||0;
-  const inflBase=taxes+mortgage+school+car+retail+other+children; // debt pmts excluded
+  const inflBase=taxes+mortgage+school+car+retail+other+children+insurance; // debt pmts excluded
   const inflation=inflPct>0?Math.round(inflBase*inflPct/100):0;
-  return {taxes,mortgage,school,car,cc,retail,other,children,bankPmt,recession,rateHike,inflation,
+  return {taxes,mortgage,school,car,cc,retail,other,children,bankPmt,recession,rateHike,insurance,inflation,
     total:base+inflation};
 }
 function passiveIncome(){return G.assets.reduce((s,a)=>s+(a.cf>0?a.cf:0),0)}
@@ -2650,6 +2742,7 @@ function moveTokenSteps(steps,cb){
   if(document.hidden){
     for(let i=0;i<steps;i++){
       G.position=(G.position+1)%BOARD_SPACES.length;
+      if(G.position===0)ageOneYear(); // crossed START — a year of life passes
       if(i<steps-1&&BOARD_SPACES[G.position].type==='payday'){collectPassByPayday();}
     }
     placeToken(G.position,false);
@@ -2657,6 +2750,7 @@ function moveTokenSteps(steps,cb){
     return;
   }
   G.position=(G.position+1)%BOARD_SPACES.length;
+  if(G.position===0)ageOneYear(); // crossed START — a year of life passes
   placeToken(G.position,true);playClick();
   const el=document.getElementById(`bs${G.position}`);
   if(el){el.style.transform='scale(1.18)';setTimeout(()=>el.style.transform='',280);}
@@ -2665,11 +2759,178 @@ function moveTokenSteps(steps,cb){
   setTimeout(()=>moveTokenSteps(steps-1,cb),340);
 }
 
+// ── AGING (1 year per board lap) ─────────────────────
+function ageOneYear(){
+  if(!G||!G.identity)return;
+  G.gameYear=(G.gameYear||1)+1;
+  G.identity.age=(G.identity.age||G.identity.ageStart||25)+1;
+  recalcChildCosts(); // kids' monthly cost scales with their life stage
+  addLog('🎂',`Year ${G.gameYear} — you're now ${G.identity.age}.`,'b');
+  const chip=$('year-age-chip');if(chip)chip.textContent=`Yr ${G.gameYear} · Age ${G.identity.age}`;
+  saveGame();
+}
+// Kid life stage from turn-age (same scale as checkChildMilestones: school@8, teen@16, grad@22)
+function childStage(turnAge){
+  if(turnAge>=22)return{emoji:'🎓',label:'Adult',cost:50};
+  if(turnAge>=16)return{emoji:'🧑',label:'Teen',cost:300};
+  if(turnAge>=8) return{emoji:'🧒',label:'Child',cost:250};
+  return             {emoji:'👶',label:'Baby',cost:200};
+}
+// Recompute total monthly child cost from stages. Replaces the old flat +=200/-=150
+// increments so costs RISE as kids grow (and drop when they're independent).
+function recalcChildCosts(){
+  if(!G.childBirths||!G.childBirths.length){G.extraChildren=0;return;}
+  G.extraChildren=G.childBirths.reduce((s,c)=>s+childStage(G.turn-c.born).cost,0);
+}
+
+// ══ CAR DEALERSHIP ════════════════════════════════════
+function openCarDealership(fromBoard){
+  const tier=creditTier(G.creditScore||650);
+  const tierIdx=CAR_TIER_IDX[tier.label];
+  const apr=loanRate()+0.02; // auto loans run ~2pts over the player's base rate
+  const actions=CARS.map(car=>{
+    const gated=tierIdx<car.minTier;
+    const canCash=G.cash>=car.price;
+    const locked=gated&&!canCash;
+    return{
+      label:`${car.emoji} ${car.name} — $${fmt(car.price)}${gated?(canCash?' (cash only)':' 🔒 credit '+['Poor','Fair','Good','Very Good','Excellent'][car.minTier]+'+'):''}`,
+      cls:'btn-tan',locked,
+      fn:()=>showCarDetail(car,fromBoard),
+    };
+  });
+  actions.push({label:fromBoard?'Just browsing — leave':'Close',cls:'btn-gold',fn:()=>{if(fromBoard)endTurn();}});
+  openModal({band:'gold',title:'🚗 Car Dealership',
+    desc:`Your credit: ${G.creditScore} (${tier.label}) → auto APR ${(apr*100).toFixed(1)}%, ${Math.round(CAR_DOWN_PCT[tier.label]*100)}% down required. Current ride: ${G.carOwned?G.carOwned.emoji+' '+G.carOwned.name:'🚙 beater (paid off)'}.`,
+    rows:[['Credit Tier',tier.label,''],['Your Auto APR',(apr*100).toFixed(1)+'%',''],['Down Payment Required',Math.round(CAR_DOWN_PCT[tier.label]*100)+'%','']],
+    actions});
+}
+function showCarDetail(car,fromBoard){
+  const tier=creditTier(G.creditScore||650);
+  const tierIdx=CAR_TIER_IDX[tier.label];
+  const apr=loanRate()+0.02;
+  // Negative-equity rollover: any remaining car loan folds into the new note
+  const oldBal=(G.liabilities||[]).filter(l=>l.type==='carfin'||l.name==='Car Loan').reduce((s,l)=>s+l.amt,0);
+  const down=Math.round(car.price*CAR_DOWN_PCT[tier.label]/100)*100;
+  const principal=car.price-down+oldBal;
+  const pmt=carMonthlyPmt(principal,apr,60);
+  const canFinance=tierIdx>=car.minTier&&G.cash>=down;
+  const canCash=G.cash>=car.price;
+  const rows=[
+    ['Price','$'+fmt(car.price),''],
+    ['Down Payment ('+Math.round(CAR_DOWN_PCT[tier.label]*100)+'%)','$'+fmt(down),'red'],
+    ...(oldBal>0?[['⚠️ Old Loan Rolled In','+$'+fmt(oldBal),'red']]:[]),
+    ['Financed Amount','$'+fmt(principal),''],
+    ['Monthly Payment (60mo @ '+(apr*100).toFixed(1)+'%)','$'+fmt(pmt)+'/mo','red'],
+    ['Insurance','$'+fmt(car.ins)+'/mo','red'],
+    ['Total Monthly Hit','$'+fmt(pmt+car.ins)+'/mo','red'],
+  ];
+  openModal({band:'gold',title:`${car.emoji} ${car.name}`,
+    desc:`${car.segment} segment. ${tierIdx<car.minTier?'Your credit tier can\'t finance this one — cash only.':'Financing available at your tier.'}`,
+    rows,
+    actions:[
+      {label:`Finance — $${fmt(down)} down`,cls:'btn-gold',locked:!canFinance,fn:()=>buyCarFinance(car,down,principal,pmt,apr,fromBoard)},
+      {label:`Pay Cash — $${fmt(car.price)}`,cls:'btn-tan',locked:!canCash,fn:()=>buyCarCash(car,fromBoard)},
+      {label:'← Back',cls:'btn-tan',fn:()=>openCarDealership(fromBoard)},
+    ]});
+}
+function _clearOldCarLoans(){
+  G.liabilities=(G.liabilities||[]).filter(l=>!(l.type==='carfin'||l.name==='Car Loan'));
+}
+function buyCarFinance(car,down,principal,pmt,apr,fromBoard){
+  G.cash-=down;
+  _clearOldCarLoans();
+  const dueDay=1+Math.floor(Math.random()*28);
+  G.liabilities.push({name:`${car.emoji} ${car.name} Loan`,amt:principal,type:'carfin',pmt,dueDay,carId:car.id});
+  G.expenseOverrides=G.expenseOverrides||{};
+  G.expenseOverrides.car=pmt;           // replaces the old car payment line
+  G.carInsurance=car.ins;
+  G.carOwned={id:car.id,name:car.name,emoji:car.emoji,price:car.price};
+  boostCredit(3); // new installment line, on-time so far
+  saveGame();
+  addLog('🚗',`Financed ${car.name} — $${fmt(down)} down, $${fmt(pmt)}/mo (due day ${dueDay})`,'b');
+  showEventCard('life',`${car.emoji} Keys in Hand!`,
+    `You drive off in a ${car.name}. $${fmt(down)} down, $${fmt(pmt)}/mo for 60 months, due on day ${dueDay}. Insurance adds $${fmt(car.ins)}/mo. Miss a payday and this loan goes delinquent.`,
+    'A financed car is a liability wearing an asset costume. It takes money OUT of your pocket every month — buy the asset first, let the asset buy the car.',
+    [['New Loan','$'+fmt(principal),'red'],['Monthly (pmt+ins)','$'+fmt(pmt+car.ins)+'/mo','red'],['Cash Left','$'+fmt(G.cash),'gold']],
+    [{label:'Vroom 🚗',cls:'btn-gold',fn:fromBoard?endTurn:()=>{}}]);
+  updateUI();
+}
+function buyCarCash(car,fromBoard){
+  G.cash-=car.price;
+  _clearOldCarLoans();
+  G.expenseOverrides=G.expenseOverrides||{};
+  G.expenseOverrides.car=0;             // no payment — owned outright
+  G.carInsurance=car.ins;
+  G.carOwned={id:car.id,name:car.name,emoji:car.emoji,price:car.price};
+  boostCredit(2);
+  saveGame();
+  addLog('🚗',`Bought ${car.name} CASH — $${fmt(car.price)}. No car payment.`,'g');
+  showEventCard('life',`${car.emoji} Paid in Full`,
+    `${car.name}, no lender, no payment — just $${fmt(car.ins)}/mo insurance. The title sits in YOUR drawer.`,
+    'Paying cash for depreciating assets only makes sense when the cash is surplus. The wealthy finance appreciating assets and pay cash for toys — after the assets pay for them.',
+    [['Paid','$'+fmt(car.price),'red'],['Monthly Payment','$0 ✅','green'],['Cash Left','$'+fmt(G.cash),'gold']],
+    [{label:'Debt-free ride 😎',cls:'btn-gold',fn:fromBoard?endTurn:()=>{}}]);
+  updateUI();
+}
+
+// ══ PAYDAY DELINQUENCY ENGINE ═════════════════════════
+// Runs INSIDE the existing payday math (cf already includes every expense + loan
+// payment — we never deduct twice). This only judges the OUTCOME:
+//  cf<0 & covered by savings/borrowing → warning. cash still <0 → delinquency.
+function paydayDelinquencyCheck(){
+  const cf=monthlyCF();
+  if(cf>=0){
+    // Fully covered payday — catch up any late status
+    if((G.ccLateTier||0)>0){
+      G.ccLateTier=0;boostCredit(10);
+      addLog('💳','Caught up on payments — delinquency cleared. CR +10','g');
+    }
+    return null;
+  }
+  if(G.cash>=0)return null; // negative CF but savings/borrowing absorbed it — ensureCash handled
+  // True delinquency: bills couldn't be paid even after the bank said no
+  const shortfall=-G.cash;
+  G.ccLateTier=(G.ccLateTier||0)+1;
+  const tierDays=G.ccLateTier===1?30:G.ccLateTier===2?60:90;
+  const lateFee=Math.max(50,Math.round(shortfall*0.05/10)*10);
+  const creditHit=G.ccLateTier===1?-20:G.ccLateTier===2?-40:-60;
+  boostCredit(creditHit);
+  // Unpaid balance lands on the credit card (real life: the card eats what cash can't)
+  let cc=G.liabilities.find(l=>l.name==='Credit Cards');
+  if(!cc){cc={name:'Credit Cards',amt:0};G.liabilities.push(cc);}
+  cc.amt+=shortfall+lateFee;
+  if(G.ccLateTier>=3)cc.amt=Math.round(cc.amt*1.10); // collections: +10% penalty interest
+  G.cash=0;
+  saveGame();
+  addLog('🚨',`DELINQUENT (${tierDays} days): missed $${fmt(shortfall)}, fee $${fmt(lateFee)}, CR ${creditHit}`,'r');
+  return{shortfall,lateFee,creditHit,tierDays,newBal:cc.amt};
+}
+function showDelinquencyCard(d,onClose){
+  showEventCard('setback',`🚨 ${d.tierDays} Days Late — You Couldn't Cover Your Bills`,
+    `Your expenses exceeded your income and the bank refused to lend more. $${fmt(d.shortfall)} in bills went UNPAID. The balance rolled onto your credit card with a $${fmt(d.lateFee)} late fee${d.tierDays>=90?' — and it just went to COLLECTIONS (+10% penalty)':''}.`,
+    'This is how the debt spiral starts: expenses > income → unpaid bills → fees + interest → bigger expenses. Cut lifestyle or raise income — the math never negotiates.',
+    [['Missed Bills','$'+fmt(d.shortfall),'red'],
+     ['Late Fee','$'+fmt(d.lateFee),'red'],
+     ['Credit Score',`${G.creditScore} (${d.creditHit})`,'red'],
+     ['New CC Balance','$'+fmt(d.newBal),'red']],
+    [{label:'Ouch. 😖',cls:'btn-tan',fn:onClose||(()=>{})}]);
+}
+
 function collectPassByPayday(){
   const cf=monthlyCF();
   G.cash+=cf;
   // If negative CF pushed cash below zero, auto-borrow to cover (matches onPayday() behavior)
   if(G.cash<0)ensureCash(0,'pass-by payday shortfall');
+  // Same delinquency engine as onPayday. No card here — a card mid-move would clobber
+  // the landed-space card; the red toast + log carry the message instead.
+  const delinq=paydayDelinquencyCheck();
+  if(delinq){
+    const t=document.createElement('div');
+    t.style.cssText='position:fixed;bottom:130px;left:50%;transform:translateX(-50%);background:#8b1a1a;color:#fff;padding:8px 18px;border-radius:9px;font-family:Georgia,serif;font-size:.8rem;font-weight:900;z-index:9999;pointer-events:none;box-shadow:0 3px 14px rgba(0,0,0,.5)';
+    t.textContent=`🚨 ${delinq.tierDays} DAYS LATE — $${fmt(delinq.shortfall)} unpaid, credit ${delinq.creditHit}`;
+    document.body.appendChild(t);
+    setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},2600);
+  }
   saveGame(); // persist cash change — crash after passing payday would otherwise lose the money
   addLog('🌾',`Passed CASHFLOW DAY — collected ${cf>=0?'+':''}$${fmt(cf)}`,'g');
   if(cf<0){checkBankruptcy();}
@@ -2715,6 +2976,7 @@ function showQuarterlyTax(){
 // ── SPACE LOGIC ───────────────────────────────────────
 function triggerSpace(sp){
   G.turn++;
+  recalcChildCosts(); // kid stage costs track turn-age (school/teen transitions)
   // Recession tick — count down and restore when done
   if(G._recessionTurns>0){
     G._recessionTurns--;
@@ -2793,9 +3055,84 @@ function dispatchSpace(sp){
     case'recession':showRecessionEvent();break;
     case'crisis':  showCrisisEvent();break;
     case'tip':     showTipEvent();break;
+    case'dealer':  openCarDealership(true);break;
+    case'credit':  showCreditBureauEvent();break;
+    case'lifeevent':showLifeEvent();break;
+    case'wildcard':showMysteryBox(0,endTurn);break;
     case'start':   endTurn();break;
     default:       endTurn();
   }
+}
+
+// ── CREDIT BUREAU space — your report gets pulled, things move ──
+function showCreditBureauEvent(){
+  const events=[
+    {w:22,icon:'📈',title:'Clean Payment History Reported',pts:+15,story:'Twelve months of on-time payments just hit your file. The bureaus reward boring consistency.',tip:'Payment history is 35% of your score — the single biggest lever. Boring wins.'},
+    {w:18,icon:'🧾',title:'Utilization Drop Detected',pts:+10,story:'Your card balances reported low this cycle. Utilization under 30% reads as discipline.',tip:'Keep reported balances under 30% of limits — under 10% is where scores really climb.'},
+    {w:14,icon:'🛡️',title:'Old Negative Mark Expired',pts:+25,story:'A years-old late payment just aged off your report. The past finally let go.',tip:'Most negatives fall off after 7 years. Time heals credit — if you stop adding new wounds.'},
+    {w:16,icon:'🔍',title:'Hard Inquiry Cluster',pts:-10,story:'Three lenders pulled your file this quarter. Each pull whispers "desperate for credit."',tip:'Batch loan shopping into a 14-45 day window — scoring models count clustered pulls as one.'},
+    {w:14,icon:'⚠️',title:'Reporting Error Found',pts:-15,story:'An account you never opened shows on your file. Disputing it takes 30 days. Meanwhile, it drags.',tip:'Pull your free reports yearly at annualcreditreport.com. Errors are common — and disputable.'},
+    {w:8,icon:'🚨',title:'Identity Theft Scare',pts:-25,story:'Someone tried opening a card in your name. Frozen in time, but the inquiry damage lands first.',tip:'Freeze your credit at all 3 bureaus when not actively applying. It\'s free and reversible.'},
+    {w:8,icon:'🎯',title:'Credit Limit Increase Granted',pts:+20,story:'Your bank quietly doubled a card limit. Same balances, half the utilization — the score jumps.',tip:'A higher limit you don\'t spend is a free score boost. Ask for CLIs yearly — soft pull only.'},
+  ];
+  const total=events.reduce((s,e)=>s+e.w,0);let r=Math.random()*total;let ev=events[0];
+  for(const e of events){r-=e.w;if(r<=0){ev=e;break;}}
+  boostCredit(ev.pts);
+  const tier=creditTier(G.creditScore);
+  saveGame();
+  addLog('💳',`Credit Bureau: ${ev.title} (${ev.pts>0?'+':''}${ev.pts}) → ${G.creditScore}`,ev.pts>=0?'g':'r');
+  showEventCard(ev.pts>=0?'opportunity':'setback','💳 Credit Bureau — '+ev.title,ev.story,ev.tip,
+    [['Score Change',(ev.pts>0?'+':'')+ev.pts,ev.pts>=0?'green':'red'],
+     ['Credit Score',G.creditScore+' ('+tier.label+')',ev.pts>=0?'green':'red'],
+     ['Loan APR',(loanRate()*100).toFixed(0)+'%','']],
+    [{label:ev.pts>=0?'Nice 📈':'Brutal 📉',cls:ev.pts>=0?'btn-gold':'btn-tan',fn:endTurn}]);
+}
+
+// ── LIFE EVENT space — BitLife-style random life moment ──
+function showLifeEvent(){
+  const age=(G.identity&&G.identity.age)||25;
+  const events=[
+    {w:14,icon:'💍',title:'Wedding Invitation',story:'Your best friend is getting married — destination wedding. Flights, suit, gift. You can\'t say no. Or can you?',
+     cost:Math.round(900*(G.location?G.location.exp:1)/50)*50,alt:{label:'Send a gift, skip the trip — $150',cost:150}},
+    {w:12,icon:'🏥',title:'Health Scare',story:'A weird pain sends you to urgent care. Tests, copays, a specialist referral. Your body sends the bill.',
+     cost:Math.round(700*(G.location?G.location.exp:1)/50)*50},
+    {w:12,icon:'🎉',title:'Milestone Birthday',story:`You're turning ${age+1} and everyone expects a party. Venue, drinks, the works.`,
+     cost:Math.round(500*(G.location?G.location.exp:1)/50)*50,alt:{label:'House party instead — $120',cost:120}},
+    {w:10,icon:'✈️',title:'Family Emergency Flight',story:'A relative is in the hospital across the country. Last-minute flights cost what they cost.',
+     cost:Math.round(650*(G.location?G.location.exp:1)/50)*50},
+    {w:12,icon:'💼',title:'Networking Conference',story:'An industry conference could level up your career. Ticket + hotel — an investment in yourself.',
+     cost:Math.round(800*(G.location?G.location.exp:1)/50)*50,bonus:{type:'salary',amt:150,label:'+$150/mo raise potential'}},
+    {w:12,icon:'🐕',title:'A Dog Adopts You',story:'A stray follows you home and looks at you with THOSE eyes. Vet bills, food, supplies... you\'re keeping the dog.',
+     cost:350,monthly:60},
+    {w:14,icon:'💰',title:'Inheritance Check',story:'A great-aunt you barely remember left you something. Family lawyers tracked you down.',
+     gain:Math.round((1500+Math.random()*3500)/100)*100},
+    {w:14,icon:'🤝',title:'Old Friend Pays You Back',story:'That loan from years ago you wrote off? They made it big. Venmo notification: paid in full, with interest.',
+     gain:Math.round((600+Math.random()*1400)/100)*100},
+  ];
+  const total=events.reduce((s,e)=>s+e.w,0);let r=Math.random()*total;let ev=events[0];
+  for(const e of events){r-=e.w;if(r<=0){ev=e;break;}}
+  if(ev.gain){
+    G.cash+=ev.gain;saveGame();
+    addLog(ev.icon,`${ev.title}: +$${fmt(ev.gain)}`,'g');
+    showEventCard('life',`${ev.icon} ${ev.title}`,ev.story,'Windfalls feel like luck. What you DO with them is strategy — fund a deal, not a lifestyle bump.',
+      [['Received','+$'+fmt(ev.gain),'green'],['Cash','$'+fmt(G.cash),'gold']],
+      [{label:'Blessings 🙏',cls:'btn-gold',fn:endTurn}]);
+    return;
+  }
+  const pay=(amt,extra)=>{
+    ensureCash(amt,ev.title);G.cash-=amt;
+    if(ev.monthly&&!extra){G.expenseOverrides=G.expenseOverrides||{};G.expenseOverrides.other=(G.expenseOverrides.other!==undefined?G.expenseOverrides.other:G.prof.other)+ev.monthly;}
+    if(ev.bonus&&!extra&&ev.bonus.type==='salary')G.salaryBoost=(G.salaryBoost||0)+ev.bonus.amt;
+    saveGame();
+    addLog(ev.icon,`${ev.title}: -$${fmt(amt)}${ev.monthly&&!extra?` +$${ev.monthly}/mo`:''}`,'b');
+    endTurn();
+  };
+  const acts=[{label:`Pay $${fmt(ev.cost)}${ev.monthly?` (+$${ev.monthly}/mo)`:''}${ev.bonus?' — '+ev.bonus.label:''}`,cls:'btn-gold',fn:()=>pay(ev.cost,false)}];
+  if(ev.alt)acts.push({label:ev.alt.label,cls:'btn-tan',fn:()=>pay(ev.alt.cost,true)});
+  showEventCard('life',`${ev.icon} Life Happens — ${ev.title}`,ev.story,
+    'Life events are why emergency funds exist. Three months of expenses in cash turns disasters into inconveniences.',
+    [['Cost','$'+fmt(ev.cost),'red'],...(ev.monthly?[['Monthly Add','+$'+fmt(ev.monthly)+'/mo','red']]:[]),...(ev.bonus?[['Upside',ev.bonus.label,'green']]:[]),['Cash','$'+fmt(G.cash),'gold']],
+    acts);
 }
 
 function onPayday(){
@@ -2809,6 +3146,13 @@ function onPayday(){
   G.cash+=cf+bonus+waiverBonus;
   // If cash went negative after payday, try to auto-borrow (capped at MAX_BANK_LOAN)
   if(G.cash<0){ensureCash(0,'payday shortfall');}
+  // Delinquent card balance compounds 3%/payday until caught up (interest on the unpaid)
+  if((G.ccLateTier||0)>0){
+    const cc=G.liabilities.find(l=>l.name==='Credit Cards');
+    if(cc&&cc.amt>0){const int=Math.round(cc.amt*0.03);cc.amt+=int;addLog('💳',`Delinquent CC accruing — +$${fmt(int)} interest`,'r');}
+  }
+  // Delinquency engine: judges the payday OUTCOME (cf already deducted everything once)
+  const delinq=paydayDelinquencyCheck();
   checkBankruptcy();
   if(G._bankrupt)return;
   // Track freedom history for chart (cap at 30 points)
@@ -2888,6 +3232,25 @@ function onPayday(){
     }
   });
   G.liabilities=G.liabilities.filter(l=>(l.type==='biz'||l.type==='business'||l.type==='note')?l.amt>0:true);
+  // Financed cars (dealership system): payment flows through expenses().car override —
+  // here only the principal portion (~60%, short amortization) reduces the note.
+  // Skipped while delinquent: missed paydays don't pay principal.
+  if(!delinq){
+    G.liabilities.forEach(l=>{
+      if(l.type!=='carfin'||l.amt<=0||!(l.pmt>0))return;
+      const principal=Math.round(l.pmt*0.60);
+      const before=l.amt;
+      l.amt=Math.max(0,l.amt-principal);
+      totalPrincipalPaid+=Math.min(principal,before);
+      if(l.amt===0&&before>0){
+        G.expenseOverrides=G.expenseOverrides||{};
+        G.expenseOverrides.car=0; // note retired — payment disappears, insurance stays
+        boostCredit(12);
+        addLog('🚗',`${l.name} PAID OFF — car payment gone forever. CR +12`,'gold');
+      }
+    });
+    G.liabilities=G.liabilities.filter(l=>l.type!=='carfin'||l.amt>0);
+  }
   // Bank loan: full payment reduces principal (rate is already the "interest penalty")
   if(G.bankLoan>0&&G.extraBankPmt>0){
     const paid=Math.min(G.bankLoan,G.extraBankPmt);
@@ -2925,6 +3288,8 @@ function onPayday(){
   // Persist payday mutations (cash deposit, debt paydown, credit boosts) before card shows.
   // A crash while the payday card is visible would otherwise replay all those mutations on reload.
   saveGame();
+  // Delinquent payday: the consequence card IS the payday card — the pain must be legible
+  if(delinq){showDelinquencyCard(delinq,endTurn);return;}
   showEventCard('payday',title,story,
     'Your salary and passive income are deposited. Keep building assets.',
     rows,
@@ -3630,10 +3995,10 @@ function showBabyEvent(){
   const count=triplets?3:twins?2:1;
   G.numChildren+=count;
   const moCost=count*200;
-  G.extraChildren+=moCost;
   // Track birth turn for lifecycle milestones
   if(!G.childBirths)G.childBirths=[];
   for(let i=0;i<count;i++)G.childBirths.push({born:G.turn,milestones:{}});
+  recalcChildCosts(); // stage-based: babies start at $200/mo each, rises as they grow
   saveGame(); // persist baby mutations before card — crash during card would add baby twice
   const stories={
     1:G.numChildren===1?'Your partner has exciting news. A baby is on the way. $200/month joins your expense column — permanently.'
@@ -3689,7 +4054,7 @@ function checkChildMilestones(){
         // Graduated — one-time cost but reduce monthly child expense slightly
         const partyCost=Math.round(500*(G.location?G.location.exp:1)/50)*50;
         ensureCash(partyCost,'graduation party');G.cash-=partyCost;
-        G.extraChildren=Math.max(0,G.extraChildren-150);saveGame();
+        recalcChildCosts();saveGame(); // grad → Adult stage: monthly cost drops to $50
         showEventCard('life','🎓 College Graduate!',
           `Your child graduated! Cap and gown, graduation party, helping them get on their feet — $${fmt(partyCost)} spent. But their monthly cost drops $150 as they get independent.`,
           'The goal was always to raise someone who doesn\'t need you. That\'s the best ROI you can get as a parent.',
@@ -6452,8 +6817,61 @@ function updateUI(){
   const pct=Math.min(100,exp.total>0?Math.round(pass/exp.total*100):0);
 
   // Top bar
-  $('pc-av').textContent=G.prof.icon;
-  $('pc-name').textContent=G.prof.name+' · T'+G.turn;
+  $('pc-av').textContent=(G.identity&&G.identity.avatar)||G.prof.icon;
+  $('pc-name').textContent=((G.identity&&G.identity.name)||G.prof.name)+' · '+G.prof.icon+' T'+G.turn;
+  const yaChip=$('year-age-chip');
+  if(yaChip&&G.identity)yaChip.textContent=`Yr ${G.gameYear||1} · Age ${G.identity.age||G.identity.ageStart}`;
+  // ── Life Hub profile header ─────────────────────────
+  (function(){
+    if(!$('lh-profile'))return;
+    const id=G.identity||{};
+    $('lh-avatar').textContent=id.avatar||G.prof.icon;
+    $('lh-name').textContent=(id.name||'Player')+' — '+G.prof.icon+' '+G.prof.name;
+    $('lh-sub').textContent=`Age ${id.age||id.ageStart||'?'} · Year ${G.gameYear||1} · ${id.ethnicityLabel||''} · ${G.location?G.location.icon+' '+G.location.name:''}`;
+    const carChip=$('lh-car-chip');
+    if(carChip)carChip.textContent=G.carOwned?`${G.carOwned.emoji} ${G.carOwned.name}`:'🚙 Beater (paid off)';
+    const tier=creditTier(G.creditScore||650);
+    const crChip=$('lh-credit-chip');
+    if(crChip){crChip.textContent=`💳 ${G.creditScore} · ${tier.label}`;crChip.style.color=tier.color;}
+    const dqChip=$('lh-delinq-chip');
+    if(dqChip){
+      const t=G.ccLateTier||0;
+      dqChip.style.display=t>0?'':'none';
+      if(t>0)dqChip.textContent=`🚨 ${t>=3?'COLLECTIONS (90+ days)':t===2?'60 DAYS LATE':'30 DAYS LATE'}`;
+    }
+    // Kids graphic: emoji stage + age + monthly cost per kid
+    const kidsEl=$('lh-kids');
+    if(kidsEl){
+      const births=G.childBirths||[];
+      kidsEl.innerHTML=births.length?births.map(c=>{
+        const tAge=Math.max(0,G.turn-c.born),st=childStage(tAge);
+        return `<span title="${st.label} — $${fmt(st.cost)}/mo" style="display:flex;flex-direction:column;align-items:center;background:rgba(138,48,96,.10);border:1px solid rgba(138,48,96,.3);border-radius:8px;padding:2px 6px;min-width:34px">
+          <span style="font-size:1.05rem;line-height:1.2">${st.emoji}</span>
+          <span style="font-size:.5rem;font-weight:800;color:#8a3060">${Math.min(tAge,25)}y</span>
+          <span style="font-size:.46rem;color:#6b5535">$${fmt(st.cost)}</span></span>`;
+      }).join(''):'';
+    }
+    // Loans & due dates list — every liability + bank loan, with payment + due day
+    const loansWrap=$('lh-loans-wrap'),loansEl=$('lh-loans');
+    if(loansWrap&&loansEl){
+      const exp2=expenses();
+      const pmtMap={'Home Mortgage':exp2.mortgage,'School Loan':exp2.school,'Car Loan':exp2.car,'Credit Cards':exp2.cc};
+      const rows=[];
+      (G.liabilities||[]).forEach(l=>{
+        if(l.amt<=0)return;
+        const pmt=l.type==='carfin'?l.pmt:(pmtMap[l.name]||l.pmt||0);
+        const due=l.type==='carfin'?`day ${l.dueDay}`:'CASHFLOW DAY';
+        const late=l.name==='Credit Cards'&&(G.ccLateTier||0)>0;
+        rows.push(`<div class="fsr"><span class="fl">${late?'🚨 ':''}${l.name}:</span><span class="fv ${late?'r':''}">$${fmt(l.amt)}${pmt?` · $${fmt(pmt)}/mo`:''} · due ${due}</span></div>`);
+      });
+      if(G.bankLoan>0)rows.push(`<div class="fsr"><span class="fl">🏦 Bank Loan:</span><span class="fv">$${fmt(G.bankLoan)} · $${fmt(G.extraBankPmt||0)}/mo · due CASHFLOW DAY</span></div>`);
+      loansEl.innerHTML=rows.join('');
+      loansWrap.style.display=rows.length?'':'none';
+    }
+    // Insurance expense row
+    const insRow=$('fs-ins-row'),insVal=$('fs-insurance');
+    if(insRow){const ins=G.carInsurance||0;insRow.style.display=ins>0?'':'none';if(insVal)insVal.textContent='$'+fmt(ins);}
+  })();
   $('pc-status').textContent=G.location?(G.location.icon+' '+G.location.name):'Taking Turn';
   // Credit score chip (separate pill in top bar)
   const creditChip=$('credit-chip');
@@ -7000,6 +7418,13 @@ function loadSave(){
     if(G._outerRolling===undefined)G._outerRolling=false;
     if(G._obCrashPaydays===undefined)G._obCrashPaydays=0;
     if(!G.milestones)G.milestones={}; // back-compat: old saves missing milestones object
+    // Life-sim layer (v11) back-compat
+    if(!G.identity)G.identity={name:'You',avatar:'\u{1F9D1}\u{1F3FD}',ethnicityLabel:'Medium',ageStart:G.prof.age||25,age:G.prof.age||25};
+    if(G.gameYear===undefined)G.gameYear=1;
+    if(G.carOwned===undefined)G.carOwned=null;
+    if(G.carInsurance===undefined)G.carInsurance=0;
+    if(!G.delinq)G.delinq={};
+    if(G.ccLateTier===undefined)G.ccLateTier=0;
     // New fields (achievements, sparkline, doubles streak, market effects)
     if(!G._achievements)G._achievements=[];
     if(!G._netWorthHistory)G._netWorthHistory=[];
@@ -7459,7 +7884,7 @@ function netRelay(msg){
 }
 function _setLobbyNetStatus(txt){
   const ph=$('mp-lobby-pass-hint');
-  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v10-nocache';
+  if(ph)ph.textContent=(_mpRoomPass?'🔐 Password protected':'🔓 No password')+' · '+txt+' · v11-lifesim';
 }
 function peerHostStart(){
   _sbStart(_mpRoomName); // websocket relay — works even where P2P can't
@@ -7842,7 +8267,7 @@ function mpSubmitJoin(){
   const playerName=($('mp-join-name-inp')||{}).value?.trim()||'Guest';
   if(!roomName){_bcJoinStatus('Enter the room name.','#fb7185');return;}
   const btn=$('mp-join-btn');if(btn){btn.textContent='Connecting...';btn.disabled=true;}
-  _bcJoinStatus('Looking for room "'+roomName+'"... (v10-nocache)','rgba(34,211,238,.8)');
+  _bcJoinStatus('Looking for room "'+roomName+'"... (v11-lifesim)','rgba(34,211,238,.8)');
   if(_bc)_bc.close();
   _bc=new BroadcastChannel(_bcChannelName(roomName));
   _bcRole='joiner';_bcLobbyPhase=true;
@@ -7985,7 +8410,7 @@ function mpStartJoinerPing(){
 function mpJoinerPickProfile(msg){
   window._joinerProfileMode=true;
   window._joinerLobbyMsg=msg;
-  selectedProf=null;selectedLocation=null;selectedDream=null;
+  selectedProf=null;selectedLocation=null;selectedDream=null;selectedIdentity=null; // joiner builds their OWN character
   resetToSpin();
   showScreen('splash');
   // Hide host-only controls — this pass is purely "build YOUR character"
@@ -8195,7 +8620,74 @@ $('btn-spin').addEventListener('click',doSpin);
 $('btn-again').addEventListener('click',()=>{resetToSpin();setTimeout(doSpin,310);});
 $('btn-begin').addEventListener('click',()=>{
   if(!selectedProf)return;
-  // Build location grid and show location selection screen
+  // Character creation comes first — identity before geography
+  buildCharacterScreen();
+  showScreen('character');
+});
+
+// ── CHARACTER CREATION ────────────────────────────────
+// Avatar bases × Unicode skin-tone modifiers. ethnicityLabel = tone descriptor.
+const CHAR_TONES=[
+  {mod:'\u{1F3FB}',label:'Light'},
+  {mod:'\u{1F3FC}',label:'Medium-Light'},
+  {mod:'\u{1F3FD}',label:'Medium'},
+  {mod:'\u{1F3FE}',label:'Medium-Dark'},
+  {mod:'\u{1F3FF}',label:'Dark'},
+];
+const CHAR_BASES=['\u{1F9D1}','\u{1F468}','\u{1F469}','\u{1F9D4}'];// 🧑 👨 👩 🧔
+let selectedIdentity=null;
+function _charDefaultIdentity(){
+  const seedAge=Math.min(40,Math.max(18,(selectedProf&&selectedProf.age)||25));
+  return{name:'',avatar:'\u{1F9D1}\u{1F3FD}',ethnicityLabel:'Medium',ageStart:seedAge};
+}
+function buildCharacterScreen(){
+  if(!selectedIdentity)selectedIdentity=_charDefaultIdentity();
+  // Re-seed default age from the (possibly re-spun) profession if player hasn't touched it
+  const grid=$('char-avatar-grid');grid.innerHTML='';
+  CHAR_BASES.forEach(base=>{
+    CHAR_TONES.forEach(tone=>{
+      const av=base+tone.mod;
+      const cell=document.createElement('div');
+      cell.style.cssText='display:flex;align-items:center;justify-content:center;font-size:2rem;padding:8px 0;background:rgba(255,255,255,.05);border:2px solid '+(selectedIdentity.avatar===av?'#f0c020':'rgba(255,255,255,.12)')+';border-radius:12px;cursor:pointer;transition:transform .12s';
+      cell.textContent=av;
+      cell.onclick=()=>{
+        selectedIdentity.avatar=av;selectedIdentity.ethnicityLabel=tone.label;
+        grid.querySelectorAll('div').forEach(d=>d.style.borderColor='rgba(255,255,255,.12)');
+        cell.style.borderColor='#f0c020';
+        _charSyncPreview();
+      };
+      grid.appendChild(cell);
+    });
+  });
+  const ageEl=$('char-age');
+  ageEl.value=selectedIdentity.ageStart;
+  $('char-age-val').textContent=ageEl.value;
+  ageEl.oninput=()=>{selectedIdentity.ageStart=+ageEl.value;$('char-age-val').textContent=ageEl.value;_charSyncPreview();};
+  const nameEl=$('char-name');
+  nameEl.value=selectedIdentity.name||'';
+  nameEl.oninput=()=>{selectedIdentity.name=nameEl.value.trim();_charSyncPreview();};
+  _charSyncPreview();
+}
+function charRandomize(){
+  const base=CHAR_BASES[Math.floor(Math.random()*CHAR_BASES.length)];
+  const tone=CHAR_TONES[Math.floor(Math.random()*CHAR_TONES.length)];
+  const names=['Alex','Jordan','Sam','Maya','Leo','Nina','Marcus','Sofia','Andre','Keisha','Diego','Amara','Chen','Priya','Omar','Luna'];
+  selectedIdentity=selectedIdentity||_charDefaultIdentity();
+  selectedIdentity.avatar=base+tone.mod;
+  selectedIdentity.ethnicityLabel=tone.label;
+  selectedIdentity.ageStart=18+Math.floor(Math.random()*23);
+  if(!$('char-name').value.trim())selectedIdentity.name=names[Math.floor(Math.random()*names.length)];
+  buildCharacterScreen();playClick&&playClick();
+}
+function _charSyncPreview(){
+  $('char-prev-av').textContent=selectedIdentity.avatar;
+  $('char-prev-name').textContent=selectedIdentity.name||'Your Name';
+  $('char-prev-sub').textContent='Age '+selectedIdentity.ageStart+' · '+selectedIdentity.ethnicityLabel+' · '+(selectedProf?selectedProf.icon+' '+selectedProf.name:'');
+  if($('char-name').value!==(selectedIdentity.name||''))$('char-name').value=selectedIdentity.name||'';
+}
+$('btn-char-go').addEventListener('click',()=>{
+  if(!selectedIdentity)selectedIdentity=_charDefaultIdentity();
+  if(!selectedIdentity.name)selectedIdentity.name='You';
   buildLocGrid();
   showScreen('location');
 });
