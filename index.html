@@ -11415,24 +11415,51 @@ try{
   if(mode==='solo'&&loadSave()){_autoResumed=true;setTimeout(()=>resumeGame(),60);}
   else if(mode==='mp'&&loadSave(SAVE_KEY_MP)){_autoResumed=true;setTimeout(()=>resumeGame(),60);}
 }catch(e){}
-// Check for saved game before showing splash
+// ── STATE-AWARE SPLASH ──────────────────────────────────────────────────
+// One life per spin: while a run is alive, the menu is about THAT life —
+// the career spinner makes no sense (you can't re-spin) so it's hidden.
+// Finish or abandon the run and the spinner returns for the next life.
 if(!_autoResumed&&loadSave()){
-  // Add resume button to splash before showing
   setTimeout(()=>{
+    const spCard=document.querySelector('.sp-card');if(!spCard)return;
+    // hide everything that belongs to STARTING a life
+    const stage=document.getElementById('sp-stage');if(stage)stage.style.display='none';
+    const spin=document.getElementById('btn-spin');if(spin)spin.style.display='none';
+    const title=spCard.querySelector('.sp-title');if(title)title.textContent='⏳ Life in Progress';
+    // hero: the run you're living
+    const cf=(()=>{try{return monthlyCF();}catch(e){return 0;}})();
+    const wrap=document.createElement('div');
+    wrap.id='splash-resume';
+    wrap.style.cssText='display:flex;flex-direction:column;gap:8px;align-items:center;padding:6px 0 2px';
+    wrap.innerHTML=
+      `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">`+
+        `<span class="bti-chip">${G.identity&&G.identity.name?G.identity.name:'You'} · Age ${(G.identity&&G.identity.age)||G.prof.age||'?'}</span>`+
+        `<span class="bti-chip gold">💵 $${fmt(G.cash)}</span>`+
+        `<span class="bti-chip ${cf>=0?'good':'bad'}">CF ${cf>=0?'+':''}$${fmt(cf)}/mo</span>`+
+        `<span class="bti-chip">Turn ${G.turn}</span>`+
+      `</div>`;
     const resumeBtn=document.createElement('button');
-    resumeBtn.className='btn-spin';resumeBtn.style.cssText='margin-top:10px;background:linear-gradient(135deg,#3a1070 0%,#6b3fa8 45%,#8b5fc8 60%,#6b3fa8 80%,#3a1070 100%);border-color:rgba(150,100,220,.5);color:#e8d4ff;box-shadow:0 5px 20px rgba(107,63,168,.5)';
-    resumeBtn.textContent=`▶ Resume ${G.prof.icon} ${G.prof.name} (Turn ${G.turn})`;
+    resumeBtn.className='btn-spin';
+    resumeBtn.style.cssText='background:linear-gradient(135deg,#3a1070 0%,#6b3fa8 45%,#8b5fc8 60%,#6b3fa8 80%,#3a1070 100%);border-color:rgba(150,100,220,.5);color:#e8d4ff;box-shadow:0 5px 20px rgba(107,63,168,.5)';
+    resumeBtn.textContent=`▶ Continue as ${G.prof.icon} ${G.prof.name}`;
     resumeBtn.onclick=()=>resumeGame();
-    const spCard=document.querySelector('.sp-card');if(spCard)spCard.appendChild(resumeBtn);
-    // Also add "New Game" note
-    const note=document.createElement('div');note.style.cssText='font-size:.6rem;color:rgba(255,255,255,.28);text-align:center;margin-top:7px;font-style:italic;letter-spacing:.5px';
-    note.textContent='— or spin below to start a new game —';
-    if(spCard)spCard.appendChild(note);
+    wrap.appendChild(resumeBtn);
+    // the only path back to the spinner: deliberately end this life
+    const abandon=document.createElement('button');
+    abandon.style.cssText='background:none;border:none;color:rgba(255,255,255,.35);font-size:.62rem;font-style:italic;cursor:pointer;font-family:Georgia,serif;text-decoration:underline;padding:2px';
+    abandon.textContent='🗑 Abandon this life & spin a new path';
+    abandon.onclick=()=>{
+      if(confirm('End this life for good? '+G.prof.name+' — Turn '+G.turn+' will be erased. Your ✦ credits and trophies are safe.')){
+        clearSave();
+        try{sessionStorage.removeItem('cf_in_game');}catch(e){}
+        location.reload();
+      }
+    };
+    wrap.appendChild(abandon);
+    spCard.insertBefore(wrap,spCard.firstChild.nextSibling); // right under the title
   },100);
-  // The save was loaded only to power the Resume button. The SPLASH starts
-  // fresh: player-count buttons show "1", so the internals must match —
-  // otherwise spinning solo routes into multiplayer room setup.
-  // resumeGame() restores the count from PLAYERS when actually resuming.
+  // The save was loaded only to power the hero. resumeGame() restores the
+  // player count from PLAYERS when actually resuming.
   _mpCount=1;
 }
 showScreen('splash');
