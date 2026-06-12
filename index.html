@@ -543,9 +543,20 @@ body{
 #panic-cf-bar{height:4px;background:linear-gradient(90deg,#2a8a2a,#4aba4a);border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1)}
 #panic-cf-label{font-size:.58rem;color:rgba(255,255,255,.45);white-space:nowrap;font-family:Arial,sans-serif;font-weight:600}
 
+/* ── 🎲 Thrown dice — physical dice fly across the felt (WAAPI, reduced-motion-proof) ── */
+.fly-die{
+  position:fixed;z-index:240;border-radius:10px;
+  background:linear-gradient(145deg,#fdfdf2,#d8d8c8);border:2px solid #888;
+  display:grid;grid-template-rows:repeat(3,1fr);grid-template-columns:repeat(3,1fr);
+  padding:5px;box-shadow:0 14px 30px rgba(0,0,0,.55),inset 0 1px 0 #fff;
+  pointer-events:none;will-change:transform;
+}
+.fly-die .die-cell{display:flex;align-items:center;justify-content:center}
+.fly-die .pip{width:34%;height:34%;border-radius:50%;background:#16161a}
+
 /* ── TURN DIALOG (right side floating) ── */
 #ev-popup{
-  position:fixed;right:20px;top:50%;transform:translateY(-50%);
+  position:fixed;right:20px;top:44%;transform:translateY(-50%);
   width:360px;max-width:min(360px,40vw);
   background:var(--parch);border:3px solid var(--parch-b);border-radius:14px;
   display:none;flex-direction:column;overflow:hidden;
@@ -594,10 +605,10 @@ body{
 @keyframes rBlink{0%,100%{opacity:1}50%{opacity:.75}}
 .btn-row{display:flex;gap:8px}
 
-/* ── CHAT PANEL (left side) ── */
+/* ── LIFE FEED (right side, under the turn dialog) ── */
 #chat-log{
-  position:fixed;bottom:90px;left:65px;transform:none;
-  width:340px;
+  position:fixed;bottom:14px;right:20px;left:auto;transform:none;
+  width:330px;
   background:rgba(8,3,20,.92);
   border:1px solid rgba(120,70,190,.35);
   border-radius:12px;
@@ -619,7 +630,7 @@ body{
 }
 .cl-hdr-title{display:flex;align-items:center;gap:5px}
 .cl-toggle-btn{background:none;border:none;color:rgba(180,150,255,.6);cursor:pointer;font-size:.75rem;padding:0 2px;line-height:1}
-#cl-rows{max-height:240px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(120,70,190,.4) transparent;flex:1}
+#cl-rows{max-height:185px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(120,70,190,.4) transparent;flex:1}
 #cl-rows::-webkit-scrollbar{width:3px}
 #cl-rows::-webkit-scrollbar-thumb{background:rgba(120,70,190,.4);border-radius:2px}
 .cl-row{
@@ -693,6 +704,8 @@ body{
   box-shadow:0 12px 50px rgba(0,0,0,.6);animation:cPop .25s cubic-bezier(.175,.885,.32,1.275);
   position:relative;pointer-events:all;/* card captures clicks normally */
 }
+.ecm-band svg,.mbox-band svg{width:17px;height:17px;flex-shrink:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.ecm-band,.mbox-band{display:flex!important;align-items:center;justify-content:center;gap:8px}
 .ecm-band{
   padding:9px 14px;font-family:Georgia,serif;font-style:italic;font-weight:700;
   font-size:.92rem;color:#fff;display:flex;align-items:center;gap:8px;
@@ -1769,7 +1782,7 @@ body{
       <!-- Chat panel -->
       <div id="chat-log">
         <div class="cl-hdr" onclick="toggleChatPanel()">
-          <span class="cl-hdr-title">💬 <span>GAME LOG</span></span>
+          <span class="cl-hdr-title">📜 <span>LIFE FEED</span></span>
           <button class="cl-toggle-btn" id="cl-tog-btn" title="Collapse / expand">▼</button>
         </div>
         <div id="cl-rows"></div>
@@ -3304,7 +3317,7 @@ function fitBoard(){
   // Area hidden or not laid out yet (resize on splash/lobby) — retry once visible.
   // Without this guard the scale went NEGATIVE and exploded the board.
   if(availW<=0||availH<=0){setTimeout(fitBoard,250);return;}
-  const scale=Math.max(0.2,Math.min(1,availW/BOARD_PX,availH/BOARD_PX));
+  const scale=Math.max(0.2,Math.min(1.18,availW/BOARD_PX,availH/BOARD_PX)); // >1 lets the board breathe on desktop now that the left/bottom is clear
   document.documentElement.style.setProperty('--board-scale',scale.toFixed(4));
 }
 // Self-healing fit: hammers fitBoard on animation frames until the board-area
@@ -3394,6 +3407,9 @@ function toggleMute(){
   localStorage.setItem('cf_muted',window._muted?'1':'0');
   const b=$('btn-sound');
   if(b){b.textContent=window._muted?'🔇':'🔊';b.style.opacity=window._muted?'.55':'1';}
+  if(!window._muted){ // audible proof the toggle worked — also revives a suspended context
+    try{const c=_ctx();if(c&&c.state==='suspended')c.resume();_tone(660,.10,'sine',.18,0,990);}catch(e){}
+  }
 }
 document.addEventListener('DOMContentLoaded',()=>{
   const b=$('btn-sound');
@@ -3408,8 +3424,8 @@ function playClick(){
     src.connect(g);g.connect(ctx.destination);src.start();}catch(e){}
 }
 function playLand(){
-  if(window._muted)return;
-  try{const ctx=new AudioContext(),osc=ctx.createOscillator(),g=ctx.createGain();
+  const ctx=_ctx();if(!ctx)return; // shared context — new AudioContext() per call leaked past Chrome's 6-context cap and killed ALL sound mid-game
+  try{const osc=ctx.createOscillator(),g=ctx.createGain();
     osc.connect(g);g.connect(ctx.destination);
     const sp=BOARD_SPACES[G.position];
     const freq=sp.type==='payday'?880:sp.type==='deal'?660:sp.type==='doodad'||sp.type==='layoff'?220:440;
@@ -3756,7 +3772,25 @@ function rollDice(){
     // nudge v2 off the matching face, wrapping within d4 range
     v2=(v2%dieFaces)+1;
   }
+  // ── LUCK SMOOTHING (variable-ratio reinforcement) ──────────────────────
+  // Pure RNG produces brutal cold streaks that FEEL rigged and end sessions.
+  // After 2+ consecutive painful landings there's a 45% chance that a roll
+  // headed for ANOTHER pain space gets one silent re-roll — and the second
+  // result stands, good or bad. One re-roll max, never guaranteed, invisible.
+  // The player just feels the game "turn around" — the relief spike that keeps
+  // play loops alive. Fair by design: odds never change while you're winning,
+  // and nothing is deterministic enough to predict.
+  const PAIN={doodad:1,layoff:1,crisis:1,recession:1,lawsuit:1,audit:1};
+  const _landType=t=>{const sp=BOARD_SPACES[(G.position+t)%BOARD_SPACES.length];return sp?sp.type:'';};
+  if(!useExpress&&(G._painStreak||0)>=2&&Math.random()<0.45){
+    const t0=d2locked?v1:v1+v2;
+    if(PAIN[_landType(t0)]){
+      v1=Math.ceil(Math.random()*dieFaces);
+      if(!d2locked)v2=Math.ceil(Math.random()*dieFaces);
+    }
+  }
   const total=d2locked?v1:(useExpress?v1+v2+v3:v1+v2);
+  if(PAIN[_landType(total)])G._painStreak=(G._painStreak||0)+1;else G._painStreak=0;
   const finishRoll=()=>{
     d1.classList.remove('roll');d2.classList.remove('roll');
     if(useExpress)d3.classList.remove('roll');
@@ -3813,16 +3847,55 @@ function rollDice(){
     finishRoll();
     return;
   }
-  let ticks=0;
-  const timer=setInterval(()=>{
-    setDieVal(d1,Math.ceil(Math.random()*dieFaces));
-    if(!d2locked)setDieVal(d2,Math.ceil(Math.random()*dieFaces));
-    if(useExpress)setDieVal(d3,Math.ceil(Math.random()*6));
-    if(++ticks>=14){
-      clearInterval(timer);
-      finishRoll();
-    }
-  },80);
+  // 🎲 THROWN DICE — dice fly in from the table edges, tumble across the felt
+  // with an arc + bounce, then settle onto the center pads showing the result.
+  // element.animate() keyframes: immune to prefers-reduced-motion CSS zeroing.
+  const flyers=[[d1,v1],[d2locked?null:d2,v2],[useExpress?d3:null,v3]].filter(f=>f[0]);
+  let landed=0,finished=false;
+  const finishOnce=()=>{if(finished)return;finished=true;finishRoll();};
+  flyers.forEach((f,i)=>{
+    const target=f[0],val=f[1];
+    const r=target.getBoundingClientRect();
+    if(!r.width){finishOnce();return;} // board not laid out — skip theatrics
+    target.style.visibility='hidden';
+    const fly=document.createElement('div');
+    fly.className='fly-die';
+    fly.style.left=r.left+'px';fly.style.top=r.top+'px';
+    fly.style.width=r.width+'px';fly.style.height=r.height+'px';
+    setDieVal(fly,Math.ceil(Math.random()*dieFaces));
+    document.body.appendChild(fly);
+    const fromLeft=i%2===0;
+    const sx=fromLeft?-(r.left+160):(innerWidth-r.left+160); // off-screen start
+    const sy=-60+(Math.random()*120-60);
+    const spin=(fromLeft?1:-1)*(560+Math.random()*380);
+    const flick=setInterval(()=>setDieVal(fly,Math.ceil(Math.random()*dieFaces)),70);
+    const anim=fly.animate([
+      {transform:`translate(${sx}px,${sy}px) rotate(0deg) scale(1.55)`,opacity:.92,offset:0},
+      {transform:`translate(${sx*0.45}px,${sy*0.3-74}px) rotate(${spin*0.4}deg) scale(1.34)`,opacity:1,offset:0.38},
+      {transform:`translate(${sx*0.12}px,-28px) rotate(${spin*0.78}deg) scale(1.12)`,offset:0.68},
+      {transform:`translate(0px,7px) rotate(${spin*0.96}deg) scale(0.95)`,offset:0.86},
+      {transform:`translate(0px,0px) rotate(${Math.round(spin/360)*360}deg) scale(1)`,offset:1}
+    ],{duration:880+i*130,easing:'cubic-bezier(.22,.9,.3,1)',fill:'forwards'});
+    anim.onfinish=()=>{
+      clearInterval(flick);
+      setDieVal(fly,val);
+      if(!window._muted){try{_tone(150+i*40,.09,'square',.15);}catch(e){}} // felt thud
+      fly.animate([{transform:'scale(1)'},{transform:'scale(1.16)'},{transform:'scale(1)'}],
+        {duration:190,easing:'ease-out'}).onfinish=()=>{
+        target.style.visibility='';
+        fly.remove();
+        if(++landed===flyers.length)finishOnce();
+      };
+    };
+  });
+  if(!flyers.length){finishOnce();return;}
+  // Safety net: if an animation never fires onfinish, force-settle the turn
+  setTimeout(()=>{
+    if(finished)return;
+    document.querySelectorAll('.fly-die').forEach(e=>e.remove());
+    flyers.forEach(f=>{f[0].style.visibility='';});
+    finishOnce();
+  },2800);
 }
 
 function moveTokenSteps(steps,cb){
@@ -4669,18 +4742,45 @@ function onPayday(){
   const exp=expenses();
   const liabPayments={'Home Mortgage':exp.mortgage,'School Loan':exp.school,'Car Loan':exp.car,'Credit Cards':exp.cc};
   let autoDebtMsg=null;
+  // Payments amortize for real now: principal paydown is computed from the
+  // ORIGINAL payment (constant absolute paydown → guaranteed finite payoff),
+  // while the payment the player owes each month scales DOWN with the
+  // remaining balance. Every payday visibly shrinks expenses as debts melt —
+  // the core feedback loop the game is teaching.
+  G._basePmts=G._basePmts||{};
+  let pmtDropTotal=0;
   G.liabilities.forEach(l=>{
-    const pd=LIAB_PAYDOWN[l.name];const pmt=liabPayments[l.name]||0;
-    if(!pd||!pmt||l.amt<=0)return;
-    const principal=Math.round(pmt*pd.pct);
+    const pd=LIAB_PAYDOWN[l.name];if(!pd||l.amt<=0)return;
+    const curPmt=liabPayments[l.name]||0;
+    // capture base payment; refresh if a NEW bigger loan replaced the old one (e.g. home purchase)
+    if(G._basePmts[l.name]===undefined||curPmt>G._basePmts[l.name])G._basePmts[l.name]=curPmt;
+    if(l.orig===undefined||l.amt>l.orig*1.6)l.orig=l.amt; // fresh loan → new baseline (1.6 guard: delinquency interest doesn't reset it)
+    const basePmt=G._basePmts[l.name];if(!basePmt)return;
+    const principal=Math.round(basePmt*pd.pct);
     const before=l.amt;
     l.amt=Math.max(0,l.amt-principal);
     totalPrincipalPaid+=Math.min(principal,before);
     if(l.amt===0&&before>0){
       autoDebtMsg=l.name;
       boostCredit(15,l.name+' cleared');
+      // the payment dies WITH the debt (manual payoff already did this — auto payoff didn't)
+      const ek=LIAB_TO_EXPENSE[l.name];
+      if(ek){G.expenseOverrides=G.expenseOverrides||{};G.expenseOverrides[ek]=0;}
+    } else {
+      // Scale this month's payment to the surviving balance: floor 30% of the
+      // original payment, cap 150% (delinquency interest can grow the balance)
+      const ratio=Math.min(1.5,l.amt/Math.max(1,l.orig));
+      const newPmt=Math.max(25,Math.round(basePmt*(0.30+0.70*ratio)/5)*5);
+      const ek=LIAB_TO_EXPENSE[l.name];
+      if(ek){
+        G.expenseOverrides=G.expenseOverrides||{};
+        const cur=G.expenseOverrides[ek]!==undefined?G.expenseOverrides[ek]:basePmt;
+        if(newPmt<cur)pmtDropTotal+=cur-newPmt;
+        G.expenseOverrides[ek]=cur===0?0:newPmt; // never resurrect a payment the player already cleared
+      }
     }
   });
+  if(pmtDropTotal>=10)addLog('📉',`Debt payments shrank -$${fmt(pmtDropTotal)}/mo — balances melting, payday rising`,'g');
   G.liabilities=G.liabilities.filter(l=>l.amt>0||!LIAB_PAYDOWN[l.name]); // keep unknowns
   if(autoDebtMsg)setTimeout(()=>celebrateDebtFree(autoDebtMsg),600);
   // Biz loans: pay down from each asset's mortgagePmt (~35% principal portion)
@@ -6041,6 +6141,48 @@ const SETBACK_QUIPS=[
   'Financial freedom called. It said it\'s running a little late.',
   'Somewhere a Monopoly man is laughing in a top hat.',
 ];
+// ── POPUP ICONS — every card band gets a crisp SVG glyph matched to its
+// content (keyword scan), replacing emoji-only headers. White stroke, inherits
+// the band's color block behind it.
+const _POP_SVGS={
+  banknote:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.01M18 12h.01"/>',
+  up:'<polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/>',
+  down:'<polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/>',
+  alert:'<path d="M10.3 3.8 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><path d="M12 17h.01"/>',
+  heart:'<path d="M19 14c1.5-1.5 3-3.3 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3.4 1-4.5 2.5C10.9 4 9.3 3 7.5 3A5.5 5.5 0 0 0 2 8.5c0 2.2 1.5 4 3 5.5l7 7z"/>',
+  briefcase:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',
+  bag:'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  scales:'<path d="M12 3v18M3 7l3-4 3 4M3 7a3 3 0 0 0 6 0M15 7l3-4 3 4M15 7a3 3 0 0 0 6 0M8 21h8"/>',
+  bank:'<path d="M3 21h18M3 10h18M5 6l7-3 7 3M6 10v7M10 10v7M14 10v7M18 10v7"/>',
+  bulb:'<path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V18h6v-1.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/>',
+  trophy:'<path d="M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0zM7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 1-3 3"/>',
+  home:'<path d="M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5M9 21v-6h6v6"/>',
+  car:'<path d="M5 11 7 6h10l2 5M3 16v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3M5 16v2M19 16v2"/><circle cx="7.5" cy="16" r="1"/><circle cx="16.5" cy="16" r="1"/>',
+  baby:'<circle cx="12" cy="8" r="4"/><path d="M5 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M10 7.5h.01M14 7.5h.01"/>',
+  gift:'<rect x="3" y="8" width="18" height="4"/><rect x="5" y="12" width="14" height="9"/><line x1="12" y1="8" x2="12" y2="21"/><path d="M12 8c-2 0-4.5-.7-4.5-2.7C7.5 3.6 9 3 10 3c2 0 2 3 2 5zM12 8c2 0 4.5-.7 4.5-2.7C16.5 3.6 15 3 14 3c-2 0-2 3-2 5z"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M12 11v5"/>',
+};
+function _popIcon(bandCls,txt){
+  const t=(txt||'').toLowerCase();
+  let k=null;
+  if(/car|vehicle|dealer/.test(t))k='car';
+  else if(/house|home|mortgage|duplex|rent|apartment|condo|real estate/.test(t))k='home';
+  else if(/baby|child|kid/.test(t))k='baby';
+  else if(/lawsuit|legal|court|attorney|sued/.test(t))k='scales';
+  else if(/irs|audit|tax/.test(t))k='bank';
+  else if(/loan|bank|borrow|credit/.test(t))k='bank';
+  else if(/layoff|fired|job/.test(t))k='briefcase';
+  else if(/recession|crash|drop/.test(t))k='down';
+  else if(/crisis|emergency|alert/.test(t))k='alert';
+  else if(/doodad|shopping|bought|spend/.test(t))k='bag';
+  else if(/charity|donat/.test(t))k='heart';
+  else if(/mystery|box|gift|prize/.test(t))k='gift';
+  else if(/payday|cashflow day|salary|paycheck/.test(t))k='banknote';
+  else if(/dream|win|trophy|champion/.test(t))k='trophy';
+  else if(/mentor|tip|lesson/.test(t))k='bulb';
+  if(!k)k={payday:'banknote',opportunity:'up','big-opp':'up',setback:'alert',market:'up',life:'heart',charity:'heart',tip:'bulb',gray:'info',green:'up',red:'alert',gold:'trophy'}[bandCls]||'info';
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+_POP_SVGS[k]+'</svg>';
+}
 function showEventCard(bandCls,label,story,tip,numbers,actions){
   // 40% of setbacks get a comedy quip stitched under the lesson
   if(bandCls==='setback'&&tip&&Math.random()<0.4){
@@ -6049,7 +6191,7 @@ function showEventCard(bandCls,label,story,tip,numbers,actions){
   _resumeFn=()=>showEventCard(bandCls,label,story,tip,numbers,actions);
   openFS();
   $('ecm-band').className='ecm-band '+bandCls;
-  $('ecm-band').textContent=label;
+  $('ecm-band').innerHTML=_popIcon(bandCls,label+' '+(story||'').slice(0,140))+'<span>'+String(label).replace(/[<>&]/g,'')+'</span>';
   $('ecm-story').textContent=story;
   const tipEl=$('ecm-tip');
   if(tip){$('ecm-tip-txt').textContent=tip;tipEl.style.display='';}else tipEl.style.display='none';
@@ -7330,7 +7472,8 @@ function openSettings(){
   const muted=window._muted;
   openModal({band:'gray',title:'⚙️ Settings',
     desc:'Your game auto-saves after every action. Leaving is always safe.',
-    rows:[['Auto-save','ON — every action persists','green'],
+    rows:[['Sound',muted?'🔇 OFF':'🔊 ON',muted?'red':'green'],
+          ['Auto-save','ON — every action persists','green'],
           ['Run',`${G.prof.icon} ${G.prof.name} · Turn ${G.turn}`,''],
           ['Lifetime','✦ '+fmt(loadProfile().credits||0)+' · 🏆 '+loadProfile().trophies.length+' trophies','']],
     actions:[
@@ -7359,7 +7502,8 @@ function openSettings(){
 function openModal({band,title,desc,rows,actions,customInput,_noFS}){
   _resumeFn=()=>openModal({band,title,desc,rows,actions,customInput,_noFS});
   if(!_noFS)openFS();
-  $('mb-band').textContent=title;$('mb-band').className='mbox-band '+(band||'gray');
+  $('mb-band').innerHTML=_popIcon(band||'gray',title+' '+(desc||'').slice(0,140))+'<span>'+String(title).replace(/[<>&]/g,'')+'</span>';
+  $('mb-band').className='mbox-band '+(band||'gray');
   $('mb-title').textContent=title;$('mb-desc').textContent=desc||'';
   const tbl=$('mb-tbl');
   if(rows&&rows.length){
@@ -8337,8 +8481,9 @@ function showMilestone(ico,title,msg){
   document.body.appendChild(el);
   requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('show')));
   setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),650);},4200);
-  if(!window._muted)
-  try{const ctx=new AudioContext(),osc=ctx.createOscillator(),g=ctx.createGain();
+  const _mctx=_ctx();
+  if(_mctx)
+  try{const ctx=_mctx,osc=ctx.createOscillator(),g=ctx.createGain();
     osc.connect(g);g.connect(ctx.destination);osc.type='sine';
     osc.frequency.setValueAtTime(659,ctx.currentTime);osc.frequency.setValueAtTime(880,ctx.currentTime+.12);osc.frequency.setValueAtTime(1047,ctx.currentTime+.24);
     g.gain.setValueAtTime(.18,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.5);
