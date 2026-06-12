@@ -269,7 +269,7 @@ body{
   position:fixed;left:0;top:50px;bottom:0;width:660px;
   background:var(--parch);border-right:3px solid var(--parch-b);
   display:flex;flex-direction:column;
-  transform:translateX(calc(-660px + 42px));
+  transform:translateX(calc(-660px + 46px));
   transition:transform .42s cubic-bezier(0.32,0.72,0,1), box-shadow .42s ease;
   z-index:138;overflow:hidden;
 }
@@ -286,8 +286,8 @@ body{
 #fs-panel.open #fs-summ{animation-delay:.22s}
 @keyframes fsSectionIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 #fs-tab{
-  position:absolute;right:-42px;top:50%;transform:translateY(-50%);
-  width:42px;height:160px;
+  position:absolute;right:-46px;top:50%;transform:translateY(-50%);
+  width:46px;height:180px;
   background:linear-gradient(180deg,var(--purple2),var(--purple));
   border:2px solid rgba(255,255,255,.18);border-left:none;border-radius:0 10px 10px 0;
   display:flex;align-items:center;justify-content:center;
@@ -960,7 +960,7 @@ body{
   #top-bar .btn-og{padding:5px 8px!important;font-size:.62rem!important;letter-spacing:0!important}
   #goals-box{display:none!important}
   /* FS panel: full-width slide-over on phones (was hard-broken at 660px fixed) */
-  #fs-panel{max-height:none;width:100vw;transform:translateX(calc(-100vw + 42px))}
+  #fs-panel{max-height:none;width:100vw;transform:translateX(calc(-100vw + 46px))}
   #fs-panel.open{transform:translateX(0)}
   #fs-inner{grid-template-columns:1fr}
   #fs-freedom-panel{grid-column:1!important;grid-row:auto!important}
@@ -1547,7 +1547,6 @@ body{
     <div id="express-badge" style="display:none;background:#6040b0;border:1px solid #9060e0;border-radius:10px;padding:2px 9px;font-size:.62rem;font-weight:900;color:#e0c8ff;letter-spacing:1px;font-family:Arial,sans-serif">⚡ EXPRESS</div>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗 Dealer</button>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡 Realty</button>
-    <button class="btn-og btn-gold" onclick="toggleFS()" style="padding:6px 14px;font-size:.75rem;letter-spacing:.5px">🪪 Life Hub</button>
     <button class="btn-og btn-tan" onclick="saveGame();location.reload()" title="Save & return to menu" style="padding:6px 10px;font-size:.72rem">💾 Menu</button>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
@@ -1669,8 +1668,9 @@ body{
 </div><!-- /game -->
 
 <!-- ══ FS PANEL — lives outside .screen so it works on inner AND outer board ══ -->
-<div id="fs-panel" class="fs-hidden" onmouseenter="openFS()" onmouseleave="scheduleCloseFS()">
+<div id="fs-panel" class="fs-hidden">
   <div id="fs-tab" onclick="toggleFS()">🪪 Life<br>Hub</div>
+  <button id="fs-close-btn" onclick="toggleFS()" title="Close (Esc)" style="position:absolute;top:8px;right:10px;z-index:5;width:30px;height:30px;border-radius:50%;background:rgba(107,63,168,.18);border:1.5px solid rgba(107,63,168,.45);color:#6b3fa8;font-size:.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s" onmouseenter="this.style.background='rgba(107,63,168,.35)'" onmouseleave="this.style.background='rgba(107,63,168,.18)'">◀</button>
   <div id="fs-inner">
 
     <!-- Life Hub profile header (v11 life-sim layer) -->
@@ -4405,7 +4405,20 @@ function triggerBankruptcy(cause){
     cash:`You ran out of money with nowhere left to borrow. Cash hit $${fmt(G.cash)} and the bank stopped lending.`,
     debt:`Your bank loan hit $${fmt(G.bankLoan||0)} and monthly expenses still exceed income by $${fmt(Math.abs(monthlyCF()))}/mo. The spiral became unrecoverable.`,
   };
-  $('bk-reason').textContent=reasons[cause]||'The debt caught up. Game over.';
+  const bkName=(G.identity&&G.identity.name)||'You';
+  const BK_COMEDY=[
+    `${bkName} decided to live in the wilderness, never to be seen by family and friends again. The squirrels respect the hustle.`,
+    `Friends swear they saw ${bkName} living under a bridge, charging tolls. Entrepreneurial to the end.`,
+    `${bkName} legally changed their name to "Cash Flow Negative" and fled to a country with no extradition treaty for credit card debt.`,
+    `${bkName} now sells an online course called "How To Avoid Bankruptcy" for $499. It has one module: "Don't do what I did."`,
+    `The bank repossessed everything except ${bkName}'s optimism. The optimism was deemed to have no resale value.`,
+    `${bkName}'s last known purchase: a lottery ticket. The receipt is framed somewhere as a warning.`,
+    `${bkName} moved back in with their parents, who immediately started charging rent. The lesson continues.`,
+    `Local pigeons have accepted ${bkName} as one of their own. They report ${bkName} is "doing okay, all things considered."`,
+  ];
+  const funny=BK_COMEDY[Math.floor(Math.random()*BK_COMEDY.length)];
+  $('bk-reason').innerHTML=(reasons[cause]||'The debt caught up. Game over.')+
+    `<div style="margin-top:12px;font-style:italic;color:rgba(255,200,200,.85);font-size:.85rem">${funny}</div>`;
   $('bk-turns').textContent=G.turn||0;
   $('bk-debt').textContent='$'+fmt(totalLiabilities()); // bankLoan already included
   $('bk-assets').textContent=G.assets.length;
@@ -5502,7 +5515,25 @@ function showTipEvent(){
 }
 
 // ── EVENT CARD ────────────────────────────────────────
+const SETBACK_QUIPS=[
+  'The universe sends invoices, not warnings.',
+  'Your wallet just filed a restraining order.',
+  'Somewhere, your financial advisor felt a disturbance.',
+  'This is why we can\'t have nice things. Literally.',
+  'Your bank account let out a small scream.',
+  'Money can\'t buy happiness, but apparently it can leave without saying goodbye.',
+  'The good news: it\'s tax deductible. The bad news: everything else.',
+  'Breaking: local wallet enters witness protection.',
+  'Your emergency fund just used its one phone call.',
+  'On the bright side, you\'re building character. Character pays 0% APY.',
+  'Financial freedom called. It said it\'s running a little late.',
+  'Somewhere a Monopoly man is laughing in a top hat.',
+];
 function showEventCard(bandCls,label,story,tip,numbers,actions){
+  // 40% of setbacks get a comedy quip stitched under the lesson
+  if(bandCls==='setback'&&tip&&Math.random()<0.4){
+    tip=tip+' '+SETBACK_QUIPS[Math.floor(Math.random()*SETBACK_QUIPS.length)];
+  }
   _resumeFn=()=>showEventCard(bandCls,label,story,tip,numbers,actions);
   openFS();
   $('ecm-band').className='ecm-band '+bandCls;
@@ -8441,6 +8472,11 @@ function _spaceCanRoll(){
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape')return;
   const m=$('modal');
+  // No modal open? ESC closes the Life Hub panel
+  if((!m||!m.classList.contains('vis'))&&!($('event-modal')&&$('event-modal').classList.contains('vis'))){
+    const fp=$('fs-panel');
+    if(fp&&fp.classList.contains('open')){e.preventDefault();toggleFS();return;}
+  }
   if(m&&m.classList.contains('vis')){
     e.preventDefault();
     const fromBoard=window._modalFromBoard;window._modalFromBoard=false;
