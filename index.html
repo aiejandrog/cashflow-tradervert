@@ -950,6 +950,20 @@ body{
   display:flex;align-items:center;justify-content:center;
 }
 .tr-item.tr-locked{filter:grayscale(1) brightness(.32) blur(.4px)}
+/* ── 🏆 trophy hover tooltip — one floating card, WAAPI-animated in ── */
+#trophy-tip{
+  position:fixed;z-index:9700;width:218px;pointer-events:none;display:none;
+  background:linear-gradient(165deg,#1c1230 0%,#0e0818 100%);
+  border:1.5px solid rgba(240,192,32,.5);border-radius:12px;padding:11px 13px;
+  box-shadow:0 12px 34px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.07);
+  font-family:Arial,sans-serif;
+}
+#trophy-tip .tt-top{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+#trophy-tip .tt-ico{font-size:1.7rem;line-height:1;filter:drop-shadow(0 2px 5px rgba(0,0,0,.6))}
+#trophy-tip .tt-name{font-size:.82rem;font-weight:900;font-family:Georgia,serif;color:#fff;line-height:1.15}
+#trophy-tip .tt-tier{font-size:.54rem;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+#trophy-tip .tt-how{font-size:.64rem;color:rgba(255,255,255,.75);line-height:1.45;border-top:1px solid rgba(255,255,255,.1);padding-top:6px}
+#trophy-tip .tt-status{font-size:.56rem;font-weight:800;margin-top:6px;letter-spacing:.5px}
 .tr-item.tr-locked::after{
   content:'?';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-size:.85rem;font-weight:900;color:rgba(240,192,32,.55);font-family:Georgia,serif;
@@ -2627,7 +2641,7 @@ function renderTrophyRack(){
     html+='<div class="tr-shelf">'+TROPHIES.slice(i,i+PER).map(t=>{
       const has=have.has(t.id);
       const tier=TROPHY_TIERS[t.tier];
-      return '<div class="tr-item'+(has?'':' tr-locked')+'" title="'+(has?t.name+' ('+tier.label+')':'??? — How: '+t.how.replace(/"/g,'&quot;'))+'"'+
+      return '<div class="tr-item'+(has?'':' tr-locked')+'" data-tid="'+t.id+'"'+
         (has?' style="text-shadow:0 0 10px '+tier.color+',0 2px 4px rgba(0,0,0,.7)"':'')+'>'+t.icon+'</div>';
     }).join('')+'</div>';
   }
@@ -2861,6 +2875,56 @@ function checkTrophies(hook){
 }
 
 // ══ 🏆 TROPHY WALL overlay (main menu) ══
+// ── 🏆 TROPHY TOOLTIP — hover ANY trophy (rack or wall, locked or unlocked)
+// and a card pops in showing exactly how it's earned. WAAPI animation so it
+// survives prefers-reduced-motion; one shared element, delegated listeners.
+function _trophyTipEl(){
+  let el=document.getElementById('trophy-tip');
+  if(!el){el=document.createElement('div');el.id='trophy-tip';document.body.appendChild(el);}
+  return el;
+}
+function _trophyTipShow(tid,anchor){
+  const t=TROPHIES.find(x=>x.id===tid);if(!t)return;
+  const tier=TROPHY_TIERS[t.tier];
+  const has=loadProfile().trophies.includes(t.id);
+  const el=_trophyTipEl();
+  el.style.borderColor=has?tier.color:'rgba(255,255,255,.25)';
+  el.innerHTML=`<div class="tt-top">
+      <div class="tt-ico" style="${has?'':'filter:grayscale(1) brightness(.45)'}">${t.icon}</div>
+      <div><div class="tt-name">${has?t.name:'???'}</div>
+      <div class="tt-tier" style="color:${tier.color}">${tier.label} · ✦${tier.credits}</div></div>
+    </div>
+    <div class="tt-how">${t.how}</div>
+    <div class="tt-status" style="color:${has?'#7ee0a0':'rgba(255,255,255,.4)'}">${has?'✓ UNLOCKED':'🔒 LOCKED — go get it'}</div>`;
+  el.style.display='block';
+  // place beside the anchor, clamped to the viewport
+  const r=anchor.getBoundingClientRect();
+  const W=218,H=el.offsetHeight||120;
+  let x=r.right+12,y=r.top+r.height/2-H/2;
+  if(x+W>innerWidth-8)x=r.left-W-12;
+  if(x<8)x=Math.min(innerWidth-W-8,Math.max(8,r.left+r.width/2-W/2)),y=r.bottom+10;
+  y=Math.max(8,Math.min(innerHeight-H-8,y));
+  el.style.left=x+'px';el.style.top=y+'px';
+  el.animate([
+    {opacity:0,transform:'scale(.82) translateY(6px)'},
+    {opacity:1,transform:'scale(1.03) translateY(0)',offset:.7},
+    {opacity:1,transform:'scale(1) translateY(0)'}
+  ],{duration:200,easing:'cubic-bezier(.2,.8,.3,1)'});
+}
+function _trophyTipHide(){
+  const el=document.getElementById('trophy-tip');
+  if(!el||el.style.display==='none')return;
+  el.animate([{opacity:1},{opacity:0}],{duration:120,fill:'forwards'}).onfinish=()=>{el.style.display='none';};
+}
+document.addEventListener('mouseover',e=>{
+  const item=e.target.closest&&e.target.closest('[data-tid]');
+  if(item){_trophyTipShow(item.getAttribute('data-tid'),item);}
+});
+document.addEventListener('mouseout',e=>{
+  const item=e.target.closest&&e.target.closest('[data-tid]');
+  if(item&&!(e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('[data-tid]')===item))_trophyTipHide();
+});
+document.addEventListener('scroll',_trophyTipHide,true);
 function openTrophyWall(){
   const p=loadProfile();
   let el=document.getElementById('trophy-wall');
@@ -2872,11 +2936,11 @@ function openTrophyWall(){
   const cards=TROPHIES.map(t=>{
     const has=p.trophies.includes(t.id);
     const tier=TROPHY_TIERS[t.tier];
-    return `<div class="tw-card${has?' tw-has':''}" data-tier="${t.tier}" style="border-color:${has?tier.color:'rgba(255,255,255,.1)'};${has?'box-shadow:0 0 18px '+tier.color+'44':''}">
+    return `<div class="tw-card${has?' tw-has':''}" data-tier="${t.tier}" data-tid="${t.id}" style="border-color:${has?tier.color:'rgba(255,255,255,.1)'};${has?'box-shadow:0 0 18px '+tier.color+'44':''}">
       <div style="font-size:2.2rem;line-height:1;${has?'':'filter:grayscale(1) brightness(.4)'}">${t.icon}</div>
       <div style="font-size:.78rem;font-weight:900;font-family:Georgia,serif;color:${has?tier.color:'rgba(255,255,255,.35)'}">${t.name}</div>
       <div style="font-size:.56rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:${tier.color}${has?'':'66'}">${tier.label} · ✦${tier.credits}</div>
-      <div style="font-size:.6rem;color:rgba(255,255,255,${has?'.6':'.35'});line-height:1.4">${has?'Unlocked!':'How: '+t.how}</div>
+      <div style="font-size:.6rem;color:rgba(255,255,255,${has?'.6':'.35'});line-height:1.4">${has?'✓ '+t.how:'How: '+t.how}</div>
     </div>`;
   }).join('');
   el.innerHTML=`
