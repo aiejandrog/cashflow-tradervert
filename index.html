@@ -4313,17 +4313,38 @@ function pixelCarSVG(car){
   const tpl=_pixTemplateFor(car.segment);
   const body=_pixPaint(car);
   const gold=['Sport','Exotic','Supercar','Dream','Luxury'].indexOf(car.segment)>=0;
-  const C={B:body,H:_shade(body,1.45),S:_shade(body,0.62),W:'#9fd9f0',T:'#17171c',R:gold?'#f0c020':'#b9bdc4',L:'#ffe27a',X:'#e23b3b'};
+  const C={B:body,H:_shade(body,1.45),S:_shade(body,0.62),D:_shade(body,0.40),W:'#9fd9f0',T:'#17171c',R:gold?'#f0c020':'#b9bdc4',r:gold?'#8a6a08':'#6a6e75',L:'#ffe27a',X:'#e23b3b'};
   const w=tpl[0].length,hh=tpl.length;
-  let rects='';
-  for(let y=0;y<hh;y++){
-    const row=tpl[y];
-    for(let x=0;x<row.length;x++){
-      const c=row[x];if(c==='.'||!C[c])continue;
-      rects+='<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="'+C[c]+'"/>';
+  // build a cell grid first so we can post-process like real sprite art
+  const grid=[];
+  for(let y=0;y<hh;y++){grid[y]=[];const row=tpl[y];
+    for(let x=0;x<w;x++){const c=row[x];grid[y][x]=(c&&c!=='.'&&C[c])?c:null;}
+  }
+  // bottom shade band: the lowest body row of each column gets the darkest paint
+  for(let x=0;x<w;x++){
+    for(let y=hh-1;y>=0;y--){
+      const c=grid[y][x];
+      if(c==='B'||c==='S'||c==='H'){grid[y][x]='D';break;}
+      if(c)break; // wheels/lights terminate the column
     }
   }
-  return '<svg viewBox="0 0 '+w+' '+hh+'" shape-rendering="crispEdges" style="width:100%;height:100%;display:block">'+rects+'</svg>';
+  // spoked rims: alternate rim pixels darken — reads as alloy spokes at a glance
+  for(let y=0;y<hh;y++)for(let x=0;x<w;x++){
+    if(grid[y][x]==='R'&&((x+y)%2===0))grid[y][x]='r';
+  }
+  let rects='';
+  for(let y=0;y<hh;y++)for(let x=0;x<w;x++){
+    const c=grid[y][x];if(!c)continue;
+    rects+='<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="'+C[c]+'"/>';
+  }
+  // auto outline: every empty cell touching the sprite gets the classic black edge
+  let outline='';
+  for(let y=0;y<hh;y++)for(let x=0;x<w;x++){
+    if(grid[y][x])continue;
+    if((y>0&&grid[y-1][x])||(y<hh-1&&grid[y+1][x])||(x>0&&grid[y][x-1])||(x<w-1&&grid[y][x+1]))
+      outline+='<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="#101014"/>';
+  }
+  return '<svg viewBox="0 0 '+w+' '+hh+'" shape-rendering="crispEdges" style="width:100%;height:100%;display:block">'+outline+rects+'</svg>';
 }
 function carSpecs(car){
   // Deterministic plausible specs from segment + price
@@ -4356,6 +4377,7 @@ function openShowroom(fromBoard){
     </div>
     <div id="sr-specs" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 16px"></div>
     <div style="display:flex;gap:10px;justify-content:center;padding:14px 16px 20px">
+      <button id="sr-360" class="btn-og btn-tan" style="padding:11px 18px;font-size:.8rem">🔄 360° View</button>
       <button id="sr-buy" class="btn-og btn-gold" style="padding:11px 26px;font-size:.85rem">View Deal →</button>
     </div>`;
   document.body.appendChild(el);
@@ -4365,6 +4387,21 @@ function openShowroom(fromBoard){
   document.getElementById('sr-prev').onclick=()=>_srMove(-1);
   document.getElementById('sr-next').onclick=()=>_srMove(1);
   document.getElementById('sr-buy').onclick=()=>{const car=CARS[_srIdx];closeShowroom(true);showCarDetail(car,_srFromBoard);};
+  // 🔄 360° turntable — the sprite spins on the dais (mirror-flip through edge-on,
+  // with a brightness dip at the profile edge so it reads as rotation, not a glitch)
+  document.getElementById('sr-360').onclick=()=>{
+    const carEl=document.getElementById('sr-car');const btn=document.getElementById('sr-360');
+    if(window._sr360){window._sr360.cancel();window._sr360=null;btn.textContent='🔄 360° View';carEl.style.transform='';return;}
+    btn.textContent='⏹ Stop Spin';
+    window._sr360=carEl.animate([
+      {transform:'scaleX(1)',filter:'brightness(1)'},
+      {transform:'scaleX(0.08)',filter:'brightness(.55)',offset:.25},
+      {transform:'scaleX(-1)',filter:'brightness(.92)',offset:.5},
+      {transform:'scaleX(-0.08)',filter:'brightness(.55)',offset:.75},
+      {transform:'scaleX(1)',filter:'brightness(1)'}
+    ],{duration:2600,iterations:Infinity,easing:'linear'});
+    if(!window._muted)try{sfxEngine();}catch(e){}
+  };
   // drag/swipe
   const stage=document.getElementById('sr-stage');
   stage.addEventListener('pointerdown',e=>{_srDrag={x:e.clientX,moved:0};stage.style.cursor='grabbing';stage.setPointerCapture(e.pointerId);});
@@ -4389,6 +4426,7 @@ function closeShowroom(skipTurn){
   if(_srFromBoard&&!skipTurn){_srFromBoard=false;endTurn();}
 }
 function _srMove(dir){
+  if(window._sr360){window._sr360.cancel();window._sr360=null;const b=document.getElementById('sr-360');if(b)b.textContent='🔄 360° View';}
   _srIdx=(_srIdx+dir+CARS.length)%CARS.length;
   _srRender(dir);
   if(!window._muted)try{sfxEngine();}catch(e){}
