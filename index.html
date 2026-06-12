@@ -1682,6 +1682,7 @@ body{
     <div id="express-badge" style="display:none;background:#6040b0;border:1px solid #9060e0;border-radius:10px;padding:2px 9px;font-size:.62rem;font-weight:900;color:#e0c8ff;letter-spacing:1px;font-family:Arial,sans-serif">⚡ EXPRESS</div>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗 Dealer</button>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡 Realty</button>
+    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openLeisure()" title="Leisure — dining, nightlife, travel" style="padding:6px 10px;font-size:.72rem">🍸 Leisure</button>
     <button class="btn-og btn-tan" onclick="openSettings()" title="Settings" style="padding:6px 10px;font-size:.72rem">⚙️</button>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
@@ -2557,6 +2558,21 @@ const DREAMS = [
   {id:'hotel',name:'Hotel Owner',icon:'🏨',cost:650000,desc:'Your name on a hotel. Guests from 40 countries. Front desk works 24/7 so you don\'t have to.'},
   {id:'retire',name:'Early Retirement',icon:'🏝️',cost:750000,desc:'Walk away from work forever at 40. Wake up whenever. Travel anywhere.'},
   {id:'legacy',name:'Leave a Legacy',icon:'👑',cost:1000000,desc:'Build something your grandchildren inherit. Generational wealth is the ultimate flex.'},
+  // ── Expanded catalog — a dream for every kind of player ──
+  {id:'foodtrucks',name:'Food Truck Fleet',icon:'🚚',cost:200000,desc:'Five trucks, five neighborhoods, zero rent. Lunch rush pays your mortgage.'},
+  {id:'arcade',name:'Retro Arcade Bar',icon:'🕹️',cost:220000,desc:'Pinball, CRTs, craft beer. Your childhood, monetized.'},
+  {id:'gymchain',name:'Gym Franchise',icon:'💪',cost:280000,desc:'Three locations of gains. January memberships fund the whole year.'},
+  {id:'cabin',name:'Mountain Cabin Empire',icon:'🏔️',cost:320000,desc:'A row of A-frames on a booking app. Snow season prints, summer hikes print harder.'},
+  {id:'barber',name:'Barbershop Chain',icon:'💈',cost:240000,desc:'Fades, franchising, and Saturday-morning culture. Recession-proof since forever.'},
+  {id:'vineyard',name:'Boutique Vineyard',icon:'🍇',cost:500000,desc:'Rows of vines with your family name on the bottle. Patience in liquid form.'},
+  {id:'studio',name:'Recording Studio',icon:'🎙️',cost:380000,desc:'Platinum plaques on the wall and artists booking your rooms around the clock.'},
+  {id:'marina',name:'Marina & Boat Club',icon:'⛵',cost:700000,desc:'Slips, storage, and memberships. The boats are theirs — the water bill is yours to collect.'},
+  {id:'yacht',name:'Yacht Life',icon:'🛥️',cost:850000,desc:'70 feet of "we made it." Charter it out and the sea pays for itself.'},
+  {id:'racehorse',name:'Racehorse Stable',icon:'🏇',cost:600000,desc:'Thoroughbreds, silks, and a box at the derby. The sport of kings, financed by cash flow.'},
+  {id:'jet',name:'Private Jet Share',icon:'🛩️',cost:950000,desc:'Wheels up in 20 minutes. TSA becomes a word other people say.'},
+  {id:'island',name:'Private Island',icon:'🏝️',cost:1200000,desc:'A dot on the map that answers to you. The final boss of real estate.'},
+  {id:'foundation',name:'Charity Foundation',icon:'🕊️',cost:900000,desc:'A foundation with your name funding scholarships forever. Wealth that outlives you.'},
+  {id:'esports',name:'Esports Team',icon:'🎮',cost:750000,desc:'Your tag on jerseys, your team on the big stage. GG, wealth gap.'},
 ];
 
 // ══ PERSISTENT PROFILE (survives every run — the reason to come back) ══
@@ -3964,8 +3980,8 @@ function recalcChildCosts(){
 const _PIX_TEMPLATES={
   sedan:[
     '....................................',
-    '.........BBBBBBBBBBBB..............',
-    '........BBWWWWSBWWWWBB.............',
+    '.........HHHHHHHHHHHH..............',
+    '........BHWWWWSBWWWWHB.............',
     '.......BBWWWWWSBWWWWWBB............',
     '......BBBBBBBBBBBBBBBBBB...........',
     '..BBBBBBBBBBBBBBBBBBBBBBBBBBBB....',
@@ -3976,21 +3992,21 @@ const _PIX_TEMPLATES={
     '......TTTT.............TTTT.......',
   ],
   wedge:[
-    '....................................',
-    '.............BBBBBBBBBB............',
-    '...........BBWWWWWWWWBBB...........',
-    '.........BBBWWWWWWWWWWBBBB.........',
-    '.B....BBBBBBBBBBBBBBBBBBBBBBB......',
-    '.BB.BBBBBBBBBBBBBBBBBBBBBBBBBBBL...',
+    '..HH................................',
+    '..BBB........HHHHHHHHH.............',
+    '...BB......HHWWWWWWWWHBB...........',
+    '...BBB...BBBWWWWWWWWWWBBBB.........',
+    '...BBBBBBBBBBBBBBBBBBBBBBBBBBH.....',
+    '..BBBBBBBBBBBBBBBBBBBBBBBBBBBBBL...',
     '.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
     'XSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS..',
-    '.SSS.TTTT.SSSSSSSSSSSSSS.TTTT.SS...',
+    '.SSS.TTTT.SSSSSSSSSSSSSS.TTTT.SSS..',
     '.....TRRT................TRRT......',
     '.....TTTT................TTTT......',
   ],
   boxy:[
     '....................................',
-    '.......BBBBBBBBBBBBBBBBB...........',
+    '.......HHHHHHHHHHHHHHHHH...........',
     '......BBWWWWSBWWWWSBWWBB...........',
     '......BBWWWWSBWWWWSBWWBB...........',
     '.....BBBBBBBBBBBBBBBBBBBB..........',
@@ -4041,7 +4057,7 @@ function pixelCarSVG(car){
   const tpl=_pixTemplateFor(car.segment);
   const body=_pixPaint(car);
   const gold=['Sport','Exotic','Supercar','Dream','Luxury'].indexOf(car.segment)>=0;
-  const C={B:body,S:_shade(body,0.62),W:'#9fd9f0',T:'#17171c',R:gold?'#f0c020':'#b9bdc4',L:'#ffe27a',X:'#e23b3b'};
+  const C={B:body,H:_shade(body,1.45),S:_shade(body,0.62),W:'#9fd9f0',T:'#17171c',R:gold?'#f0c020':'#b9bdc4',L:'#ffe27a',X:'#e23b3b'};
   const w=tpl[0].length,hh=tpl.length;
   let rects='';
   for(let y=0;y<hh;y++){
@@ -4349,6 +4365,48 @@ function openRealtyOffice(){
     rows:[['Your Cash','$'+fmt(G.cash),'gold'],...(cur?[['Current Home Equity','+$'+fmt(cur.equity),'green']]:[]),['Mortgage Rate',(loanRate()*100).toFixed(0)+'%','']],
     actions});
 }
+// ── 🏠 CARTOON HOME ART — flat, friendly SVG scene per home category,
+// injected above the realty detail copy so buyers SEE what they're buying.
+function _homeArtSVG(h){
+  const id=h.id||'';
+  const sky='<rect x="0" y="0" width="160" height="64" rx="8" fill="#aee3f7"/><circle cx="134" cy="14" r="8" fill="#ffd84d"/><ellipse cx="40" cy="12" rx="13" ry="5" fill="#fff" opacity=".85"/><ellipse cx="98" cy="20" rx="10" ry="4" fill="#fff" opacity=".7"/>';
+  const grass='<rect x="0" y="64" width="160" height="16" fill="#7ccb6e"/>';
+  let scene='';
+  const win=(x,y)=>'<rect x="'+x+'" y="'+y+'" width="8" height="8" rx="1" fill="#fff3b8" stroke="#5a4a20" stroke-width=".8"/>';
+  if(/studio|condo1br|loft|waterfront|penthouse/.test(id)){
+    // city tower
+    scene='<rect x="58" y="10" width="44" height="58" rx="3" fill="#7e8fb5" stroke="#46527a" stroke-width="1.5"/>'+
+      [18,32,46].map(y=>win(64,y)+win(76,y)+win(88,y)).join('')+
+      '<rect x="72" y="58" width="16" height="10" fill="#46527a"/>'+
+      (/waterfront/.test(id)?'<rect x="0" y="64" width="160" height="16" fill="#4db3e6"/><path d="M0 66 q8 4 16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0" stroke="#fff" fill="none" stroke-width="1.4" opacity=".7"/>':'')+
+      (/penthouse|loft/.test(id)?'<rect x="58" y="4" width="44" height="8" rx="2" fill="#f0c020"/><text x="80" y="11" font-size="6" text-anchor="middle" fill="#1a0800" font-family="Arial" font-weight="bold">PH</text>':'');
+    if(/waterfront/.test(id))return '<svg viewBox="0 0 160 80" style="width:100%;max-width:240px">'+sky+scene+'</svg>';
+  } else if(/townhouse/.test(id)){
+    scene='<rect x="38" y="26" width="40" height="42" fill="#d98e6a" stroke="#8a4a2a" stroke-width="1.5"/><rect x="78" y="26" width="40" height="42" fill="#e8b07a" stroke="#8a4a2a" stroke-width="1.5"/>'+
+      '<polygon points="36,26 58,12 80,26" fill="#a85a3a"/><polygon points="76,26 98,12 120,26" fill="#8a4a2a"/>'+
+      win(46,34)+win(62,34)+win(86,34)+win(102,34)+
+      '<rect x="50" y="54" width="12" height="14" fill="#5a3a1a"/><rect x="92" y="54" width="12" height="14" fill="#5a3a1a"/>';
+  } else if(/starter|suburban/.test(id)){
+    scene='<rect x="44" y="32" width="62" height="36" fill="#f5e3c0" stroke="#9a7a4a" stroke-width="1.5"/><polygon points="38,32 75,10 112,32" fill="#c0563a" stroke="#8a3a2a" stroke-width="1.5"/>'+
+      win(52,40)+win(90,40)+'<rect x="68" y="46" width="14" height="22" fill="#7a4a2a"/><circle cx="79" cy="58" r="1.4" fill="#f0c020"/>'+
+      '<rect x="118" y="40" width="3" height="28" fill="#6a4a2a"/><circle cx="119" cy="36" r="10" fill="#4e9e44"/>'+
+      (/suburban/.test(id)?'<rect x="14" y="46" width="24" height="22" fill="#cfd6e0" stroke="#7a8494" stroke-width="1.2"/><rect x="18" y="52" width="16" height="16" fill="#5a6474"/>':'');
+  } else if(/executive|hillside/.test(id)){
+    scene='<rect x="34" y="26" width="74" height="42" rx="2" fill="#eef1f4" stroke="#7a8494" stroke-width="1.5"/><rect x="34" y="22" width="74" height="6" fill="#46525e"/>'+
+      '<rect x="42" y="34" width="26" height="18" rx="1" fill="#9fd9f0" stroke="#5a7a8a"/><rect x="74" y="34" width="26" height="18" rx="1" fill="#9fd9f0" stroke="#5a7a8a"/>'+
+      '<rect x="64" y="56" width="12" height="12" fill="#46525e"/>'+
+      '<ellipse cx="128" cy="70" rx="22" ry="6" fill="#4db3e6" stroke="#fff" stroke-width="1"/>';
+  } else {
+    // estate / beachfront villa
+    scene='<rect x="30" y="30" width="80" height="38" fill="#fbf0d8" stroke="#b08a4a" stroke-width="1.5"/><polygon points="24,30 70,8 116,30" fill="#d4674a" stroke="#9a4a32" stroke-width="1.5"/>'+
+      '<rect x="38" y="38" width="14" height="12" rx="1" fill="#9fd9f0" stroke="#5a7a8a"/><rect x="88" y="38" width="14" height="12" rx="1" fill="#9fd9f0" stroke="#5a7a8a"/>'+
+      '<rect x="62" y="44" width="16" height="24" fill="#8a5a2a"/><rect x="56" y="30" width="2" height="38" fill="#b08a4a"/><rect x="82" y="30" width="2" height="38" fill="#b08a4a"/>'+
+      '<rect x="138" y="34" width="3.5" height="34" fill="#8a6a3a"/><path d="M140 34 q-12 -8 -18 -2 M140 34 q12 -8 18 -2 M140 34 q-8 -12 -2 -16 M140 34 q8 -12 2 -16" stroke="#3e9e44" stroke-width="3.5" fill="none" stroke-linecap="round"/>'+
+      (/beachfront/.test(id)?'<rect x="0" y="64" width="160" height="16" fill="#f5deb0"/><rect x="0" y="72" width="160" height="8" fill="#4db3e6"/>':'<rect x="8" y="52" width="14" height="16" fill="#6a7a8a"/><rect x="10" y="46" width="10" height="6" fill="#5a6a7a"/>');
+    return '<svg viewBox="0 0 160 80" style="width:100%;max-width:240px">'+sky+scene+'</svg>';
+  }
+  return '<svg viewBox="0 0 160 80" style="width:100%;max-width:240px">'+sky+grass+scene+'</svg>';
+}
 function showHomeDetail(h){
   const tier=creditTier(G.creditScore||650);
   const price=_homePrice(h);
@@ -4376,6 +4434,8 @@ function showHomeDetail(h){
       {label:`Buy — $${fmt(cashNeeded)} cash to close`,cls:'btn-gold',locked:!canBuy,fn:()=>buyHome(h,price,down,equity,cashNeeded,principal,pmt)},
       {label:'← Listings',cls:'btn-tan',fn:openRealtyOffice},
     ]});
+  // cartoon curb appeal — injected above the copy (openModal sets desc via textContent)
+  try{$('mb-desc').insertAdjacentHTML('afterbegin','<div style="text-align:center;margin-bottom:8px">'+_homeArtSVG(h)+'</div>');}catch(e){}
 }
 function buyHome(h,price,down,equity,cashNeeded,principal,pmt){
   if(_mpLocked()){_mpLockToast();return;}
@@ -7015,7 +7075,7 @@ function manageTenant(uid){
     ],
     actions:[
       // Manager hire/fire — for 2+ unit properties (solo houses don't need one)
-      ...(!state.managed&&units>=2?[{label:`👔 Hire Property Manager — $${fmt(mgmtFee)}/mo (fills & manages all units)`,cls:'btn-gold',fn:()=>hirePropertyManager(uid)}]:[]),
+      ...(!state.managed?[{label:`👔 Hire Property Manager — $${fmt(mgmtFee)}/mo (fills & manages ${units>1?'all units':'the unit'})`,cls:'btn-gold',fn:()=>hirePropertyManager(uid)}]:[]),
       ...(state.managed?[{label:'👔 Fire Manager — handle units yourself',cls:'btn-tan',fn:()=>firePropertyManager(uid)}]:[]),
       // Per-unit listing only when self-managing — the manager fills units automatically
       ...(!state.managed?vacantUnits.map(i=>({label:`🔍 List Unit ${i+1}`,cls:'btn-gold',fn:()=>showTenantSearch(uid,i)})):[]),
@@ -7277,6 +7337,105 @@ function sellPrimaryResidence(){
       {label:'Keep It',cls:'btn-tan',fn:()=>{}}
     ]
   });
+}
+
+// ── 🍸 LEISURE — dining, nightlife, travel. Lifestyle spending with flavor:
+// mostly pure doodad (that's the lesson), occasionally a perk. Fires from the
+// top bar between actions — never touches the turn engine.
+function _leisurePay(cost,emoji,name,quip,perkFn){
+  if(G.cash<cost){addLog('🚫',`Can't afford ${name} — $${fmt(cost)}. The wallet said no.`,'r');return false;}
+  G.cash-=cost;
+  addLog(emoji,`${name} — $${fmt(cost)}. ${quip}`,'b');
+  if(perkFn)perkFn();
+  sfxCash&&sfxCash();updateUI();saveGame();return true;
+}
+function openLeisure(){
+  if(_mpLocked()){_mpLockToast();return;}
+  openModal({band:'life',title:'🍸 Leisure',
+    desc:'Money buys experiences too. Just remember every dollar spent here is a dollar not compounding. (But hey — live a little.)',
+    rows:[['Your Cash','$'+fmt(G.cash),'gold'],['Lifetime Leisure','$'+fmt(G._leisureSpent||0),'']],
+    actions:[
+      {label:'🍽 Go Out to Eat',cls:'btn-tan',fn:openDining},
+      {label:'🌃 Nightlife',cls:'btn-tan',fn:openNightlife},
+      {label:'✈️ Travel',cls:'btn-tan',fn:openTravel},
+      {label:'Close',cls:'btn-gold',fn:()=>{}},
+    ],_noFS:true});
+}
+function _leisureGo(cost,emoji,name,quip,perkFn){
+  if(_leisurePay(cost,emoji,name,quip,perkFn)){G._leisureSpent=(G._leisureSpent||0)+cost;}
+}
+function openDining(){
+  const spots=[
+    {e:'🌮',n:'Taco Loco (street tacos)',c:25, q:'Greasy, glorious, gone in 4 minutes.'},
+    {e:'🍔',n:'Smash Bros Diner (burgers)',c:45, q:'The shake alone was worth it.'},
+    {e:'🍝',n:'Trattoria Bella (Italian)',c:120, q:'You twirled the pasta like you own real estate. You kind of do.'},
+    {e:'🍣',n:'Kintsugi Omakase (sushi)',c:350, q:'Seventeen courses. You understood four of them.'},
+    {e:'🥩',n:"Maison d'Or (Michelin steakhouse)",c:800,q:'The waiter called you "monsieur" and you felt it in your credit score.'},
+  ];
+  openModal({band:'life',title:'🍽 Go Out to Eat',
+    desc:'From street tacos to Michelin stars. Upscale rooms sometimes seat you next to interesting people…',
+    rows:[['Your Cash','$'+fmt(G.cash),'gold']],
+    actions:[...spots.map(s=>({label:`${s.e} ${s.n} — $${fmt(s.c)}`,cls:'btn-tan',locked:G.cash<s.c,fn:()=>{
+      _leisureGo(s.c,s.e,s.n,s.q,()=>{
+        if(s.c>=120&&Math.random()<0.18){
+          const tip=Math.round((200+Math.random()*600)/50)*50;
+          G.cash+=tip;
+          addLog('🤝',`Got talking at the next table — a small consulting favor lands you +$${fmt(tip)}. Rooms matter.`,'gold');
+        } else if(s.c<=45&&Math.random()<0.08){
+          const doc=150;G.cash-=Math.min(doc,G.cash);
+          addLog('🤢',`The "special sauce" was special alright. Pharmacy run: -$${fmt(doc)}.`,'r');
+        }
+      });
+    }})),{label:'← Back',cls:'btn-gold',fn:openLeisure}],_noFS:true});
+}
+function openNightlife(){
+  const single=!(G.relationship&&(G.relationship.status==='dating'||G.relationship.status==='married'));
+  openModal({band:'life',title:'🌃 Nightlife',
+    desc:'The night is young and so is your net worth. Choose your chaos.',
+    rows:[['Your Cash','$'+fmt(G.cash),'gold']],
+    actions:[
+      {label:'🍺 The Rusty Anchor (dive bar) — $60',cls:'btn-tan',locked:G.cash<60,fn:()=>{
+        _leisureGo(60,'🍺','The Rusty Anchor','Darts, jukebox, questionable peanuts.',()=>{
+          const r=Math.random();
+          if(r<0.12){G.cash-=Math.min(300,G.cash);addLog('📱','Phone gone. Last seen near the jukebox. Replacement: -$300.','r');}
+          else if(r<0.28){const w=Math.round((150+Math.random()*350)/50)*50;G.cash+=w;addLog('🎯',`Hustled the darts table — +$${fmt(w)}. Don't make it a career.`,'gold');}
+        });
+      }},
+      {label:'🍸 SkyBar rooftop lounge — $180',cls:'btn-tan',locked:G.cash<180,fn:()=>{
+        _leisureGo(180,'🍸','SkyBar','$22 cocktails and a skyline that almost makes them worth it.',()=>{
+          if(Math.random()<0.15){boostCredit(2,'networked with a banker');addLog('🏦','A private banker liked your energy. Small favor noted.','gold');}
+        });
+      }},
+      {label:'💎 Diamond Palace (gentlemen\'s club) — $400',cls:'btn-tan',locked:G.cash<400,fn:()=>{
+        _leisureGo(400,'💎','Diamond Palace','The ATM inside charges $12 a withdrawal. You know this personally now.',()=>{
+          if(Math.random()<0.30){const extra=Math.min(300,G.cash);G.cash-=extra;addLog('💸',`You "made it rain". The rain cost an extra $${fmt(extra)}. Financial freedom delayed by weather.`,'r');}
+          if(!single&&Math.random()<0.25){addLog('😬',`${G.relationship.partner.name} saw the glitter on your jacket. You're on the couch tonight.`,'r');}
+        });
+      }},
+      {label:'← Back',cls:'btn-gold',fn:openLeisure},
+    ],_noFS:true});
+}
+function openTravel(){
+  openModal({band:'life',title:'✈️ Travel',
+    desc:'Perspective is the one purchase that appreciates. Still costs money though.',
+    rows:[['Your Cash','$'+fmt(G.cash),'gold']],
+    actions:[
+      {label:'🏖 Weekend Getaway — Key West · $900',cls:'btn-tan',locked:G.cash<900,fn:()=>{
+        _leisureGo(900,'🏖','Key West getaway','Two days of salt air. Inbox: 47 unread. Worth it.');
+      }},
+      {label:'🌴 Vacation — Cancún all-inclusive · $2,500',cls:'btn-tan',locked:G.cash<2500,fn:()=>{
+        _leisureGo(2500,'🌴','Cancún all-inclusive','Wristband on, worries off. The swim-up bar knows your name now.',()=>{
+          if(Math.random()<0.2){boostCredit(2,'recharged');addLog('🧘','You came back sharp. Decisions feel easier this month.','gold');}
+        });
+      }},
+      {label:'🌍 Travel the World — 3 weeks, 6 countries · $9,000',cls:'btn-tan',locked:G.cash<9000,fn:()=>{
+        _leisureGo(9000,'🌍','World tour','Tokyo, Lisbon, Buenos Aires… your passport finally earns its keep.',()=>{
+          boostCredit(3,'worldly perspective');
+          if(Math.random()<0.25){const idea=Math.round((500+Math.random()*1500)/100)*100;G.cash+=idea;addLog('💡',`A business idea from a hostel conversation actually pays off: +$${fmt(idea)}.`,'gold');}
+        });
+      }},
+      {label:'← Back',cls:'btn-gold',fn:openLeisure},
+    ],_noFS:true});
 }
 
 // ── BORROW / PAY ──────────────────────────────────────
@@ -10991,11 +11150,57 @@ function _charSyncPreview(){
   $('char-prev-sub').textContent='Age '+selectedIdentity.ageStart+' · '+(selectedIdentity.ethnicityLabel||selectedIdentity.toneLabel||'')+' · '+(selectedProf?selectedProf.icon+' '+selectedProf.name:'');
   if($('char-name').value!==(selectedIdentity.name||''))$('char-name').value=selectedIdentity.name||'';
 }
+// ── NAME ORIGIN GUESS — one-shot icebreaker after naming your character.
+// Pure pattern-matching for fun; the answers earn you a witty reply either way.
+function _guessNameOrigin(name){
+  const n=(name||'').toLowerCase();
+  if(/(ez|az|os|ito|ita|cia|jo)$|^(jose|juan|maria|carlos|luis|alej|pedro|diego|sofia|valent)/.test(n))return 'Latin America or Spain';
+  if(/(ov|ova|ev|sky|ski|enko|mir)$|^(vlad|dmit|olg|nat|ivan|serg)/.test(n))return 'Eastern Europe';
+  if(/^(mc|mac|o')|(agh|aith)$/.test(n))return 'Ireland or Scotland';
+  if(/(son|sen|berg|strom)$/.test(n))return 'Scandinavia';
+  if(/(preet|deep|esh|raj|av|ya)$|^(arj|ravi|priya|anil|sanj)/.test(n))return 'South Asia';
+  if(/(ko|ito|aki|umi|hiro)$|^(yuki|kenji|saku|hana)/.test(n))return 'Japan';
+  if(/(chen|wang|li|zhang|wei|ming)/.test(n))return 'China';
+  if(/^(ade|olu|chi|ngo|kwa)|(ade|ola|emi|chukwu)$/.test(n))return 'West Africa';
+  if(/(ed|elle|ette|eau)$|^(pierre|claude|marie|jean)/.test(n))return 'France';
+  return 'the good ol\' USA';
+}
+const _NAME_QUIP_YES=[
+  'I KNEW IT. Centuries of naming wisdom live in my circuits. 🧠✨',
+  'Called it. I should charge for this.',
+  'Of course it is. I\'m basically a passport scanner with charisma.',
+  'Nailed it first try. Your name wears its roots well. 🌍',
+];
+const _NAME_QUIP_NO=[
+  'Well… f*** you too then. Keep your mysteries. 🙄',
+  'Wow. Okay. I\'ll just be wrong over here, ALONE.',
+  'Lies. The algorithm is never wrong. (The algorithm is sometimes wrong.)',
+  'Fine. Witness protection respects no pattern-matching. 🕵️',
+];
 $('btn-char-go').addEventListener('click',()=>{
   if(!selectedIdentity)selectedIdentity=_charDefaultIdentity();
   if(!selectedIdentity.name)selectedIdentity.name='You';
-  buildLocGrid();
-  showScreen('location');
+  const proceed=()=>{buildLocGrid();showScreen('location');};
+  const nm=selectedIdentity.name;
+  if(!window._nameQuipDone&&nm&&nm!=='You'&&nm.length>=3){
+    window._nameQuipDone=true;
+    const origin=_guessNameOrigin(nm);
+    const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+    openModal({band:'life',title:'🔮 Hold up — '+nm+'?',
+      desc:`Quick gut check: is that name from ${origin}?`,rows:[],
+      actions:[
+        {label:'😏 Yes, actually',cls:'btn-gold',fn:()=>{
+          openModal({band:'life',title:'🔮 '+pick(_NAME_QUIP_YES),desc:'Anyway. Go pick where '+nm+' lives.',rows:[],
+            actions:[{label:'Continue →',cls:'btn-gold',fn:proceed}],_noFS:true});
+        }},
+        {label:'🙃 Nope',cls:'btn-tan',fn:()=>{
+          openModal({band:'life',title:'🔮 '+pick(_NAME_QUIP_NO),desc:'Moving on. Go pick where '+nm+' lives.',rows:[],
+            actions:[{label:'Continue →',cls:'btn-gold',fn:proceed}],_noFS:true});
+        }},
+      ],_noFS:true});
+    return;
+  }
+  proceed();
 });
 function buildLocGrid(){
   const grid=$('loc-grid');grid.innerHTML='';
