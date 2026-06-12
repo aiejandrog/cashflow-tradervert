@@ -1547,7 +1547,7 @@ body{
     <div id="express-badge" style="display:none;background:#6040b0;border:1px solid #9060e0;border-radius:10px;padding:2px 9px;font-size:.62rem;font-weight:900;color:#e0c8ff;letter-spacing:1px;font-family:Arial,sans-serif">⚡ EXPRESS</div>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗 Dealer</button>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡 Realty</button>
-    <button class="btn-og btn-tan" onclick="saveGame();location.reload()" title="Save & return to menu" style="padding:6px 10px;font-size:.72rem">💾 Menu</button>
+    <button class="btn-og btn-tan" onclick="openSettings()" title="Settings" style="padding:6px 10px;font-size:.72rem">⚙️</button>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
   <!-- Rotating goals (objectives system) -->
@@ -1910,11 +1910,11 @@ body{
       💡 <b style="color:#fde68a">What went wrong:</b> Spending exceeded income long enough for debt to become unserviceable. The path back: cut expenses first, build cash flow second, invest third.
     </div>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-      <button onclick="clearSave();location.reload()"
+      <button onclick="clearSave();try{sessionStorage.removeItem('cf_in_game')}catch(e){};location.reload()"
         style="padding:14px 32px;border-radius:10px;border:none;background:linear-gradient(135deg,#b02020,#e03030);color:#fff;font-size:1rem;font-weight:900;cursor:pointer;font-family:Georgia,serif;letter-spacing:1px;box-shadow:0 4px 20px rgba(200,32,32,.4)">
         🔄 Try Again
       </button>
-      <button onclick="clearSave();location.reload()"
+      <button onclick="clearSave();try{sessionStorage.removeItem('cf_in_game')}catch(e){};location.reload()"
         style="padding:14px 28px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);font-size:.9rem;font-weight:700;cursor:pointer;font-family:Arial,sans-serif">
         Main Menu
       </button>
@@ -7006,6 +7006,37 @@ function celebrateDebtFree(debtName){
   }
 }
 
+// ══ ⚙️ SETTINGS — in-game menu (save/leave/restart/sound/tutorial) ══
+function openSettings(){
+  if(!_gameScreenActive())return;
+  const muted=window._muted;
+  openModal({band:'gray',title:'⚙️ Settings',
+    desc:'Your game auto-saves after every action. Leaving is always safe.',
+    rows:[['Auto-save','ON — every action persists','green'],
+          ['Run',`${G.prof.icon} ${G.prof.name} · Turn ${G.turn}`,''],
+          ['Lifetime','✦ '+fmt(loadProfile().credits||0)+' · 🏆 '+loadProfile().trophies.length+' trophies','']],
+    actions:[
+      {label:muted?'🔊 Unmute Sound':'🔇 Mute Sound',cls:'btn-tan',fn:()=>{toggleMute();openSettings();}},
+      {label:'📖 Replay Tutorial',cls:'btn-tan',fn:()=>{try{startTutorial();}catch(e){}}},
+      {label:'🔄 Restart Run (same career)',cls:'btn-tan',fn:()=>{
+        if(confirm('Restart from Turn 0 as '+G.prof.name+'? Current progress is lost.'))replaySameProfession();
+      }},
+      {label:'💾 Save & Main Menu',cls:'btn-gold',fn:()=>{
+        saveGame();
+        try{sessionStorage.removeItem('cf_in_game');}catch(e){}
+        location.reload();
+      }},
+      {label:'🗑 Abandon Run (delete save)',cls:'btn-tan',fn:()=>{
+        if(confirm('Delete this run permanently? Your ✦ credits and trophies are safe — only the run dies.')){
+          clearSave();
+          try{sessionStorage.removeItem('cf_in_game');}catch(e){}
+          location.reload();
+        }
+      }},
+      {label:'← Back to Game',cls:'btn-tan',fn:()=>{}},
+    ],_noFS:true});
+}
+
 // ── MODAL ─────────────────────────────────────────────
 function openModal({band,title,desc,rows,actions,customInput,_noFS}){
   _resumeFn=()=>openModal({band,title,desc,rows,actions,customInput,_noFS});
@@ -8743,6 +8774,7 @@ function startGame(prof,loc){
   const lobby=$('mp-lobby');if(lobby)lobby.style.display='none';
   const wait=$('mp-wait');if(wait)wait.style.display='none';
   try{localStorage.removeItem('cf_pending_spin');}catch(e){} // life committed — lock released
+  try{sessionStorage.setItem('cf_in_game','solo');}catch(e){} // refresh returns straight into the run
   initGame(prof,loc);_prevCash=null;
   // Hide bankruptcy overlay in case player is starting fresh after going bankrupt
   const bkOv=$('bankruptcy-overlay');if(bkOv)bkOv.style.display='none';
@@ -8878,6 +8910,7 @@ function loadSave(key){
 }
 function clearSave(){localStorage.removeItem(SAVE_KEY);}
 function resumeGame(){
+  try{sessionStorage.setItem('cf_in_game',PLAYERS.length>1?'mp':'solo');}catch(e){}
   // Password gate: MP save with a room password must be unlocked first
   if(PLAYERS.length>1&&_mpRoomPass&&!_mpPassUnlocked){
     mpCheckPassword(()=>resumeGame());
@@ -10013,8 +10046,16 @@ function bcJoinerFinishTurn(){
 // (mpAdvanceTurn and mpLaunchGame patched in their definitions below)
 
 // ── INIT ──────────────────────────────────────────────
+// Refresh mid-game returns INTO the game (sessionStorage survives refresh, not tab close).
+// Intentional exits (Settings → Main Menu) clear the flag, so the menu still exists.
+let _autoResumed=false;
+try{
+  const mode=sessionStorage.getItem('cf_in_game');
+  if(mode==='solo'&&loadSave()){_autoResumed=true;setTimeout(()=>resumeGame(),60);}
+  else if(mode==='mp'&&loadSave(SAVE_KEY_MP)){_autoResumed=true;setTimeout(()=>resumeGame(),60);}
+}catch(e){}
 // Check for saved game before showing splash
-if(loadSave()){
+if(!_autoResumed&&loadSave()){
   // Add resume button to splash before showing
   setTimeout(()=>{
     const resumeBtn=document.createElement('button');
