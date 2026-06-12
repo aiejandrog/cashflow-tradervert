@@ -11436,6 +11436,61 @@ function _guessNameOrigin(name){
   if(/(ed|elle|ette|eau)$|^(pierre|claude|marie|jean)/.test(n))return 'France';
   return 'the good ol\' USA';
 }
+// Pop-culture name radar — checked BEFORE the country guesser. Each entry:
+// [regex, where it's from, optional custom "yes" reaction]
+const _FAMOUS_NAMES=[
+  [/jon?\s*snow/, 'Game of Thrones', 'I knew it. Sadly, you know NOTHING about cash flow… yet. ❄️'],
+  [/daenerys|khaleesi/, 'Game of Thrones', 'Mother of Dragons, collector of rents. 🐉'],
+  [/sponge\s*bob/, 'SpongeBob SquarePants', 'I KNEW IT. Mr. Krabs would be proud — that crab understood passive income. 🦀'],
+  [/walter\s*white|heisenberg/, 'Breaking Bad', 'Say my name. …It\'s "Compound Interest." 🧪'],
+  [/tony\s*stark|iron\s*man/, 'Marvel', 'Genius, billionaire, playboy, LANDLORD. Let\'s go. 🦾'],
+  [/bruce\s*wayne|batman/, 'Batman', 'Called it. Fun fact: Wayne Manor is a terrible cash-flowing asset. 🦇'],
+  [/peter\s*parker|spider\s*-?man/, 'Spider-Man', 'With great leverage comes great monthly payments. 🕷️'],
+  [/darth|vader|skywalker|yoda|kenobi/, 'Star Wars', 'Strong with this one, the cash flow is. 🌌'],
+  [/harry\s*potter|hermione|dumbledore|weasley/, 'Harry Potter', 'Accio assets! Gringotts pays terrible interest btw. ⚡'],
+  [/frodo|gandalf|aragorn|legolas|bilbo/, 'Lord of the Rings', 'One ring to rent them all. 💍'],
+  [/\bmario\b|luigi|bowser|peach/, 'Super Mario', 'Confirmed. The man\'s been collecting coins since 1985 — respect the hustle. 🍄'],
+  [/goku|vegeta|saiyan/, 'Dragon Ball', 'IT\'S OVER 9000!! (your future net worth, hopefully) 🔥'],
+  [/naruto|sasuke|uchiha/, 'Naruto', 'Believe it! Shadow-clone yourself some income streams. 🍥'],
+  [/james\s*bond|007/, 'James Bond', 'The name\'s Flow. Cash Flow. 🍸'],
+  [/rocky\s*balboa|\brocky\b/, 'Rocky', 'It ain\'t about how hard you hit — it\'s about how hard your money works. 🥊'],
+  [/tony\s*montana|scarface/, 'Scarface', 'First you get the money. Then you get the assets. Then you get the freedom. 🌴'],
+  [/homer|bart\s*simpson|simpson/, 'The Simpsons', 'D\'oh! 30 years and Homer still hasn\'t paid off that house. 🍩'],
+  [/rick\s*sanchez|morty/, 'Rick and Morty', 'Wubba lubba dub dub, get that money across infinite dimensions. 🧪'],
+  [/michael\s*scott|dwight\s*schrute/, 'The Office', 'I DECLARE… FINANCIAL FREEDOM! 📎'],
+  [/geralt|witcher/, 'The Witcher', 'Toss a coin to your landlord. Better yet — BE the landlord. ⚔️'],
+  [/kratos/, 'God of War', 'BOY. Diversify. 🪓'],
+  [/lara\s*croft/, 'Tomb Raider', 'Raiding tombs is just aggressive real-estate prospecting. 🏺'],
+  [/john\s*wick/, 'John Wick', 'All this over one rental property… understandable. 🐶'],
+  [/escobar/, 'Narcos', 'Plata o portfolio, amigo. Choose the legal one. 🦛'],
+  [/tyler\s*durden/, 'Fight Club', 'First rule of Money Club: TALK about Money Club. 🧼'],
+  [/forrest\s*gump/, 'Forrest Gump', 'Bought Apple stock by accident and died rich. Be like Forrest. 🏃'],
+  [/jack\s*sparrow/, 'Pirates of the Caribbean', 'Captain Jack — the original liquidity problem. 🏴\u200d☠️'],
+  [/toretto|dom(inic)?\s*toretto/, 'Fast & Furious', 'It\'s all about FAMILY… trusts. Family trusts. 🏎️'],
+  [/shrek|donkey/, 'Shrek', 'A swamp is still real estate. Location, location, location. 🧅'],
+  [/\belsa\b|frozen/, 'Frozen', 'Let it go… the bad debt, I mean. ❄️'],
+  [/beyonce|drake|eminem|rihanna|jay\s*-?z/, 'the music industry', 'Confirmed. Now build a catalog that pays YOU royalties. 🎤'],
+  [/lebron|jordan|kobe|messi|ronaldo|brady/, 'sports legend territory', 'Champions invest the contract money. Welcome to training camp. 🏆'],
+  [/elon\s*musk|bezos|buffett|kiyosaki/, 'billionaire biographies', 'Studying the masters I see. This whole game is basically their homework. 📚'],
+  [/john\s*cena/, 'WWE', 'Is it? I literally can\'t see you. 🤚'],
+  [/pikachu|pokemon|charizard/, 'Pokémon', 'Gotta catch all the income streams. ⚡'],
+  [/deadpool|wade\s*wilson/, 'Deadpool', 'Maximum effort on those mortgage payments. 💀'],
+];
+function _famousName(name){
+  const n=(name||'').toLowerCase();
+  for(const f of _FAMOUS_NAMES){if(f[0].test(n))return{src:f[1],quip:f[2]};}
+  return null;
+}
+const _FAME_YES=[
+  'KNEW IT. Put me in the credits. 🎬',
+  'Ha! My pop-culture circuits are UNDEFEATED.',
+  'Of course it is. Royalties for the reference, please.',
+];
+const _FAME_NO=[
+  'Sure. "Totally original character." Wink. 😉',
+  'Riiight, and I\'m just a humble calculator.',
+  'Coincidence? I think NOT. But fine, your "original" name lives on.',
+];
 const _NAME_QUIP_YES=[
   'I KNEW IT. Centuries of naming wisdom live in my circuits. 🧠✨',
   'Called it. I should charge for this.',
@@ -11455,8 +11510,25 @@ $('btn-char-go').addEventListener('click',()=>{
   const nm=selectedIdentity.name;
   if(!window._nameQuipDone&&nm&&nm!=='You'&&nm.length>=3){
     window._nameQuipDone=true;
-    const origin=_guessNameOrigin(nm);
     const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+    const fame=_famousName(nm);
+    if(fame){
+      // pop-culture hit — the radar goes first, the country guesser sits this one out
+      openModal({band:'life',title:'🎬 Hold up — '+nm+'?!',
+        desc:`Wait wait wait. Is that from ${fame.src}?? 👀`,rows:[],
+        actions:[
+          {label:'😏 Yeah, you got me',cls:'btn-gold',fn:()=>{
+            openModal({band:'life',title:'🎬 '+(fame.quip||pick(_FAME_YES)),desc:'Anyway. Go pick where '+nm+' lives.',rows:[],
+              actions:[{label:'Continue →',cls:'btn-gold',fn:proceed}],_noFS:true});
+          }},
+          {label:'🙃 No idea what you mean',cls:'btn-tan',fn:()=>{
+            openModal({band:'life',title:'🎬 '+pick(_FAME_NO),desc:'Moving on. Go pick where '+nm+' lives.',rows:[],
+              actions:[{label:'Continue →',cls:'btn-gold',fn:proceed}],_noFS:true});
+          }},
+        ],_noFS:true});
+      return;
+    }
+    const origin=_guessNameOrigin(nm);
     openModal({band:'life',title:'🔮 Hold up — '+nm+'?',
       desc:`Quick gut check: is that name from ${origin}?`,rows:[],
       actions:[
