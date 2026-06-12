@@ -9698,9 +9698,69 @@ function scheduleCloseFS(){
 }
 
 // ── SCREEN ────────────────────────────────────────────
+// ── ⏰ IDLE HECKLER — dawdle 15s on any setup screen and the game talks smack.
+// Escalates per screen visit, resets on any interaction, max 3 nags per screen.
+const _NAG_LINES={
+  splash:[
+    '⏰ It\'s a SPIN BUTTON, not a life decision. Oh wait—',
+    '💸 Hurry up — the money\'s getting cold.',
+    '🎰 Spin it. SPIN IT. Let\'s get this money!!',
+  ],
+  character:[
+    '💇 You\'re beautiful, they\'re pixels. PICK ONE.',
+    '⏰ Tick tock, b*tch — payday won\'t collect itself. 💅',
+    '🪞 The mirror says yes. The clock says MOVE.',
+  ],
+  location:[
+    '🗺️ They\'re all expensive, sweetheart. Throw a dart.',
+    '⏰ Rent is rising in all 16 cities while you stare.',
+    '✈️ PICK A CITY. The economy is literally waiting on you.',
+  ],
+  dream:[
+    '💭 Dream faster. Capitalism doesn\'t nap.',
+    '⏰ Bro it\'s a DREAM, not a prenup. Choose!',
+    '🚀 Hurry up and let\'s get this money!! 💸💸',
+  ],
+};
+let _nagTimer=null,_nagCount=0,_nagScreen=null;
+function _nagToast(msg){
+  if(document.hidden)return;
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;left:50%;bottom:46px;transform:translateX(-50%);z-index:9800;max-width:78vw;'+
+    'background:linear-gradient(135deg,#2a1845,#160a2c);border:1.5px solid rgba(240,192,32,.6);border-radius:14px;'+
+    'padding:11px 20px;color:#ffe9a0;font-family:Georgia,serif;font-weight:800;font-size:.85rem;text-align:center;'+
+    'box-shadow:0 10px 32px rgba(0,0,0,.6);pointer-events:none;white-space:normal';
+  document.body.appendChild(t);
+  t.animate([
+    {opacity:0,transform:'translateX(-50%) translateY(24px) scale(.85)'},
+    {opacity:1,transform:'translateX(-50%) translateY(-6px) scale(1.04)',offset:.6},
+    {opacity:1,transform:'translateX(-50%) translateY(0) scale(1)'}
+  ],{duration:340,easing:'cubic-bezier(.2,.8,.3,1.2)'});
+  setTimeout(()=>{t.animate([{opacity:1},{opacity:0,transform:'translateX(-50%) translateY(10px)'}],{duration:300,fill:'forwards'}).onfinish=()=>t.remove();},4200);
+  if(!window._muted){try{_tone(880,.07,'sine',.12,0,660);}catch(e){}}
+}
+function _nagArm(){
+  clearTimeout(_nagTimer);
+  if(!_nagScreen||_nagCount>=(_NAG_LINES[_nagScreen]||[]).length)return;
+  _nagTimer=setTimeout(()=>{
+    const lines=_NAG_LINES[_nagScreen]||[];
+    if(_nagCount<lines.length){_nagToast(lines[_nagCount]);_nagCount++;_nagArm();}
+  },15000);
+}
+function _nagWatch(id){
+  clearTimeout(_nagTimer);
+  if(_NAG_LINES[id]){_nagScreen=id;_nagCount=0;_nagArm();}
+  else{_nagScreen=null;}
+}
+// any interaction on a watched screen resets the countdown (but not the escalation)
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(_nagScreen)_nagArm();},{passive:true,capture:true}));
+// boot lands on the splash without a showScreen() call — arm the heckler there too
+document.addEventListener('DOMContentLoaded',()=>{const s=document.querySelector('.screen.active');if(s)_nagWatch(s.id);});
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   $(id).classList.add('active');
+  _nagWatch(id);
   // Clean up ob-mode when leaving game screen (e.g. win screen after dream landed)
   if(id!=='game'){
     const gEl=$('game');if(gEl)gEl.classList.remove('ob-mode');
