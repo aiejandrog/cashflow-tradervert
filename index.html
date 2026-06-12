@@ -4543,7 +4543,7 @@ function openShowroom(fromBoard){
   };
   // drag/swipe
   const stage=document.getElementById('sr-stage');
-  stage.addEventListener('pointerdown',e=>{_srDrag={x:e.clientX,moved:0};stage.style.cursor='grabbing';stage.setPointerCapture(e.pointerId);});
+  stage.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;_srDrag={x:e.clientX,moved:0};stage.style.cursor='grabbing';stage.setPointerCapture(e.pointerId);});
   stage.addEventListener('pointermove',e=>{
     if(!_srDrag)return;
     const dx=e.clientX-_srDrag.x;_srDrag.moved=dx;
@@ -4559,8 +4559,17 @@ function openShowroom(fromBoard){
   };
   stage.addEventListener('pointerup',release);
   stage.addEventListener('pointercancel',release);
+  // ⌨️ arrow keys browse the lot, Esc walks out — listener removed with the showroom
+  window._srKeys=e=>{
+    if(!document.getElementById('showroom'))return;
+    if(e.key==='ArrowRight'){e.preventDefault();_srMove(1);}
+    else if(e.key==='ArrowLeft'){e.preventDefault();_srMove(-1);}
+    else if(e.key==='Escape'){closeShowroom();}
+  };
+  document.addEventListener('keydown',window._srKeys);
 }
 function closeShowroom(skipTurn){
+  if(window._srKeys){document.removeEventListener('keydown',window._srKeys);window._srKeys=null;}
   const el=document.getElementById('showroom');if(el)el.remove();
   if(_srFromBoard&&!skipTurn){_srFromBoard=false;endTurn();}
 }
