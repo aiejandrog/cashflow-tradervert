@@ -543,16 +543,25 @@ body{
 #panic-cf-bar{height:4px;background:linear-gradient(90deg,#2a8a2a,#4aba4a);border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1)}
 #panic-cf-label{font-size:.58rem;color:rgba(255,255,255,.45);white-space:nowrap;font-family:Arial,sans-serif;font-weight:600}
 
-/* ── 🎲 Thrown dice — physical dice fly across the felt (WAAPI, reduced-motion-proof) ── */
-.fly-die{
-  position:fixed;z-index:240;border-radius:10px;
-  background:linear-gradient(145deg,#fdfdf2,#d8d8c8);border:2px solid #888;
-  display:grid;grid-template-rows:repeat(3,1fr);grid-template-columns:repeat(3,1fr);
-  padding:5px;box-shadow:0 14px 30px rgba(0,0,0,.55),inset 0 1px 0 #fff;
-  pointer-events:none;will-change:transform;
+/* ── 🎲 3D thrown dice — real CSS cubes tumble in from the table edge ── */
+.fly-die3d{position:fixed;z-index:240;width:54px;height:54px;pointer-events:none;perspective:520px;will-change:transform,opacity;filter:drop-shadow(0 16px 14px rgba(0,0,0,.55))}
+.fd-cube{width:100%;height:100%;position:relative;transform-style:preserve-3d;will-change:transform}
+.fd-face{position:absolute;inset:0;border-radius:9px;background:linear-gradient(145deg,#fdfdf2,#d4d4c2);border:2px solid #888;display:grid;grid-template-rows:repeat(3,1fr);grid-template-columns:repeat(3,1fr);padding:5px}
+.fly-die3d.fd-glow .fd-face{box-shadow:0 0 16px rgba(240,192,32,.85),inset 0 1px 0 #fff;border-color:#c8910c}
+.fd-cell{display:flex;align-items:center;justify-content:center}
+.fd-pip{width:70%;height:70%;border-radius:50%;background:#16161a}
+/* static board dice retired — the 3D throw IS the dice now */
+#dice-row{display:none}
+#center-roll-btn{
+  margin:6px auto 2px;display:block;background:linear-gradient(135deg,#c8910c,#f0c020);
+  border:2px solid #f8e070;border-radius:12px;color:#1a0800;font-family:Georgia,serif;
+  font-weight:900;font-size:.88rem;letter-spacing:2px;padding:9px 26px;cursor:pointer;
+  box-shadow:0 5px 18px rgba(240,192,32,.4);transition:filter .15s;
 }
-.fly-die .die-cell{display:flex;align-items:center;justify-content:center}
-.fly-die .pip{width:34%;height:34%;border-radius:50%;background:#16161a}
+#center-roll-btn:hover{filter:brightness(1.12)}
+/* splash: desktop multiplayer lives in the Online Rooms panel — the 1-4 player
+   row only shows on small screens where the panel is hidden */
+@media(min-width:1000px){.sp-mp-row{display:none!important}}
 
 /* ── TURN DIALOG (right side floating) ── */
 #ev-popup{
@@ -1714,6 +1723,7 @@ body{
                 <div class="die" id="die-2" onclick="toggleDie2()" style="cursor:pointer" title="Tap to toggle 2nd dice">⚀</div>
                 <div class="die" id="die-3" style="display:none;opacity:.85;border-color:#9060d0">⚀</div>
               </div>
+              <button id="center-roll-btn" onclick="rollDice()">🎲 ROLL</button>
               <div id="die2-hint"></div>
               <div id="roll-total"></div>
               <div id="board-msg">Roll the dice!</div>
@@ -3853,13 +3863,18 @@ function rollDice(){
       // Show the gift ONLY when the mystery box will actually open.
       // (It used to show on every doubles, then silently skip during the 10-turn
       // cooldown — looked like the game ate your reward.)
-      const giftDie=useExpress?(v1===v2?d2:v2===v3?d3:d2):d2;
-      giftDie.innerHTML='<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:1.4rem;line-height:1">🎁</div>';
-      giftDie.classList.add('die-gift');
+      // gift pops from the board center now — the static die-2 it used to paint is retired
+      const bcR=$('board-center')?$('board-center').getBoundingClientRect():null;
+      if(bcR&&bcR.width&&!document.hidden){
+        const g=document.createElement('div');
+        g.textContent='🎁';
+        g.style.cssText='position:fixed;left:'+(bcR.left+bcR.width/2-22)+'px;top:'+(bcR.top+bcR.height*0.3-22)+'px;font-size:2.6rem;z-index:245;pointer-events:none;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))';
+        document.body.appendChild(g);
+        g.animate([{transform:'scale(.4)',opacity:0},{transform:'scale(1.25)',opacity:1,offset:.45},{transform:'scale(1)',opacity:1}],{duration:420,easing:'cubic-bezier(.2,.8,.3,1.4)'});
+        setTimeout(()=>g.remove(),780);
+      }
       window._giftTimer=setTimeout(()=>{
         window._giftTimer=null;
-        giftDie.classList.remove('die-gift');
-        setDieVal(giftDie,useExpress?(v1===v2?v2:v2===v3?v3:v2):v2);
         G._lastDoublesTurn=G.turn||0;
         showMysteryBox(total,()=>{playClick();moveTokenSteps(total,()=>onLand());});
       },750);
@@ -3875,55 +3890,77 @@ function rollDice(){
     finishRoll();
     return;
   }
-  // 🎲 THROWN DICE — dice fly in from the table edges, tumble across the felt
-  // with an arc + bounce, then settle onto the center pads showing the result.
-  // element.animate() keyframes: immune to prefers-reduced-motion CSS zeroing.
-  const flyers=[[d1,v1],[d2locked?null:d2,v2],[useExpress?d3:null,v3]].filter(f=>f[0]);
+  // 🎲 3D THROWN DICE — true CSS cubes hurled in from the LEFT edge together,
+  // tumbling in 3D, bouncing once, then snapping to the rolled face at center.
+  // They rest glowing for a beat while the token starts moving, then fade.
+  // WAAPI keyframes: immune to prefers-reduced-motion CSS zeroing.
+  const vals=[v1,d2locked?null:v2,useExpress?v3:null].filter(v=>v!==null);
+  const bcEl=$('board-center');
+  const bc=bcEl?bcEl.getBoundingClientRect():null;
+  if(!bc||!bc.width){finishRoll();return;} // board not laid out — skip theatrics
+  document.querySelectorAll('.fly-die3d').forEach(e=>e.remove()); // clear any stragglers
+  const SZ=54;
   let landed=0,finished=false;
   const finishOnce=()=>{if(finished)return;finished=true;finishRoll();};
-  flyers.forEach((f,i)=>{
-    const target=f[0],val=f[1];
-    const r=target.getBoundingClientRect();
-    if(!r.width){finishOnce();return;} // board not laid out — skip theatrics
-    target.style.visibility='hidden';
-    const fly=document.createElement('div');
-    fly.className='fly-die';
-    fly.style.left=r.left+'px';fly.style.top=r.top+'px';
-    fly.style.width=r.width+'px';fly.style.height=r.height+'px';
-    setDieVal(fly,Math.ceil(Math.random()*dieFaces));
-    document.body.appendChild(fly);
-    const fromLeft=i%2===0;
-    const sx=fromLeft?-(r.left+160):(innerWidth-r.left+160); // off-screen start
-    const sy=-60+(Math.random()*120-60);
-    const spin=(fromLeft?1:-1)*(560+Math.random()*380);
-    const flick=setInterval(()=>setDieVal(fly,Math.ceil(Math.random()*dieFaces)),70);
-    const anim=fly.animate([
-      {transform:`translate(${sx}px,${sy}px) rotate(0deg) scale(1.55)`,opacity:.92,offset:0},
-      {transform:`translate(${sx*0.45}px,${sy*0.3-74}px) rotate(${spin*0.4}deg) scale(1.34)`,opacity:1,offset:0.38},
-      {transform:`translate(${sx*0.12}px,-28px) rotate(${spin*0.78}deg) scale(1.12)`,offset:0.68},
-      {transform:`translate(0px,7px) rotate(${spin*0.96}deg) scale(0.95)`,offset:0.86},
-      {transform:`translate(0px,0px) rotate(${Math.round(spin/360)*360}deg) scale(1)`,offset:1}
-    ],{duration:880+i*130,easing:'cubic-bezier(.22,.9,.3,1)',fill:'forwards'});
-    anim.onfinish=()=>{
-      clearInterval(flick);
-      setDieVal(fly,val);
+  // final cube orientation per value (faces: 1 front, 2 top, 3 right, 4 left, 5 bottom, 6 back)
+  const FACE_ROT={1:[0,0],2:[-90,0],3:[0,-90],4:[0,90],5:[90,0],6:[0,180]};
+  vals.forEach((val,i)=>{
+    const tx=bc.left+bc.width/2+(i-(vals.length-1)/2)*74-SZ/2;
+    const ty=bc.top+bc.height*0.30-SZ/2;
+    const wrap=document.createElement('div');
+    wrap.className='fly-die3d';
+    wrap.style.left=tx+'px';wrap.style.top=ty+'px';
+    wrap.innerHTML=_dieCubeHTML();
+    document.body.appendChild(wrap);
+    const cube=wrap.firstChild;
+    // SAME SIDE: every die launches from the left edge, staggered like a real throw
+    const sx=-(tx+180+i*70);
+    const sy=-50-Math.random()*70;
+    const dur=920+i*160;
+    wrap.animate([
+      {transform:`translate(${sx}px,${sy}px) scale(1.6)`,opacity:.95,offset:0},
+      {transform:`translate(${sx*0.42}px,${sy-80}px) scale(1.35)`,offset:0.4},
+      {transform:`translate(${sx*0.10}px,-22px) scale(1.1)`,offset:0.7},
+      {transform:'translate(0px,8px) scale(.97)',offset:0.87},
+      {transform:'translate(0px,0px) scale(1)',offset:1}
+    ],{duration:dur,easing:'cubic-bezier(.22,.9,.3,1)',fill:'forwards'});
+    const F=FACE_ROT[val]||[0,0];
+    const tumble=cube.animate([
+      {transform:`rotateX(${F[0]+720}deg) rotateY(${F[1]+1080}deg)`},
+      {transform:`rotateX(${F[0]}deg) rotateY(${F[1]}deg)`}
+    ],{duration:dur,easing:'cubic-bezier(.3,.8,.3,1)',fill:'forwards'});
+    tumble.onfinish=()=>{
       if(!window._muted){try{_tone(150+i*40,.09,'square',.15);}catch(e){}} // felt thud
-      fly.animate([{transform:'scale(1)'},{transform:'scale(1.16)'},{transform:'scale(1)'}],
-        {duration:190,easing:'ease-out'}).onfinish=()=>{
-        target.style.visibility='';
-        fly.remove();
-        if(++landed===flyers.length)finishOnce();
-      };
+      wrap.classList.add('fd-glow');
+      wrap.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:180,easing:'ease-out'});
+      if(++landed===vals.length){
+        finishOnce(); // token starts moving while the dice rest glowing…
+        setTimeout(()=>{document.querySelectorAll('.fly-die3d').forEach(e=>{
+          e.animate([{opacity:1},{opacity:0}],{duration:380,fill:'forwards'}).onfinish=()=>e.remove();
+        });},1150);
+      }
     };
   });
-  if(!flyers.length){finishOnce();return;}
   // Safety net: if an animation never fires onfinish, force-settle the turn
   setTimeout(()=>{
     if(finished)return;
-    document.querySelectorAll('.fly-die').forEach(e=>e.remove());
-    flyers.forEach(f=>{f[0].style.visibility='';});
+    document.querySelectorAll('.fly-die3d').forEach(e=>e.remove());
     finishOnce();
-  },2800);
+  },3000);
+}
+// 3D die cube: 6 pip faces positioned on a 54px cube
+function _dieFaceHTML(v){
+  const pos=PIP_POS[v]||PIP_POS[1];let h='';
+  for(let r=1;r<=3;r++)for(let c=1;c<=3;c++){
+    h+='<div class="fd-cell">'+(pos.some(p=>p[0]===r&&p[1]===c)?'<div class="fd-pip"></div>':'')+'</div>';
+  }
+  return h;
+}
+function _dieCubeHTML(){
+  const T={1:'rotateY(0deg)',2:'rotateX(90deg)',3:'rotateY(90deg)',4:'rotateY(-90deg)',5:'rotateX(-90deg)',6:'rotateY(180deg)'};
+  let faces='';
+  for(const v of[1,2,3,4,5,6])faces+='<div class="fd-face" style="transform:'+T[v]+' translateZ(27px)">'+_dieFaceHTML(v)+'</div>';
+  return '<div class="fd-cube">'+faces+'</div>';
 }
 
 function moveTokenSteps(steps,cb){
@@ -6164,16 +6201,22 @@ function showMarketEvent(){
     const canBorrow=!can&&shortage>0&&shortage<=loanRoom;
     const foreActions=[];
     if(can){
-      foreActions.push({label:'Buy Foreclosure — $'+fmt(deal.down),cls:'btn-gold',fn:()=>buyDeal(deal)});
+      foreActions.push({label:'Buy — $'+fmt(deal.down)+' down, $'+fmt(me.price-me.discount_down)+' financed',cls:'btn-gold',fn:()=>buyDeal(deal)});
     }else if(canBorrow){
       foreActions.push({label:'🏦 Borrow $'+fmt(shortage)+' + Buy',cls:'btn-gold',fn:()=>borrowAndBuy(deal,shortage)});
     }else{
       foreActions.push({label:'Need $'+fmt(shortage)+' more',cls:'btn-tan',fn:endTurn});
     }
     foreActions.push({label:'Pass',cls:'btn-tan',fn:()=>{addLog('📉','Passed on foreclosure','');endTurn();}});
+    const _financed=me.price-me.discount_down;
+    const _forePmt=Math.round(_financed*0.08/12);
     showEventCard('market','📉 Foreclosure Opportunity!',me.story,me.tip||'Foreclosures are where bargains live.',
-      [['Market Price','$'+fmt(me.price),'gold'],['Down (10%)','$'+fmt(me.discount_down),'green'],
-       ['Monthly CF','+$200/mo','green'],['Your Cash','$'+fmt(G.cash),can?'green':canBorrow?'gold':'red']],
+      [['True Market Value','$'+fmt(baseDeal.cost),''],
+       ['Bank Price','$'+fmt(me.price),'gold'],
+       ['Down Payment — pay now','$'+fmt(me.discount_down),'green'],
+       ['Financed (mortgage)','$'+fmt(_financed)+' → $'+fmt(_forePmt)+'/mo','red'],
+       ['Potential CF (tenanted)','+$200/mo gross','green'],
+       ['Your Cash','$'+fmt(G.cash),can?'green':canBorrow?'gold':'red']],
       foreActions);
     return;
   }
@@ -6414,7 +6457,7 @@ function closeEventCard(){
   // If turn still in progress and no other overlay open, prompt user to tap die
   if(G&&G.rolling&&_resumeFn){
     const modVis=$('modal')&&$('modal').classList.contains('vis');
-    if(!modVis)$('board-msg').textContent='🎲 Tap a die to resume';
+    if(!modVis)$('board-msg').textContent='🎲 Tap ROLL to resume';
   }
 }
 
