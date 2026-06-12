@@ -950,6 +950,9 @@ body{
   display:flex;align-items:center;justify-content:center;
 }
 .tr-item.tr-locked{filter:grayscale(1) brightness(.32) blur(.4px)}
+#trophy-rack{max-height:76vh;overflow-y:auto;scrollbar-width:thin}
+.tw-card[data-tier="M"]{grid-column:span 2;background:linear-gradient(150deg,rgba(255,77,109,.10),rgba(20,5,15,.4))}
+.tw-card[data-tier="M"].tw-has{border-width:2px}
 /* ── 🏆 trophy hover tooltip — one floating card, WAAPI-animated in ── */
 #trophy-tip{
   position:fixed;z-index:9700;width:218px;pointer-events:none;display:none;
@@ -2599,23 +2602,87 @@ const DREAMS = [
   {id:'esports',name:'Esports Team',icon:'🎮',cost:750000,desc:'Your tag on jerseys, your team on the big stage. GG, wealth gap.'},
 ];
 
+// ── ☁️ IP-KEYED PROGRESS SYNC — your trophies/credits/wins follow your IP.
+// Privacy: only a SHA-256 hash of the IP ever leaves the machine. Merge rules
+// favor the richest profile (union trophies, max counters) so nothing is lost.
+// Degrades silently if offline or the cf_profiles table is unreachable.
+const PROFILES_URL='https://dddcfwbydgtxxwdsvsvt.supabase.co/rest/v1/cf_profiles';
+let _ipHashCache=null,_profPushTimer=null;
+async function _ipHash(){
+  if(_ipHashCache)return _ipHashCache;
+  try{
+    const cached=sessionStorage.getItem('cf_iphash');
+    if(cached){_ipHashCache=cached;return cached;}
+    const r=await fetch('https://api.ipify.org?format=json');
+    const ip=(await r.json()).ip||'';
+    if(!ip)return null;
+    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('cf_'+ip));
+    const hex=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,32);
+    _ipHashCache=hex;sessionStorage.setItem('cf_iphash',hex);
+    return hex;
+  }catch(e){return null;}
+}
+function _profHdrs(){return{apikey:ROOMS_KEY,Authorization:'Bearer '+ROOMS_KEY,'Content-Type':'application/json'};}
+function _mergeProfiles(a,b){ // a=local, b=cloud → richest of both
+  if(!b)return a;
+  const out={...a};
+  out.trophies=Array.from(new Set([...(a.trophies||[]),...(b.trophies||[])]));
+  out.objCredited=Array.from(new Set([...(a.objCredited||[]),...(b.objCredited||[])]));
+  out.owned=Array.from(new Set([...(a.owned||[]),...(b.owned||[])]));
+  out.credits=Math.max(a.credits||0,b.credits||0);
+  out.wins=Math.max(a.wins||0,b.wins||0);
+  out.winStreak=Math.max(a.winStreak||0,b.winStreak||0);
+  out.games=Math.max(a.games||0,b.games||0);
+  out.daily={...(b.daily||{}),...(a.daily||{})};
+  out.bestByProf={...(b.bestByProf||{}),...(a.bestByProf||{})};
+  if(!out.bestOverall||(b.bestOverall&&b.bestOverall.turns<out.bestOverall.turns))out.bestOverall=b.bestOverall||out.bestOverall;
+  if(!out.lastIdentity)out.lastIdentity=b.lastIdentity||null;
+  out.equipped=Object.keys(a.equipped||{}).length?a.equipped:(b.equipped||{});
+  return out;
+}
+async function cloudPullProfile(){
+  const h=await _ipHash();if(!h)return;
+  try{
+    const r=await fetch(PROFILES_URL+'?ip_hash=eq.'+h+'&select=profile',{headers:_profHdrs()});
+    if(!r.ok)return;
+    const rows=await r.json();
+    if(!rows.length||!rows[0].profile)return;
+    const merged=_mergeProfiles(loadProfile(),rows[0].profile);
+    localStorage.setItem(PROFILE_KEY,JSON.stringify(merged));
+    if(typeof renderTrophyRack==='function')try{renderTrophyRack();}catch(e){}
+    if(typeof populateProfileStrip==='function')try{populateProfileStrip();}catch(e){}
+  }catch(e){}
+}
+function cloudPushProfile(){
+  clearTimeout(_profPushTimer);
+  _profPushTimer=setTimeout(async()=>{
+    const h=await _ipHash();if(!h)return;
+    try{
+      await fetch(PROFILES_URL+'?on_conflict=ip_hash',{method:'POST',
+        headers:{..._profHdrs(),'Prefer':'resolution=merge-duplicates'},
+        body:JSON.stringify({ip_hash:h,profile:loadProfile(),updated_at:new Date().toISOString()})});
+    }catch(e){}
+  },2500); // debounce — saveProfile fires often
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(cloudPullProfile,800));
+
 // ══ PERSISTENT PROFILE (survives every run — the reason to come back) ══
 const PROFILE_KEY='cf_profile';
 function loadProfile(){
   try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'{}');
-    return{games:p.games||0,wins:p.wins||0,bestOverall:p.bestOverall||null,bestByProf:p.bestByProf||{},daily:p.daily||{},trophies:p.trophies||[],
+    return{games:p.games||0,wins:p.wins||0,winStreak:p.winStreak||0,bestOverall:p.bestOverall||null,bestByProf:p.bestByProf||{},daily:p.daily||{},trophies:p.trophies||[],
       credits:p.credits||0,objCredited:p.objCredited||[],lastIdentity:p.lastIdentity||null,
       owned:p.owned||[],equipped:p.equipped||{}};
-  }catch(e){return{games:0,wins:0,bestOverall:null,bestByProf:{},daily:{},trophies:[],credits:0,objCredited:[],lastIdentity:null,owned:[],equipped:{}};}
+  }catch(e){return{games:0,wins:0,winStreak:0,bestOverall:null,bestByProf:{},daily:{},trophies:[],credits:0,objCredited:[],lastIdentity:null,owned:[],equipped:{}};}
 }
-function saveProfile(p){try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p));}catch(e){}}
+function saveProfile(p){try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p));cloudPushProfile();}catch(e){}}
 function recordWin(){
   // Guard: checkOuterWin re-runs on resume-after-win and in MP flows —
   // without this, every reload of the win screen farms +1 win into the profile.
   if(G._winRecorded){const p0=loadProfile();return{newPB:false,best:p0.bestOverall,wins:p0.wins};}
   G._winRecorded=true;
   const p=loadProfile();
-  p.wins++;
+  p.wins++;p.winStreak=(p.winStreak||0)+1;
   const t=G.turn,prof=G.prof&&G.prof.id;
   const newPB=!p.bestOverall||t<p.bestOverall;
   if(newPB)p.bestOverall=t;
@@ -2800,7 +2867,7 @@ function openShop(){
 }
 
 // ══ 🏆 TROPHIES — tiered, persistent, with how-to-earn ══
-const TROPHY_TIERS={C:{label:'Common',color:'#7aa86a',credits:25},R:{label:'Rare',color:'#4a8ad0',credits:50},E:{label:'Epic',color:'#a060e0',credits:100},L:{label:'Legendary',color:'#f0c020',credits:250}};
+const TROPHY_TIERS={C:{label:'Common',color:'#7aa86a',credits:25},R:{label:'Rare',color:'#4a8ad0',credits:50},E:{label:'Epic',color:'#a060e0',credits:100},L:{label:'Legendary',color:'#f0c020',credits:250},M:{label:'Mythic',color:'#ff4d6d',credits:500}};
 const TROPHIES=[
   {id:'first_roll', icon:'🎲', name:'First Steps',      tier:'C', how:'Roll the dice for the first time.'},
   {id:'first_deal', icon:'🤝', name:'Deal Maker',       tier:'C', how:'Buy your first income-producing asset.'},
@@ -2826,6 +2893,20 @@ const TROPHIES=[
   {id:'s_grade',    icon:'🏆', name:'Flawless',         tier:'L', how:'Win with an S grade.'},
   {id:'family_win', icon:'👨‍👩‍👧‍👦', name:'Dynasty',     tier:'L', how:'Win while married with 3+ kids.'},
   {id:'no_borrow',  icon:'👻', name:'Phantom',          tier:'L', how:'Win without ever taking a bank loan.'},
+  // ── Expansion set — deeper grind, bigger flexes ──
+  {id:'cash_100k',  icon:'🧱', name:'Six Figures Liquid',tier:'R', how:'Hold $100,000 cash at once.'},
+  {id:'leisure_king',icon:'🍾',name:'High Roller',       tier:'R', how:'Spend $5,000 on Leisure in one run.'},
+  {id:'world_tour', icon:'🌍', name:'Jet Setter',        tier:'R', how:'Take the 3-week world tour.'},
+  {id:'cr_800',     icon:'🌟', name:'Credit Wizard',     tier:'E', how:'Reach an 800 credit score.'},
+  {id:'landlord_6', icon:'🏙', name:'Property Tycoon',   tier:'E', how:'Own 6 rental properties in one run.'},
+  {id:'passive_10k',icon:'🌊', name:'Cash Flow Tsunami', tier:'E', how:'Reach $10,000/mo passive income.'},
+  {id:'pm_team',    icon:'👔', name:'Hands-Off Empire',  tier:'E', how:'Have 3 properties run by managers at once.'},
+  {id:'cash_250k',  icon:'🏦', name:'Quarter Mil Club',  tier:'L', how:'Hold $250,000 cash at once.'},
+  {id:'dream_big',  icon:'🌠', name:'Dream Hunter',      tier:'L', how:'Win by buying a dream worth $750k+.'},
+  {id:'win_5',      icon:'🐐', name:'Serial Escaper',    tier:'L', how:'Win 5 lifetime games.'},
+  {id:'multimillionaire',icon:'👑',name:'Empire Eternal',tier:'M', how:'Reach $5,000,000 net worth in one run.'},
+  {id:'win_streak3',icon:'☄️', name:'Untouchable',       tier:'M', how:'Win 3 games in a row — no bankruptcies between.'},
+  {id:'all_trophies',icon:'🔱',name:'Completionist',     tier:'M', how:'Unlock every other trophy in the game.'},
 ];
 function unlockTrophy(id){
   const t=TROPHIES.find(x=>x.id===id);if(!t)return;
@@ -2853,8 +2934,18 @@ function checkTrophies(hook){
       if((G._objectivesDone||[]).length>=1)unlockTrophy('goal_1');
       if((G._objectivesDone||[]).length>=4)unlockTrophy('goal_streak');
       const assetVal=G.assets.reduce((s,a)=>s+(a.totalCost||a.cost||0),0);
-      if(G.cash+assetVal-totalLiabilities()>=1000000)unlockTrophy('millionaire');
+      const _nw=G.cash+assetVal-totalLiabilities();
+      if(_nw>=1000000)unlockTrophy('millionaire');
+      if(_nw>=5000000)unlockTrophy('multimillionaire');
       if(G.relationship&&G.relationship.status==='married')unlockTrophy('married');
+      if(G.cash>=100000)unlockTrophy('cash_100k');
+      if(G.cash>=250000)unlockTrophy('cash_250k');
+      if((G.creditScore||0)>=800)unlockTrophy('cr_800');
+      if(G.assets.filter(a=>a.type==='re'&&!a.isPrimaryHome).length>=6)unlockTrophy('landlord_6');
+      if(passiveIncome()>=10000)unlockTrophy('passive_10k');
+      if((G._leisureSpent||0)>=5000)unlockTrophy('leisure_king');
+      if(G._worldTour)unlockTrophy('world_tour');
+      if(Object.values(G._propState||{}).filter(s=>s&&s.managed).length>=3)unlockTrophy('pm_team');
     }
     if(hook==='win'){
       unlockTrophy('first_win');
@@ -2864,10 +2955,19 @@ function checkTrophies(hook){
       if(!G._everBorrowed)unlockTrophy('no_borrow');
       if(G.relationship&&G.relationship.status==='married'&&(G.childBirths||[]).length>=3)unlockTrophy('family_win');
       if(G._divorced)unlockTrophy('divorce_win');
+      if(G.dream&&(G.dream.cost||0)>=750000)unlockTrophy('dream_big');
       const p=loadProfile();
       if(Object.keys(p.daily||{}).length>=5)unlockTrophy('daily_5');
+      if((p.wins||0)>=5)unlockTrophy('win_5');
+      if((p.winStreak||0)>=3)unlockTrophy('win_streak3');
+      // Completionist fires once everything ELSE is unlocked
+      const others=TROPHIES.filter(t=>t.id!=='all_trophies');
+      if(others.every(t=>p.trophies.includes(t.id)))unlockTrophy('all_trophies');
     }
-    if(hook==='bankrupt')unlockTrophy('rock_bottom');
+    if(hook==='bankrupt'){
+      unlockTrophy('rock_bottom');
+      try{const pb=loadProfile();if(pb.winStreak){pb.winStreak=0;saveProfile(pb);}}catch(e){}
+    }
     if(hook==='car')unlockTrophy('new_ride');
     if(hook==='supercar')unlockTrophy('supercar');
     if(hook==='home')unlockTrophy('homeowner');
@@ -2959,6 +3059,9 @@ function openTrophyWall(){
   // Legendary shimmer (WAAPI — reduced-motion immune)
   el.querySelectorAll('.tw-card.tw-has[data-tier="L"]').forEach(c=>{
     c.animate([{boxShadow:'0 0 14px #f0c02044'},{boxShadow:'0 0 26px #f0c020aa'},{boxShadow:'0 0 14px #f0c02044'}],{duration:2000,iterations:Infinity});
+  });
+  el.querySelectorAll('.tw-card.tw-has[data-tier="M"]').forEach(c=>{
+    c.animate([{boxShadow:'0 0 16px #ff4d6d55'},{boxShadow:'0 0 32px #ff4d6dcc'},{boxShadow:'0 0 16px #ff4d6d55'}],{duration:1600,iterations:Infinity});
   });
 }
 
@@ -7537,6 +7640,7 @@ function openTravel(){
       }},
       {label:'🌍 Travel the World — 3 weeks, 6 countries · $9,000',cls:'btn-tan',locked:G.cash<9000,fn:()=>{
         _leisureGo(9000,'🌍','World tour','Tokyo, Lisbon, Buenos Aires… your passport finally earns its keep.',()=>{
+          G._worldTour=true;checkTrophies('ui');
           boostCredit(3,'worldly perspective');
           if(Math.random()<0.25){const idea=Math.round((500+Math.random()*1500)/100)*100;G.cash+=idea;addLog('💡',`A business idea from a hostel conversation actually pays off: +$${fmt(idea)}.`,'gold');}
         });
