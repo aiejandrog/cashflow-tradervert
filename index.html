@@ -847,6 +847,12 @@ body{
   display:flex;align-items:center;gap:8px;
 }
 .char-sec-hdr::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(240,192,32,.3),transparent)}
+.char-step-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:50%;flex-shrink:0;
+  background:rgba(240,192,32,.18);border:1.5px solid rgba(240,192,32,.55);
+  color:#f0dc90;font-size:.62rem;font-weight:900;font-style:normal;
+}
 #char-avatar-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
 .char-cell{
   display:flex;align-items:center;justify-content:center;font-size:1.65rem;
@@ -1418,26 +1424,26 @@ body{
     <div class="loc-title">🪪 Create Your Character</div>
     <div class="loc-sub">Who are you in this life? Pick your look, name, and starting age.</div>
     <div id="char-scroll">
-      <div class="char-sec-hdr">Your Look <span id="char-style-label" style="opacity:.55;text-transform:none;letter-spacing:0;font-style:italic"></span></div>
-      <div id="char-avatar-grid"></div>
-      <div class="char-sec-hdr">Your Ethnicity</div>
-      <div id="char-eth-grid" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div>
-          <div class="char-sec-hdr">Your Name</div>
+          <div class="char-sec-hdr"><span class="char-step-num">1</span>Your Name</div>
           <div style="display:flex;gap:6px">
             <input id="char-name" type="text" maxlength="16" placeholder="Your name" autocomplete="off">
             <button class="btn-og btn-tan" onclick="charRandomName()" title="Random name" style="padding:0 12px;border-radius:10px;font-size:.85rem;flex-shrink:0">🎲</button>
           </div>
         </div>
         <div>
-          <div class="char-sec-hdr">Starting Age <span style="opacity:.5;text-transform:none;letter-spacing:0">(18–40)</span></div>
+          <div class="char-sec-hdr"><span class="char-step-num">2</span>Starting Age <span style="opacity:.5;text-transform:none;letter-spacing:0">(18–40)</span></div>
           <div style="display:flex;align-items:center;gap:10px;height:42px">
             <input id="char-age" type="range" min="18" max="40" value="25" style="flex:1;accent-color:#f0c020">
             <div id="char-age-val" style="font-size:1.4rem;font-weight:900;color:#f0dc90;font-family:Georgia,serif;min-width:40px;text-align:center">25</div>
           </div>
         </div>
       </div>
+      <div class="char-sec-hdr"><span class="char-step-num">3</span>Your Ethnicity</div>
+      <div id="char-eth-grid" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      <div class="char-sec-hdr"><span class="char-step-num">4</span>Your Look <span id="char-style-label" style="opacity:.55;text-transform:none;letter-spacing:0;font-style:italic"></span></div>
+      <div id="char-avatar-grid"></div>
       <div style="display:flex;gap:10px;margin-top:12px;align-items:stretch">
         <div id="char-preview" style="flex:1;display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(240,192,32,.08),rgba(107,63,168,.12));border:1px solid rgba(240,192,32,.3);border-radius:12px;padding:10px 14px">
           <div id="char-prev-av" style="font-size:2.6rem;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))">🧑🏽</div>
