@@ -552,6 +552,20 @@ body{
 .fd-pip{width:70%;height:70%;border-radius:50%;background:#16161a}
 /* static board dice retired — the 3D throw IS the dice now */
 #dice-row{display:none}
+/* ── turn info lives in the board center now — the parchment box is retired ── */
+#bc-turn-info{display:flex;flex-direction:column;align-items:center;gap:5px;max-width:270px;margin:2px auto 0}
+#bti-title{font-size:.78rem;font-weight:900;font-family:Georgia,serif;font-style:italic;color:#f0dc90;text-shadow:0 2px 6px rgba(0,0,0,.6)}
+#bti-stats{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
+.bti-chip{font-size:.55rem;font-weight:800;font-family:Arial,sans-serif;border-radius:9px;padding:2px 8px;white-space:nowrap;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.85)}
+.bti-chip.good{background:rgba(42,138,42,.22);border-color:rgba(74,186,74,.4);color:#9fe8a0}
+.bti-chip.bad{background:rgba(165,32,32,.2);border-color:rgba(220,80,80,.4);color:#fca5a5}
+.bti-chip.gold{background:rgba(200,145,12,.2);border-color:rgba(240,192,32,.45);color:#ffe9a0}
+#bti-msg{font-size:.6rem;color:rgba(255,255,255,.66);font-family:Arial,sans-serif;line-height:1.45;text-align:center;max-width:260px}
+#bti-actions{display:flex;gap:6px}
+.bti-btn{font-size:.6rem;font-weight:800;font-family:Georgia,serif;border-radius:8px;padding:5px 12px;cursor:pointer;background:rgba(255,255,255,.08);border:1px solid rgba(240,192,32,.35);color:#f0dc90;transition:background .15s}
+.bti-btn:hover{background:rgba(240,192,32,.18)}
+#center-roll-btn.go{animation:rBlink .3s infinite}
+#ev-popup{display:none!important} /* retired — info lives on the board now */
 #center-roll-btn{
   margin:6px auto 2px;display:block;background:linear-gradient(135deg,#c8910c,#f0c020);
   border:2px solid #f8e070;border-radius:12px;color:#1a0800;font-family:Georgia,serif;
@@ -616,7 +630,7 @@ body{
 
 /* ── LIFE FEED (right side, under the turn dialog) ── */
 #chat-log{
-  position:fixed;bottom:14px;right:20px;left:auto;transform:none;
+  position:fixed;bottom:84px;right:20px;left:auto;transform:none;
   width:330px;
   background:rgba(8,3,20,.92);
   border:1px solid rgba(120,70,190,.35);
@@ -1735,6 +1749,12 @@ body{
             <div id="spectate-token"></div>
             <div id="board-center">
               <div class="bc-logo"><span class="bc-cash">FREEDOM</span><span class="bc-flow">RACE</span></div>
+              <div id="bc-turn-info" style="display:none">
+                <div id="bti-title"></div>
+                <div id="bti-stats"></div>
+                <div id="bti-msg"></div>
+                <div id="bti-actions"></div>
+              </div>
               <div id="dice-row">
                 <div class="die" id="die-1" onclick="rollDice()" style="cursor:pointer" title="Tap to roll">⚀</div>
                 <div class="die" id="die-2" onclick="toggleDie2()" style="cursor:pointer" title="Tap to toggle 2nd dice">⚀</div>
@@ -2608,18 +2628,30 @@ const DREAMS = [
 // Degrades silently if offline or the cf_profiles table is unreachable.
 const PROFILES_URL='https://dddcfwbydgtxxwdsvsvt.supabase.co/rest/v1/cf_profiles';
 let _ipHashCache=null,_profPushTimer=null;
+// Per-device ID rides alongside the IP: two friends on the same wifi each get
+// their own progress row (key = ipHash-deviceId). A wiped browser loses the
+// device id but cloudPullProfile falls back to the freshest row on the same IP.
+function _deviceId(){
+  try{
+    let d=localStorage.getItem('cf_device');
+    if(!d){d=(crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36)).replace(/-/g,'').slice(0,10);localStorage.setItem('cf_device',d);}
+    return d;
+  }catch(e){return 'nodev';}
+}
 async function _ipHash(){
   if(_ipHashCache)return _ipHashCache;
   try{
-    const cached=sessionStorage.getItem('cf_iphash');
-    if(cached){_ipHashCache=cached;return cached;}
-    const r=await fetch('https://api.ipify.org?format=json');
-    const ip=(await r.json()).ip||'';
-    if(!ip)return null;
-    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('cf_'+ip));
-    const hex=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,32);
-    _ipHashCache=hex;sessionStorage.setItem('cf_iphash',hex);
-    return hex;
+    let base=sessionStorage.getItem('cf_iphash');
+    if(!base){
+      const r=await fetch('https://api.ipify.org?format=json');
+      const ip=(await r.json()).ip||'';
+      if(!ip)return null;
+      const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('cf_'+ip));
+      base=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,24);
+      sessionStorage.setItem('cf_iphash',base);
+    }
+    _ipHashCache=base+'-'+_deviceId();
+    return _ipHashCache;
   }catch(e){return null;}
 }
 function _profHdrs(){return{apikey:ROOMS_KEY,Authorization:'Bearer '+ROOMS_KEY,'Content-Type':'application/json'};}
@@ -2643,9 +2675,16 @@ function _mergeProfiles(a,b){ // a=local, b=cloud → richest of both
 async function cloudPullProfile(){
   const h=await _ipHash();if(!h)return;
   try{
-    const r=await fetch(PROFILES_URL+'?ip_hash=eq.'+h+'&select=profile',{headers:_profHdrs()});
+    let r=await fetch(PROFILES_URL+'?ip_hash=eq.'+h+'&select=profile',{headers:_profHdrs()});
     if(!r.ok)return;
-    const rows=await r.json();
+    let rows=await r.json();
+    if(!rows.length){
+      // fresh device (or wiped browser): recover from the newest row on this IP
+      const base=h.split('-')[0];
+      r=await fetch(PROFILES_URL+'?ip_hash=like.'+base+'-%25&select=profile&order=updated_at.desc&limit=1',{headers:_profHdrs()});
+      if(!r.ok)return;
+      rows=await r.json();
+    }
     if(!rows.length||!rows[0].profile)return;
     const merged=_mergeProfiles(loadProfile(),rows[0].profile);
     localStorage.setItem(PROFILE_KEY,JSON.stringify(merged));
@@ -3522,7 +3561,7 @@ function fitBoard(){
   // Area hidden or not laid out yet (resize on splash/lobby) — retry once visible.
   // Without this guard the scale went NEGATIVE and exploded the board.
   if(availW<=0||availH<=0){setTimeout(fitBoard,250);return;}
-  const scale=Math.max(0.2,Math.min(1.18,availW/BOARD_PX,availH/BOARD_PX)); // >1 lets the board breathe on desktop now that the left/bottom is clear
+  const scale=Math.max(0.2,Math.min(1.34,availW/BOARD_PX,availH/BOARD_PX)); // turn dialog retired — the board owns the screen now
   document.documentElement.style.setProperty('--board-scale',scale.toFixed(4));
 }
 // Self-healing fit: hammers fitBoard on animation frames until the board-area
@@ -6636,30 +6675,35 @@ function spacesToNextPayday(){
 }
 function showTurnDialog(){
   _resumeFn=()=>showTurnDialog(); // ROLL button can restore this if dismissed
-  const p=$('ev-popup');p.classList.add('vis');
-  $('ep-title').textContent=`${G.prof.icon} ${G.prof.name} — Turn ${G.turn+1}`;
-  $('ep-dice').textContent='🎲';
   const cf=monthlyCF(),pass=passiveIncome(),dist=spacesToNextPayday();
   const _epExp=expenses().total,_epGap=Math.max(0,_epExp-pass);
-  $('ep-player').textContent=`CF: ${cf>=0?'+':''}$${fmt(cf)}/mo · Passive: $${fmt(pass)}/mo · Gap: ${_epGap===0?'✅ FREE':'-$'+fmt(_epGap)+'/mo'}`;
-  const paydayMsg=cf>=0
-    ?`💰 Payday in ${dist} space${dist===1?'':'s'} — collect +$${fmt(cf)} when you hit it. Review your FS, repay debt, then roll.`
-    :`⚠️ Payday in ${dist} space${dist===1?'':'s'} — CF is -$${fmt(Math.abs(cf))}/mo. Nothing to collect until expenses drop below passive income.`;
-  // Bank loan pressure warning — fires when bank loan exceeds 2 months of positive CF
-  const _loanWarn=(G.bankLoan||0)>0&&cf>0&&(G.bankLoan||0)>cf*2;
-  const _loanCrit=(G.bankLoan||0)>0&&(G.bankLoan||0)>20000;
-  let epMsg=paydayMsg;
-  if(_loanWarn||_loanCrit) epMsg+=' 🏦 Bank loan $'+fmt(G.bankLoan||0)+' draining $'+fmt(G.extraBankPmt||0)+'/mo — pay it down before adding assets.';
-  if(G._waivedNextPayday) epMsg+=' 🎫 Expenses waived on next payday!';
-  if(G._charityBonus) epMsg+=' 🎁 Charity bonus pending — +50% CF next payday!';
-  $('ep-text').textContent=epMsg;
+  const info=$('bc-turn-info');
+  if(info){
+    info.style.display='flex';
+    $('bti-title').textContent=`${G.prof.icon} ${G.prof.name} — Turn ${G.turn+1}`;
+    $('bti-stats').innerHTML=
+      `<span class="bti-chip ${cf>=0?'good':'bad'}">CF ${cf>=0?'+':''}$${fmt(cf)}/mo</span>`+
+      `<span class="bti-chip gold">Passive $${fmt(pass)}</span>`+
+      `<span class="bti-chip ${_epGap===0?'good':'bad'}">${_epGap===0?'✅ FREE':'Gap -$'+fmt(_epGap)}</span>`;
+    let msg=cf>=0
+      ?`💰 Payday in ${dist} — collect +$${fmt(cf)} when you hit it.`
+      :`⚠️ Payday in ${dist} — CF is -$${fmt(Math.abs(cf))}/mo. Get expenses under passive income.`;
+    const _loanWarn=(G.bankLoan||0)>0&&((cf>0&&(G.bankLoan||0)>cf*2)||(G.bankLoan||0)>20000);
+    if(_loanWarn)msg+=` 🏦 Loan $${fmt(G.bankLoan||0)} drains $${fmt(G.extraBankPmt||0)}/mo.`;
+    if(G._waivedNextPayday)msg+=' 🎫 Next payday expenses waived!';
+    if(G._charityBonus)msg+=' 🎁 Charity bonus: +50% next payday!';
+    $('bti-msg').textContent=msg;
+    const acts=$('bti-actions');acts.innerHTML='';
+    const repay=document.createElement('button');repay.className='bti-btn';repay.textContent='💸 Repay Debt';
+    repay.onclick=()=>{closeEvPopup();openPayLoan();};
+    const borrow=document.createElement('button');borrow.className='bti-btn';borrow.textContent='🏦 Borrow';
+    borrow.onclick=()=>{closeEvPopup();openBorrow();};
+    acts.appendChild(repay);acts.appendChild(borrow);
+  }
+  const pill=$('center-roll-btn');if(pill)pill.classList.add('go');
+  return; // parchment dialog retired — everything below was its old body
   const foot=$('ep-foot');foot.innerHTML='';
   const row=document.createElement('div');row.className='btn-row';
-  const repay=document.createElement('button');repay.className='btn-og btn-tan';repay.style.flex='1';repay.textContent='💸 Repay Debt';
-  repay.onclick=()=>{closeEvPopup();openPayLoan();};
-  const borrow=document.createElement('button');borrow.className='btn-og btn-tan';borrow.style.flex='1';borrow.textContent='🏦 Borrow';
-  borrow.onclick=()=>{closeEvPopup();openBorrow();};
-  row.appendChild(repay);row.appendChild(borrow);
   const roll=document.createElement('button');roll.className='btn-og btn-roll-big';roll.id='btn-roll-ev';
   roll.textContent='🎲  ROLL THE DICE';
   roll.onclick=()=>{_resumeFn=null;closeEvPopup();rollDice();};
@@ -6668,7 +6712,11 @@ function showTurnDialog(){
 // showDealBrowser removed — it let players buy any affordable deal every turn
 // without landing on a deal space, bypassing the board's scarcity entirely.
 // Deals must come from the board (or events), like the real game.
-function closeEvPopup(){$('ev-popup').classList.remove('vis');$('ev-popup').classList.remove('minimized');}
+function closeEvPopup(){
+  $('ev-popup').classList.remove('vis');$('ev-popup').classList.remove('minimized');
+  const info=$('bc-turn-info');if(info)info.style.display='none';
+  const pill=$('center-roll-btn');if(pill)pill.classList.remove('go');
+}
 function toggleEvPopup(){
   const pop=$('ev-popup'),btn=$('ep-min-btn');
   if(!pop)return;
