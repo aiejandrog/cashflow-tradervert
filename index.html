@@ -957,7 +957,12 @@ body{
   #credit-chip #pc-credit-tier{display:none}
   /* FS button shrinks to icon-ish size */
   #top-bar .btn-og{padding:5px 8px!important;font-size:.62rem!important;letter-spacing:0!important}
-  #fs-panel{max-height:60vh}
+  /* FS panel: full-width slide-over on phones (was hard-broken at 660px fixed) */
+  #fs-panel{max-height:none;width:100vw;transform:translateX(calc(-100vw + 42px))}
+  #fs-panel.open{transform:translateX(0)}
+  #fs-inner{grid-template-columns:1fr}
+  #fs-freedom-panel{grid-column:1!important;grid-row:auto!important}
+  #lh-profile,#lh-loans-wrap,#fs-summ{grid-column:1!important}
   #ev-popup{bottom:0;left:0;right:0;top:auto;transform:none;border-radius:12px 12px 0 0;max-width:100%;width:100%}
   #chat-log{bottom:0;left:0!important;right:0;width:100%!important;border-radius:12px 12px 0 0;position:fixed;transform:none}
   .cl-row{font-size:.72rem}
@@ -2535,8 +2540,37 @@ function creditTier(score){
   return                {label:'Poor',    color:'#8b1a1a',rate:0.18};
 }
 function loanRate(){return creditTier(G.creditScore||650).rate;}
-function boostCredit(pts){
-  G.creditScore=Math.min(850,Math.max(520,(G.creditScore||650)+pts));
+function boostCredit(pts,reason){
+  if(!pts)return;
+  const before=G.creditScore||650;
+  G.creditScore=Math.min(850,Math.max(520,before+pts));
+  const delta=G.creditScore-before;
+  if(delta)_creditToast(delta,reason);
+}
+// Floating "+5 · loan paid" chip under the credit badge — the #1 "why did that
+// happen?" fix: every score change is now visible with its cause.
+let _ctStack=0;
+function _creditToast(delta,reason){
+  try{
+    if(!_gameScreenActive||!_gameScreenActive())return;
+    const chip=$('credit-chip');
+    const anchor=(chip&&chip.style.display!=='none')?chip:$('year-age-chip');
+    if(!anchor)return;
+    const r=anchor.getBoundingClientRect();
+    const t=document.createElement('div');
+    t.textContent=(delta>0?'▲ +':'▼ ')+delta+' credit'+(reason?' · '+reason:'');
+    t.style.cssText='position:fixed;left:'+Math.max(90,r.left+r.width/2)+'px;top:'+(r.bottom+6+_ctStack*24)+'px;transform:translateX(-50%);z-index:9500;pointer-events:none;font-family:Arial,sans-serif;font-size:.7rem;font-weight:900;padding:3px 11px;border-radius:12px;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,.4);'+(delta>0?'background:rgba(28,140,58,.96);color:#eaffea':'background:rgba(165,32,32,.96);color:#ffecec');
+    document.body.appendChild(t);
+    _ctStack++;
+    t.animate([
+      {opacity:0,transform:'translateX(-50%) translateY(-8px)'},
+      {opacity:1,transform:'translateX(-50%) translateY(0)',offset:.12},
+      {opacity:1,offset:.78},
+      {opacity:0,transform:'translateX(-50%) translateY(12px)'}
+    ],{duration:2400,easing:'ease-out'}).onfinish=()=>{t.remove();_ctStack=Math.max(0,_ctStack-1);};
+    if(chip)chip.animate([{transform:'scale(1)'},{transform:'scale(1.18)'},{transform:'scale(1)'}],{duration:320});
+    const sc=$('pc-credit');if(sc)sc.textContent=G.creditScore;
+  }catch(e){}
 }
 
 // ── SPINNER ──────────────────────────────────────────
@@ -3290,7 +3324,7 @@ function showCarDetail(car,fromBoard){
   const principal=car.price-down+oldBal;
   const pmt=carMonthlyPmt(principal,apr,60);
   const canFinance=tierIdx>=car.minTier&&G.cash>=down;
-  const canCash=G.cash>=car.price;
+  const canCash=G.cash>=car.price+oldBal; // cash buy must also retire the old note
   const rows=[
     ['Price','$'+fmt(car.price),''],
     ['Down Payment ('+Math.round(CAR_DOWN_PCT[tier.label]*100)+'%)','$'+fmt(down),'red'],
@@ -3305,7 +3339,7 @@ function showCarDetail(car,fromBoard){
     rows,
     actions:[
       {label:`Finance — $${fmt(down)} down`,cls:'btn-gold',locked:!canFinance,fn:()=>buyCarFinance(car,down,principal,pmt,apr,fromBoard)},
-      {label:`Pay Cash — $${fmt(car.price)}`,cls:'btn-tan',locked:!canCash,fn:()=>buyCarCash(car,fromBoard)},
+      {label:`Pay Cash — $${fmt(car.price+oldBal)}${oldBal>0?' (incl. $'+fmt(oldBal)+' loan payoff)':''}`,cls:'btn-tan',locked:!canCash,fn:()=>buyCarCash(car,fromBoard)},
       {label:'← Back',cls:'btn-tan',fn:()=>openCarDealership(fromBoard)},
     ]});
 }
@@ -3332,7 +3366,10 @@ function buyCarFinance(car,down,principal,pmt,apr,fromBoard){
   updateUI();
 }
 function buyCarCash(car,fromBoard){
-  G.cash-=car.price;
+  // Old car loan doesn't vanish — it gets paid off from cash at purchase
+  const oldBal=(G.liabilities||[]).filter(l=>l.type==='carfin'||l.name==='Car Loan').reduce((s,l)=>s+l.amt,0);
+  G.cash-=(car.price+oldBal);
+  if(oldBal>0)addLog('🚗',`Paid off old car loan: -$${fmt(oldBal)}`,'b');
   _clearOldCarLoans();
   G.expenseOverrides=G.expenseOverrides||{};
   G.expenseOverrides.car=0;             // no payment — owned outright
@@ -3451,7 +3488,7 @@ function paydayDelinquencyCheck(){
   if(cf>=0){
     // Fully covered payday — catch up any late status
     if((G.ccLateTier||0)>0){
-      G.ccLateTier=0;boostCredit(10);
+      G.ccLateTier=0;boostCredit(10,'caught up on bills');
       addLog('💳','Caught up on payments — delinquency cleared. CR +10','g');
     }
     return null;
@@ -3463,7 +3500,7 @@ function paydayDelinquencyCheck(){
   const tierDays=G.ccLateTier===1?30:G.ccLateTier===2?60:90;
   const lateFee=Math.max(50,Math.round(shortfall*0.05/10)*10);
   const creditHit=G.ccLateTier===1?-20:G.ccLateTier===2?-40:-60;
-  boostCredit(creditHit);
+  boostCredit(creditHit,'missed bills');
   // Unpaid balance lands on the credit card (real life: the card eats what cash can't)
   let cc=G.liabilities.find(l=>l.name==='Credit Cards');
   if(!cc){cc={name:'Credit Cards',amt:0};G.liabilities.push(cc);}
@@ -3647,7 +3684,7 @@ function showCreditBureauEvent(){
   ];
   const total=events.reduce((s,e)=>s+e.w,0);let r=Math.random()*total;let ev=events[0];
   for(const e of events){r-=e.w;if(r<=0){ev=e;break;}}
-  boostCredit(ev.pts);
+  boostCredit(ev.pts,ev.title);
   const tier=creditTier(G.creditScore);
   saveGame();
   addLog('💳',`Credit Bureau: ${ev.title} (${ev.pts>0?'+':''}${ev.pts}) → ${G.creditScore}`,ev.pts>=0?'g':'r');
@@ -3774,7 +3811,7 @@ function onPayday(){
     totalPrincipalPaid+=Math.min(principal,before);
     if(l.amt===0&&before>0){
       autoDebtMsg=l.name;
-      boostCredit(15);
+      boostCredit(15,l.name+' cleared');
     }
   });
   G.liabilities=G.liabilities.filter(l=>l.amt>0||!LIAB_PAYDOWN[l.name]); // keep unknowns
@@ -3816,26 +3853,29 @@ function onPayday(){
       if(l.amt===0&&before>0){
         G.expenseOverrides=G.expenseOverrides||{};
         G.expenseOverrides.car=0; // note retired — payment disappears, insurance stays
-        boostCredit(12);
+        boostCredit(12,'car paid off');
         addLog('🚗',`${l.name} PAID OFF — car payment gone forever. CR +12`,'gold');
       }
     });
     G.liabilities=G.liabilities.filter(l=>l.type!=='carfin'||l.amt>0);
   }
-  // Bank loan: full payment reduces principal (rate is already the "interest penalty")
+  // Bank loan: payment = real monthly interest + principal. Only principal reduces
+  // the balance — borrowing is no longer free money (was 100% principal = 0% APR).
   if(G.bankLoan>0&&G.extraBankPmt>0){
-    const paid=Math.min(G.bankLoan,G.extraBankPmt);
+    const interest=Math.round(G.bankLoan*loanRate()/12);
+    const paid=Math.max(0,Math.min(G.bankLoan,G.extraBankPmt-interest));
     G.bankLoan=Math.max(0,G.bankLoan-paid);
     totalPrincipalPaid+=paid;
+    if(interest>0)addLog('🏦',`Bank loan: -$${fmt(interest)} interest burned, $${fmt(paid)} to principal`,'b');
     if(G.bankLoan===0){
-      G.extraBankPmt=0;boostCredit(10);
+      G.extraBankPmt=0;boostCredit(10,'bank loan paid off');
       addLog('🏦','Bank loan fully paid off! CR +10','gold');
     }else{
       G.extraBankPmt=Math.round(G.bankLoan*loanRate()); // recalculate on new balance
     }
   }
   // Passive credit score seasoning (+1 every payday for on-time payment history)
-  boostCredit(1);
+  boostCredit(1,'on-time payments');
   const expTot=expenses().total;
   const freePct=expTot>0?Math.min(100,Math.round(pass/expTot*100)):0;
   const freeBar='█'.repeat(Math.round(freePct/10))+'░'.repeat(10-Math.round(freePct/10));
@@ -3903,7 +3943,7 @@ function showDealEvent(size){
   // Minimum available down based on loan options (FHA 3.5% if first property + 580+ credit)
   const _ownedRE=(G.assets||[]).filter(a=>a.type==='re'&&!a.isPrimaryHome).length;
   const _score=G.creditScore||650;
-  const minDownPct=(['re','biz','note'].includes(locDeal.type)&&_ownedRE===0&&_score>=580)?3.5:10;
+  const minDownPct=(locDeal.type==='re'&&locDeal.cost<=200000&&_ownedRE===0&&_score>=580)?3.5:10; // FHA: first home-sized RE only — no 24-plexes at 3.5%
   const minDown=Math.max(100,Math.round(locDeal.cost*(minDownPct/100)/100)*100);
   const canMinDown=G.cash>=minDown;
   const can=G.cash>=locDeal.down;
@@ -3978,7 +4018,7 @@ function ensureCash(needed,label){
   if(actualBorrow>0){
     G.cash+=actualBorrow;G.bankLoan=(G.bankLoan||0)+actualBorrow;
     G.extraBankPmt=Math.round(G.bankLoan*rate);
-    boostCredit(-3);
+    boostCredit(-3,'emergency borrowing');
     addLog('🏦',`Auto-borrowed $${fmt(actualBorrow)} for ${label||'payment'} — bank loan $${fmt(G.bankLoan)}`,'b');
   }
   if(actualBorrow<shortage){
@@ -4048,7 +4088,7 @@ function showLoanTypeModal(deal){
   const isFirstProp=ownedRE===0;
   // Loan options — realistic menu
   const opts=[
-    {type:'FHA 3.5%', emoji:'🏛',pct:3.5, rate:baseRate,              minCredit:580, cond:isFirstProp&&deal.type==='re',   desc:'Gov-backed · first property only · low down'},
+    {type:'FHA 3.5%', emoji:'🏛',pct:3.5, rate:baseRate,              minCredit:580, cond:isFirstProp&&deal.type==='re'&&deal.cost<=200000,   desc:'Gov-backed · first property · ≤$200k · low down'},
     {type:'Portfolio',emoji:'🏗',pct:15,  rate:baseRate+0.015,        minCredit:620, cond:true,                             desc:'Investor loan · any property · no W-2 limit'},
     {type:'Conv 20%', emoji:'🏦',pct:20,  rate:Math.max(0.04,baseRate-0.01), minCredit:0, cond:true,                       desc:'Best rate · 20% down · standard mortgage'},
     {type:'DSCR',     emoji:'📊',pct:20,  rate:baseRate+0.02,         minCredit:660, cond:deal.cf>0&&deal.type==='re',      desc:'No W-2 needed · qualified by property CF'},
@@ -4815,7 +4855,14 @@ function showRecessionEvent(){
   G._recessionExpSpike=spikeAmt;
   G._recessionSalCut=salCut;
   G.salaryBoost=(G.salaryBoost||0)-salCut;
-  G.assets.forEach(a=>{if(a.type==='re'&&a.cf>0){a._preRecessionCF=a.cf;a.cf=Math.max(0,Math.round(a.cf*0.72/10)*10);}});// 28% CF cut during recession
+  G.assets.forEach(a=>{
+    if(a.cf>0&&a._preRecessionCF===undefined){
+      a._preRecessionCF=a.cf;
+      if(a.type==='re')a.cf=Math.max(0,Math.round(a.cf*0.72/10)*10);        // tenants miss payments: -28%
+      else if(a.type==='biz')a.cf=Math.max(0,Math.round(a.cf*0.80/10)*10);  // revenue dips: -20%
+      else if(a.type==='stock')a.cf=Math.max(0,Math.round(a.cf*0.50));      // dividends slashed: -50%
+    }
+  });// recession hits EVERY asset class — dividend stocks are no longer a risk-free haven
   boostCredit(-12);
   saveGame(); // persist all recession state before card — crash during card would replay full recession
   showEventCard('setback','📉 RECESSION HITS',
@@ -4823,7 +4870,7 @@ function showRecessionEvent(){
     'Recessions don\'t hurt the prepared — they create buying opportunities. Cash reserves and passive income are your armor.',
     [['Salary Cut','-$'+fmt(salCut)+'/mo · 3 turns','red'],
      ['Expenses Up','+$'+fmt(spikeAmt)+'/mo · 3 turns','red'],
-     ['RE CF','-28% CF per property · 3 turns','red'],
+     ['Asset CF','RE -28% · Biz -20% · Dividends -50% · 3 turns','red'],
      ['Credit Hit','-12 pts','red']],
     [{label:'Weather the Storm',cls:'btn-tan',fn:()=>{
       addLog('📉',`Recession: -$${fmt(salCut)}/mo salary, +$${fmt(spikeAmt)}/mo expenses for 3 turns`,'r');endTurn();}}]);
@@ -7802,10 +7849,20 @@ function sendChatMsg(){
   const inp=$('cl-text-inp');if(!inp)return;
   const txt=(inp.value||'').trim();if(!txt)return;
   inp.value='';
+  _renderChatRow('You',txt,true);
+  // ship it to the room — chat was render-local-only before (a placebo in online play)
+  if(PLAYERS.length>1&&_bcRole&&typeof netSend==='function'){
+    const myName=(PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].name)||'Player '+(_bcMyIdx+1);
+    try{netSend({type:'chat',from:_bcMyIdx,name:myName,txt:txt.slice(0,120)});}catch(e){}
+  }
+}
+function _renderChatRow(name,txt,isMe){
   const row=document.createElement('div');row.className='cl-row chat-msg';
-  row.innerHTML=`<span class="cl-i">🗨</span><span class="cl-t"><b>You:</b> ${txt.replace(/</g,'&lt;')}</span>`;
-  const cont=$('cl-rows');cont.insertBefore(row,cont.firstChild);
-  while(cont.children.length>40)cont.removeChild(cont.lastChild);
+  row.innerHTML=`<span class="cl-i">🗨</span><span class="cl-t"><b>${String(name).replace(/</g,'&lt;')}:</b> ${String(txt).replace(/</g,'&lt;')}</span>`;
+  const cont=$('cl-rows');if(!cont)return;
+  cont.insertBefore(row,cont.firstChild);
+  while(cont.children.length>60)cont.removeChild(cont.lastChild);
+  if(!isMe&&!window._muted)try{_tone(1175,.08,'sine',.10,0);_tone(1568,.10,'sine',.10,.09);}catch(e){}
 }
 let _gifDebounce=null;
 function toggleGifPicker(){
@@ -7854,7 +7911,7 @@ function openFS(){
   $('fs-panel').classList.add('open');
   _syncFsScrollFade();
   // Push overlay card wrappers AND backdrops into the board area (right of FS panel)
-  const offset='min(680px,44vw)';
+  const offset=window.innerWidth<620?'0px':'min(680px,44vw)'; // no dead padding on phones
   ['event-modal','event-modal-bg','modal','modal-bg'].forEach(id=>{const el=$(id);if(el)el.style.paddingLeft=offset;});
 }
 // Wire scroll listener once DOM is ready
@@ -8895,6 +8952,12 @@ function _bcJoinStatus(msg,color){
 // ── MESSAGE ROUTER ──────────────────────────────────────
 function bcHandleMessage(msg){
   if(!msg||!msg.type)return;
+  // Both roles: room chat — render + host relays to the other joiners
+  if(msg.type==='chat'){
+    if(msg.from!==_bcMyIdx)_renderChatRow(msg.name||('Player '+((msg.from|0)+1)),msg.txt||'');
+    if(_bcRole==='host')netRelay(msg);
+    return;
+  }
   // Both roles: live spectator feed of the active player's actions
   if(msg.type==='turn-event'){
     _showTurnEvent(msg);
