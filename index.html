@@ -1542,6 +1542,7 @@ body{
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗 Dealer</button>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡 Realty</button>
     <button class="btn-og btn-gold" onclick="toggleFS()" style="padding:6px 14px;font-size:.75rem;letter-spacing:.5px">🪪 Life Hub</button>
+    <button class="btn-og btn-tan" onclick="saveGame();location.reload()" title="Save & return to menu" style="padding:6px 10px;font-size:.72rem">💾 Menu</button>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
   <!-- Rotating goals (objectives system) -->
@@ -2416,8 +2417,9 @@ const DREAMS = [
 const PROFILE_KEY='cf_profile';
 function loadProfile(){
   try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'{}');
-    return{games:p.games||0,wins:p.wins||0,bestOverall:p.bestOverall||null,bestByProf:p.bestByProf||{},daily:p.daily||{},trophies:p.trophies||[]};
-  }catch(e){return{games:0,wins:0,bestOverall:null,bestByProf:{},daily:{},trophies:[]};}
+    return{games:p.games||0,wins:p.wins||0,bestOverall:p.bestOverall||null,bestByProf:p.bestByProf||{},daily:p.daily||{},trophies:p.trophies||[],
+      credits:p.credits||0,objCredited:p.objCredited||[],lastIdentity:p.lastIdentity||null};
+  }catch(e){return{games:0,wins:0,bestOverall:null,bestByProf:{},daily:{},trophies:[],credits:0,objCredited:[],lastIdentity:null};}
 }
 function saveProfile(p){try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p));}catch(e){}}
 function recordWin(){
@@ -2613,7 +2615,12 @@ function initGame(prof, location) {
     })(),
   };
   G.objectives=_drawObjectives(2); // two live goals from turn 1
-  try{const p=loadProfile();p.games++;saveProfile(p);}catch(e){}
+  try{
+    const p=loadProfile();p.games++;
+    // Snapshot the character for MP prefill ("use my saved character") — identity only, never finances
+    if(selectedIdentity&&selectedIdentity.name)p.lastIdentity={...selectedIdentity,profId:prof.id};
+    saveProfile(p);
+  }catch(e){}
   // Owner: add primary home as manageable RE asset
   if(isOwner){
     const homeVal=scaledProf.mortgage_d;
@@ -2725,9 +2732,27 @@ const ITEM_H=68; // px — must match .sp-item height
 
 function doSpin(){
   if(isSpinning)return;
+  // LOCKED SPIN: a pending result from a previous spin (e.g. page reload during
+  // the reveal) cannot be re-rolled — restore it instead. Your life is your life.
+  try{
+    const pend=JSON.parse(localStorage.getItem('cf_pending_spin')||'null');
+    if(pend&&pend.profId){
+      const p=PROFS.find(x=>x.id===pend.profId);
+      if(p){revealProf(p);return;}
+    }
+  }catch(e){}
+  // OVERWRITE GUARD: spinning a new life erases the saved run — make that explicit
+  try{
+    const rawSave=localStorage.getItem(SAVE_KEY);
+    if(rawSave){
+      const s=JSON.parse(rawSave);
+      if(s&&s.G&&s.G.prof&&!confirm('Start a NEW life? Your saved run — Turn '+(s.G.turn||0)+' as '+s.G.prof.name+' — will be erased when the new game begins.'))return;
+    }
+  }catch(e){}
   const btn=$('btn-spin'),reel=$('spin-reel'),stage=$('sp-stage');
   isSpinning=true;
   spinChosen=PROFS[Math.floor(Math.random()*PROFS.length)];
+  try{localStorage.setItem('cf_pending_spin',JSON.stringify({profId:spinChosen.id,ts:Date.now()}));}catch(e){}
   btn.textContent='⏳ Spinning…';btn.disabled=true;stage.classList.add('go');
   reel.style.transition='none';
   // Hidden tab: rAF never fires — skip the animation, go straight to the reveal
@@ -2783,7 +2808,7 @@ function revealProf(p){
   $('rev-cf2').textContent=`Monthly CF: ${cf>=0?'+':''}$${fmt(cf)} · Escape: $${fmt(exp)}/mo passive`;
   $('rev-desc').textContent=p.desc;
   $('btn-begin').style.display='inline-block';
-  $('btn-again').style.display='inline-block';
+  // ONE SPIN PER LIFE — the career you roll is the life you live. No re-spins.
   // Swap: hide spin card, show reveal card
   const spCard=document.querySelector('.sp-card'),revCard=$('rev-card');
   if(spCard)spCard.style.display='none';
@@ -8285,6 +8310,7 @@ function startGame(prof,loc){
   const strip=$('mp-strip');if(strip)strip.style.display='none';
   const lobby=$('mp-lobby');if(lobby)lobby.style.display='none';
   const wait=$('mp-wait');if(wait)wait.style.display='none';
+  try{localStorage.removeItem('cf_pending_spin');}catch(e){} // life committed — lock released
   initGame(prof,loc);_prevCash=null;
   // Hide bankruptcy overlay in case player is starting fresh after going bankrupt
   const bkOv=$('bankruptcy-overlay');if(bkOv)bkOv.style.display='none';
@@ -8312,17 +8338,23 @@ function startGame(prof,loc){
 
 // ── SAVE / LOAD ───────────────────────────────────────
 const SAVE_KEY='cg_save_v2';
+const SAVE_KEY_MP='cg_save_mp';
 function saveGame(){
   if(!G)return;
   try{
     const save={G,expressMode,ts:Date.now()};
-    if(PLAYERS.length>1){save.PLAYERS=PLAYERS;save.ACTIVE_PLAYER_IDX=ACTIVE_PLAYER_IDX;save._mpCount=_mpCount;save._mpRoomName=_mpRoomName;save._mpRoomPass=_mpRoomPass;save._mpPlayerNames=_mpPlayerNames;save._bcRole=_bcRole;}
-    localStorage.setItem(SAVE_KEY,JSON.stringify(save));
+    // MP games save to their OWN slot — joining a room can never destroy the solo run
+    if(PLAYERS.length>1){
+      save.PLAYERS=PLAYERS;save.ACTIVE_PLAYER_IDX=ACTIVE_PLAYER_IDX;save._mpCount=_mpCount;save._mpRoomName=_mpRoomName;save._mpRoomPass=_mpRoomPass;save._mpPlayerNames=_mpPlayerNames;save._bcRole=_bcRole;
+      localStorage.setItem(SAVE_KEY_MP,JSON.stringify(save));
+    }else{
+      localStorage.setItem(SAVE_KEY,JSON.stringify(save));
+    }
   }catch(e){}
 }
-function loadSave(){
+function loadSave(key){
   try{
-    const raw=localStorage.getItem(SAVE_KEY);if(!raw)return false;
+    const raw=localStorage.getItem(key||SAVE_KEY);if(!raw)return false;
     const s=JSON.parse(raw);if(!s||!s.G||!s.G.prof)return false;
     G=s.G;expressMode=s.expressMode||false;_prevCash=null;
     // Restore multiplayer state if present
@@ -9197,6 +9229,12 @@ function bcHostHandlePlayerWon(msg){
 // ── JOINER SETUP ────────────────────────────────────────
 function mpOpenJoinModal(){
   const m=$('mp-join-setup');if(m)m.style.display='flex';
+  // Prefill the saved character's name — progress never transfers, the identity does
+  try{
+    const li=loadProfile().lastIdentity;
+    const ni=$('mp-join-name-inp');
+    if(li&&li.name&&ni&&!ni.value)ni.value=li.name;
+  }catch(e){}
   const st=$('mp-join-status');if(st){st.textContent='';st.style.color='';}
   setTimeout(()=>{const inp=$('mp-join-room-inp');if(inp)inp.focus();},80);
 }
@@ -9357,7 +9395,9 @@ function mpStartJoinerPing(){
 function mpJoinerPickProfile(msg){
   window._joinerProfileMode=true;
   window._joinerLobbyMsg=msg;
-  selectedProf=null;selectedLocation=null;selectedDream=null;selectedIdentity=null; // joiner builds their OWN character
+  selectedProf=null;selectedLocation=null;selectedDream=null;
+  // Joiner starts from their SAVED character (identity only — finances always fresh); fully editable
+  try{const li=loadProfile().lastIdentity;selectedIdentity=li&&li.name?{name:_pendingJoinName||li.name,avatar:li.avatar,ethnicityLabel:li.ethnicityLabel,toneLabel:li.toneLabel,gender:li.gender,ageStart:li.ageStart,_typedName:true}:null;}catch(e){selectedIdentity=null;}
   resetToSpin();
   showScreen('splash');
   // Hide host-only controls — this pass is purely "build YOUR character"
@@ -9373,6 +9413,7 @@ function mpJoinerPickProfile(msg){
 }
 function mpJoinerProfileDone(){
   window._joinerProfileMode=false;
+  try{localStorage.removeItem('cf_pending_spin');}catch(e){}
   initGame(selectedProf,selectedLocation); // builds a fresh G (dream comes from selectedDream)
   if(PLAYERS[_bcMyIdx]){
     PLAYERS[_bcMyIdx].G=JSON.parse(JSON.stringify(G));
@@ -9545,9 +9586,7 @@ if(loadSave()){
   setTimeout(()=>{
     const resumeBtn=document.createElement('button');
     resumeBtn.className='btn-spin';resumeBtn.style.cssText='margin-top:10px;background:linear-gradient(135deg,#3a1070 0%,#6b3fa8 45%,#8b5fc8 60%,#6b3fa8 80%,#3a1070 100%);border-color:rgba(150,100,220,.5);color:#e8d4ff;box-shadow:0 5px 20px rgba(107,63,168,.5)';
-    resumeBtn.textContent=PLAYERS.length>1
-      ?`▶ Resume "${_mpRoomName}" — ${PLAYERS.length} Players (Turn ${G.turn})`
-      :`▶ Resume ${G.prof.icon} ${G.prof.name} (Turn ${G.turn})`;
+    resumeBtn.textContent=`▶ Resume ${G.prof.icon} ${G.prof.name} (Turn ${G.turn})`;
     resumeBtn.onclick=()=>resumeGame();
     const spCard=document.querySelector('.sp-card');if(spCard)spCard.appendChild(resumeBtn);
     // Also add "New Game" note
@@ -9564,8 +9603,33 @@ if(loadSave()){
 showScreen('splash');
 initSpinner();
 populateProfileStrip(); // lifetime stats under the spinner — the comeback hook
+// Separate MP save slot: offer its own resume button if a room save exists
+try{
+  const rawMP=localStorage.getItem(SAVE_KEY_MP);
+  if(rawMP){
+    const sMP=JSON.parse(rawMP);
+    if(sMP&&sMP.G&&sMP.PLAYERS&&sMP.PLAYERS.length>1){
+      setTimeout(()=>{
+        const b=document.createElement('button');
+        b.className='btn-spin';
+        b.style.cssText='margin-top:8px;background:linear-gradient(135deg,#0a4a5e,#22d3ee44,#0a4a5e);border-color:rgba(34,211,238,.4);color:#aef;box-shadow:0 5px 18px rgba(34,211,238,.25);font-size:.85rem';
+        b.textContent=`👥 Resume "${sMP._mpRoomName||'Room'}" — ${sMP.PLAYERS.length} Players (Turn ${sMP.G.turn||0})`;
+        b.onclick=()=>{if(loadSave(SAVE_KEY_MP))resumeGame();};
+        const spCard=document.querySelector('.sp-card');if(spCard)spCard.appendChild(b);
+      },150);
+    }
+  }
+}catch(e){}
+// Locked-spin restore: reloading during the reveal can't re-roll the career
+try{
+  const _pend=JSON.parse(localStorage.getItem('cf_pending_spin')||'null');
+  if(_pend&&_pend.profId){
+    const _pp=PROFS.find(x=>x.id===_pend.profId);
+    if(_pp)setTimeout(()=>revealProf(_pp),250);
+  }
+}catch(e){}
 $('btn-spin').addEventListener('click',doSpin);
-$('btn-again').addEventListener('click',()=>{resetToSpin();setTimeout(doSpin,310);});
+// btn-again listener removed — career spins are locked (one life per spin)
 $('btn-begin').addEventListener('click',()=>{
   if(!selectedProf)return;
   // Character creation comes first — identity before geography
