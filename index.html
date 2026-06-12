@@ -1396,6 +1396,8 @@ body{
     <div id="char-scroll">
       <div class="char-sec-hdr">Your Look <span id="char-style-label" style="opacity:.55;text-transform:none;letter-spacing:0;font-style:italic"></span></div>
       <div id="char-avatar-grid"></div>
+      <div class="char-sec-hdr">Your Ethnicity</div>
+      <div id="char-eth-grid" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
         <div>
           <div class="char-sec-hdr">Your Name</div>
@@ -1486,6 +1488,8 @@ body{
     </div>
     <div class="tb-space"></div>
     <div id="express-badge" style="display:none;background:#6040b0;border:1px solid #9060e0;border-radius:10px;padding:2px 9px;font-size:.62rem;font-weight:900;color:#e0c8ff;letter-spacing:1px;font-family:Arial,sans-serif">⚡ EXPRESS</div>
+    <button class="btn-og btn-tan" onclick="if(window.G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗 Dealer</button>
+    <button class="btn-og btn-tan" onclick="if(window.G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡 Realty</button>
     <button class="btn-og btn-gold" onclick="toggleFS()" style="padding:6px 14px;font-size:.75rem;letter-spacing:.5px">🪪 Life Hub</button>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
@@ -1996,53 +2000,119 @@ const BIG_DEALS = [
   { id:'b14', type:'re', name:'Industrial Land + Billboard', cost:175000, down:22000, cf:1100, isLand:true, story:'Corner lot on a major corridor. One billboard facing the highway pays $1,600/month net. A developer is already asking about optioning the land for $220k. You haven\'t returned the call.', tip:'Billboards on high-traffic land are a two-layer asset — billboard cash flow today, land appreciation always.' },
 ];
 
-// ── CAR CATALOG (real makes/models, entry → supercar, credit-gated financing) ──
+// ── VEHICLE DATABASE (real make/model/year, used lot → hypercar) ──
 // minTier index: 0=Poor 1=Fair 2=Good 3=Very Good 4=Excellent — min tier required to FINANCE
 const CARS = [
-  // Entry — anyone can finance
-  { id:'versa',   name:'Nissan Versa',          emoji:'🚗', price:18000,  segment:'Entry',    ins:95,  minTier:0 },
-  { id:'elantra', name:'Hyundai Elantra',       emoji:'🚗', price:22000,  segment:'Entry',    ins:110, minTier:0 },
-  { id:'civic',   name:'Honda Civic',           emoji:'🚗', price:25000,  segment:'Entry',    ins:120, minTier:0 },
-  { id:'mazda3',  name:'Mazda 3',               emoji:'🚗', price:26000,  segment:'Entry',    ins:125, minTier:0 },
-  { id:'camry',   name:'Toyota Camry',          emoji:'🚙', price:29000,  segment:'Entry',    ins:135, minTier:0 },
-  // Mid — Fair credit+
-  { id:'accord',  name:'Honda Accord',          emoji:'🚙', price:32000,  segment:'Mid',      ins:145, minTier:1 },
-  { id:'rav4',    name:'Toyota RAV4',           emoji:'🚙', price:34000,  segment:'Mid',      ins:150, minTier:1 },
-  { id:'outback', name:'Subaru Outback',        emoji:'🚙', price:36000,  segment:'Mid',      ins:155, minTier:1 },
-  { id:'wrangler',name:'Jeep Wrangler',         emoji:'🛻', price:40000,  segment:'Mid',      ins:175, minTier:1 },
-  { id:'f150',    name:'Ford F-150',            emoji:'🛻', price:45000,  segment:'Mid',      ins:180, minTier:1 },
-  { id:'silverado',name:'Chevy Silverado',      emoji:'🛻', price:47000,  segment:'Mid',      ins:185, minTier:1 },
-  // Sport — Good credit+
-  { id:'mustang', name:'Ford Mustang GT',       emoji:'🏎️', price:46000,  segment:'Sport',    ins:240, minTier:2 },
-  { id:'camaro',  name:'Chevy Camaro SS',       emoji:'🏎️', price:48000,  segment:'Sport',    ins:250, minTier:2 },
-  { id:'tesla3',  name:'Tesla Model 3 Perf.',   emoji:'⚡', price:53000,  segment:'Sport',    ins:210, minTier:2 },
-  { id:'bmw3',    name:'BMW M340i',             emoji:'🏎️', price:60000,  segment:'Sport',    ins:260, minTier:2 },
-  { id:'audia4',  name:'Audi S4',               emoji:'🏎️', price:58000,  segment:'Sport',    ins:255, minTier:2 },
-  // Luxury — Very Good credit+
-  { id:'mbe',     name:'Mercedes E 450',        emoji:'🚘', price:74000,  segment:'Luxury',   ins:300, minTier:3 },
-  { id:'teslas',  name:'Tesla Model S',         emoji:'⚡', price:82000,  segment:'Luxury',   ins:320, minTier:3 },
-  { id:'bmwm4',   name:'BMW M4 Competition',    emoji:'🏎️', price:85000,  segment:'Luxury',   ins:360, minTier:3 },
-  { id:'escalade',name:'Cadillac Escalade',     emoji:'🚐', price:90000,  segment:'Luxury',   ins:340, minTier:3 },
-  { id:'rover',   name:'Range Rover Sport',     emoji:'🚐', price:95000,  segment:'Luxury',   ins:350, minTier:3 },
-  // Exotic — Excellent credit only
-  { id:'vette',   name:'Corvette Z06',          emoji:'🏁', price:115000, segment:'Exotic',   ins:430, minTier:4 },
-  { id:'p911',    name:'Porsche 911 Carrera S', emoji:'🏁', price:135000, segment:'Exotic',   ins:490, minTier:4 },
-  { id:'maserati',name:'Maserati GranTurismo',  emoji:'🏁', price:175000, segment:'Exotic',   ins:600, minTier:4 },
-  // Supercar — Excellent credit only
-  { id:'huracan', name:'Lamborghini Huracán',   emoji:'🟡', price:265000, segment:'Supercar', ins:900, minTier:4 },
-  { id:'ferrari', name:'Ferrari 296 GTB',       emoji:'🔴', price:340000, segment:'Supercar', ins:1100,minTier:4 },
-  { id:'mclaren', name:'McLaren 750S',          emoji:'🟠', price:330000, segment:'Supercar', ins:1050,minTier:4 },
-  { id:'rolls',   name:'Rolls-Royce Ghost',     emoji:'👑', price:350000, segment:'Supercar', ins:1200,minTier:4 },
+  // Used Lot — cheap wheels, anyone can finance
+  { id:'u_focus',  name:'2011 Ford Focus',          emoji:'🚗', price:5500,   segment:'Used',    ins:70,  minTier:0 },
+  { id:'u_corolla',name:'2009 Toyota Corolla',      emoji:'🚗', price:6500,   segment:'Used',    ins:75,  minTier:0 },
+  { id:'u_civic',  name:'2008 Honda Civic',         emoji:'🚗', price:7000,   segment:'Used',    ins:75,  minTier:0 },
+  { id:'u_mazda3', name:'2010 Mazda 3',             emoji:'🚗', price:7000,   segment:'Used',    ins:80,  minTier:0 },
+  { id:'u_camry',  name:'2007 Toyota Camry',        emoji:'🚗', price:7500,   segment:'Used',    ins:80,  minTier:0 },
+  { id:'u_altima', name:'2012 Nissan Altima',       emoji:'🚗', price:8000,   segment:'Used',    ins:85,  minTier:0 },
+  { id:'u_accord', name:'2011 Honda Accord',        emoji:'🚗', price:9000,   segment:'Used',    ins:85,  minTier:0 },
+  { id:'u_tacoma', name:'2009 Toyota Tacoma',       emoji:'🛻', price:11000,  segment:'Used',    ins:95,  minTier:0 },
+  // New Entry — reliable daily drivers
+  { id:'versa',    name:'2026 Nissan Versa S',      emoji:'🚗', price:18000,  segment:'Entry',   ins:95,  minTier:0 },
+  { id:'forte',    name:'2026 Kia Forte LXS',       emoji:'🚗', price:20500,  segment:'Entry',   ins:105, minTier:0 },
+  { id:'elantra',  name:'2026 Hyundai Elantra SEL', emoji:'🚗', price:22000,  segment:'Entry',   ins:110, minTier:0 },
+  { id:'corollan', name:'2026 Toyota Corolla LE',   emoji:'🚗', price:23000,  segment:'Entry',   ins:112, minTier:0 },
+  { id:'sentra',   name:'2026 Nissan Sentra SV',    emoji:'🚗', price:23500,  segment:'Entry',   ins:114, minTier:0 },
+  { id:'civic',    name:'2026 Honda Civic Sport',   emoji:'🚗', price:26500,  segment:'Entry',   ins:122, minTier:0 },
+  { id:'mazda3',   name:'2026 Mazda 3 Select',      emoji:'🚗', price:27000,  segment:'Entry',   ins:125, minTier:0 },
+  { id:'camry',    name:'2026 Toyota Camry SE',     emoji:'🚙', price:30000,  segment:'Entry',   ins:135, minTier:0 },
+  { id:'accord',   name:'2026 Honda Accord EX',     emoji:'🚙', price:32000,  segment:'Entry',   ins:142, minTier:0 },
+  // SUVs & Crossovers
+  { id:'crv',      name:'2026 Honda CR-V EX',       emoji:'🚙', price:34000,  segment:'SUV',     ins:148, minTier:1 },
+  { id:'rav4',     name:'2026 Toyota RAV4 XLE',     emoji:'🚙', price:35000,  segment:'SUV',     ins:150, minTier:1 },
+  { id:'outback',  name:'2026 Subaru Outback Ltd',  emoji:'🚙', price:38000,  segment:'SUV',     ins:158, minTier:1 },
+  { id:'wrangler', name:'2026 Jeep Wrangler Sahara',emoji:'🚙', price:48000,  segment:'SUV',     ins:185, minTier:1 },
+  { id:'highlander',name:'2026 Toyota Highlander',  emoji:'🚙', price:46000,  segment:'SUV',     ins:175, minTier:1 },
+  { id:'explorer', name:'2026 Ford Explorer XLT',   emoji:'🚙', price:44000,  segment:'SUV',     ins:172, minTier:1 },
+  { id:'telluride',name:'2026 Kia Telluride SX',    emoji:'🚙', price:50000,  segment:'SUV',     ins:190, minTier:1 },
+  { id:'grandcher',name:'2026 Jeep Grand Cherokee L',emoji:'🚙',price:52000,  segment:'SUV',     ins:195, minTier:1 },
+  { id:'tahoe',    name:'2026 Chevy Tahoe LT',      emoji:'🚐', price:62000,  segment:'SUV',     ins:225, minTier:2 },
+  // Trucks
+  { id:'tacoma',   name:'2026 Toyota Tacoma TRD',   emoji:'🛻', price:42000,  segment:'Truck',   ins:170, minTier:1 },
+  { id:'ranger',   name:'2026 Ford Ranger Lariat',  emoji:'🛻', price:43000,  segment:'Truck',   ins:172, minTier:1 },
+  { id:'f150',     name:'2026 Ford F-150 XLT',      emoji:'🛻', price:48000,  segment:'Truck',   ins:182, minTier:1 },
+  { id:'silverado',name:'2026 Chevy Silverado LT',  emoji:'🛻', price:49000,  segment:'Truck',   ins:185, minTier:1 },
+  { id:'ram1500',  name:'2026 Ram 1500 Big Horn',   emoji:'🛻', price:51000,  segment:'Truck',   ins:190, minTier:1 },
+  { id:'tundra',   name:'2026 Toyota Tundra SR5',   emoji:'🛻', price:53000,  segment:'Truck',   ins:195, minTier:1 },
+  { id:'f250',     name:'2026 Ford F-250 Lariat',   emoji:'🛻', price:68000,  segment:'Truck',   ins:240, minTier:2 },
+  { id:'raptor',   name:'2026 Ford F-150 Raptor',   emoji:'🛻', price:82000,  segment:'Truck',   ins:310, minTier:3 },
+  // Sport
+  { id:'brz',      name:'2026 Subaru BRZ tS',       emoji:'🏎️', price:36000,  segment:'Sport',   ins:200, minTier:2 },
+  { id:'gti',      name:'2026 VW Golf GTI SE',      emoji:'🏎️', price:38000,  segment:'Sport',   ins:205, minTier:2 },
+  { id:'nissanz',  name:'2026 Nissan Z Performance',emoji:'🏎️', price:44000,  segment:'Sport',   ins:235, minTier:2 },
+  { id:'mustang',  name:'2026 Ford Mustang GT',     emoji:'🏎️', price:46000,  segment:'Sport',   ins:245, minTier:2 },
+  { id:'camaro',   name:'2026 Chevy Camaro SS',     emoji:'🏎️', price:48000,  segment:'Sport',   ins:250, minTier:2 },
+  { id:'wrx',      name:'2026 Subaru WRX TR',       emoji:'🏎️', price:42000,  segment:'Sport',   ins:230, minTier:2 },
+  { id:'supra',    name:'2026 Toyota GR Supra 3.0', emoji:'🏎️', price:58000,  segment:'Sport',   ins:270, minTier:2 },
+  { id:'golfr',    name:'2026 VW Golf R',           emoji:'🏎️', price:48000,  segment:'Sport',   ins:248, minTier:2 },
+  // Electric
+  { id:'ioniq5',   name:'2026 Hyundai Ioniq 5 SEL', emoji:'⚡', price:47000,  segment:'EV',      ins:190, minTier:2 },
+  { id:'model3',   name:'2026 Tesla Model 3 LR',    emoji:'⚡', price:48000,  segment:'EV',      ins:195, minTier:2 },
+  { id:'mache',    name:'2026 Ford Mach-E GT',      emoji:'⚡', price:56000,  segment:'EV',      ins:215, minTier:2 },
+  { id:'modely',   name:'2026 Tesla Model Y Perf.', emoji:'⚡', price:54000,  segment:'EV',      ins:210, minTier:2 },
+  { id:'cybertruck',name:'2026 Tesla Cybertruck',   emoji:'⚡', price:82000,  segment:'EV',      ins:300, minTier:3 },
+  { id:'r1t',      name:'2026 Rivian R1T Adventure',emoji:'⚡', price:78000,  segment:'EV',      ins:290, minTier:3 },
+  { id:'modelsp',  name:'2026 Tesla Model S Plaid', emoji:'⚡', price:92000,  segment:'EV',      ins:340, minTier:3 },
+  { id:'lucid',    name:'2026 Lucid Air Touring',   emoji:'⚡', price:98000,  segment:'EV',      ins:355, minTier:3 },
+  // Luxury
+  { id:'genesisg80',name:'2026 Genesis G80 3.5T',   emoji:'🚘', price:62000,  segment:'Luxury',  ins:255, minTier:3 },
+  { id:'bmw540',   name:'2026 BMW 540i xDrive',     emoji:'🚘', price:68000,  segment:'Luxury',  ins:280, minTier:3 },
+  { id:'mbe450',   name:'2026 Mercedes E 450',      emoji:'🚘', price:74000,  segment:'Luxury',  ins:300, minTier:3 },
+  { id:'audia6',   name:'2026 Audi A6 Prestige',    emoji:'🚘', price:72000,  segment:'Luxury',  ins:295, minTier:3 },
+  { id:'lexusls',  name:'2026 Lexus LS 500',        emoji:'🚘', price:84000,  segment:'Luxury',  ins:320, minTier:3 },
+  { id:'bmwm4',    name:'2026 BMW M4 Competition',  emoji:'🏎️', price:88000,  segment:'Luxury',  ins:365, minTier:3 },
+  { id:'cayenne',  name:'2026 Porsche Cayenne S',   emoji:'🚘', price:105000, segment:'Luxury',  ins:390, minTier:3 },
+  { id:'escalade', name:'2026 Cadillac Escalade-V', emoji:'🚐', price:155000, segment:'Luxury',  ins:520, minTier:4 },
+  { id:'rover',    name:'2026 Range Rover Autobio.',emoji:'🚐', price:160000, segment:'Luxury',  ins:540, minTier:4 },
+  { id:'g63',      name:'2026 Mercedes-AMG G 63',   emoji:'🚐', price:185000, segment:'Luxury',  ins:620, minTier:4 },
+  // Exotic
+  { id:'vette',    name:'2026 Corvette Z06',        emoji:'🏁', price:118000, segment:'Exotic',  ins:440, minTier:4 },
+  { id:'emira',    name:'2026 Lotus Emira V6',      emoji:'🏁', price:102000, segment:'Exotic',  ins:400, minTier:4 },
+  { id:'amggt',    name:'2026 Mercedes-AMG GT 63',  emoji:'🏁', price:142000, segment:'Exotic',  ins:520, minTier:4 },
+  { id:'p911',     name:'2026 Porsche 911 Carrera S',emoji:'🏁',price:138000, segment:'Exotic',  ins:495, minTier:4 },
+  { id:'vantage',  name:'2026 Aston Martin Vantage',emoji:'🏁', price:195000, segment:'Exotic',  ins:680, minTier:4 },
+  { id:'r8legacy', name:'2024 Audi R8 V10 (final)', emoji:'🏁', price:210000, segment:'Exotic',  ins:720, minTier:4 },
+  { id:'turbos',   name:'2026 Porsche 911 Turbo S', emoji:'🏁', price:245000, segment:'Exotic',  ins:800, minTier:4 },
+  // Supercar
+  { id:'urus',     name:'2026 Lamborghini Urus S',  emoji:'🟡', price:245000, segment:'Supercar',ins:850, minTier:4 },
+  { id:'huracan',  name:'2026 Lamborghini Huracan', emoji:'🟡', price:275000, segment:'Supercar',ins:920, minTier:4 },
+  { id:'mclaren',  name:'2026 McLaren 750S',        emoji:'🟠', price:330000, segment:'Supercar',ins:1050,minTier:4 },
+  { id:'ferrari296',name:'2026 Ferrari 296 GTB',    emoji:'🔴', price:345000, segment:'Supercar',ins:1100,minTier:4 },
+  { id:'bentayga', name:'2026 Bentley Bentayga S',  emoji:'👑', price:265000, segment:'Supercar',ins:880, minTier:4 },
+  { id:'sf90',     name:'2026 Ferrari SF90 Stradale',emoji:'🔴',price:550000, segment:'Supercar',ins:1600,minTier:4 },
+  { id:'revuelto', name:'2026 Lamborghini Revuelto',emoji:'🟡', price:610000, segment:'Supercar',ins:1750,minTier:4 },
+  // Dream Garage — basically cash-only territory
+  { id:'rolls',    name:'2026 Rolls-Royce Ghost',   emoji:'👑', price:350000, segment:'Dream',   ins:1200,minTier:4 },
+  { id:'cullinan', name:'2026 Rolls-Royce Cullinan',emoji:'👑', price:420000, segment:'Dream',   ins:1350,minTier:4 },
+  { id:'phantom',  name:'2026 Rolls-Royce Phantom', emoji:'👑', price:520000, segment:'Dream',   ins:1500,minTier:4 },
+  { id:'chiron',   name:'2025 Bugatti Chiron SS',   emoji:'💎', price:3300000,segment:'Dream',   ins:8000,minTier:4 },
+  { id:'jesko',    name:'2026 Koenigsegg Jesko',    emoji:'💎', price:3100000,segment:'Dream',   ins:7500,minTier:4 },
 ];
 const CAR_SEGMENTS=[
-  {key:'Entry',   icon:'🚗', blurb:'Reliable daily drivers'},
-  {key:'Mid',     icon:'🛻', blurb:'SUVs & trucks'},
+  {key:'Used',    icon:'🔧', blurb:'Cheap wheels that run'},
+  {key:'Entry',   icon:'🚗', blurb:'New & reliable daily drivers'},
+  {key:'SUV',     icon:'🚙', blurb:'Crossovers & family haulers'},
+  {key:'Truck',   icon:'🛻', blurb:'Work & play pickups'},
   {key:'Sport',   icon:'🏎️', blurb:'Performance machines'},
+  {key:'EV',      icon:'⚡', blurb:'Electric everything'},
   {key:'Luxury',  icon:'🚘', blurb:'Premium badges'},
   {key:'Exotic',  icon:'🏁', blurb:'Six-figure thrills'},
-  {key:'Supercar',icon:'👑', blurb:'The 1% club'},
+  {key:'Supercar',icon:'🟡', blurb:'Poster cars'},
+  {key:'Dream',   icon:'💎', blurb:'The garage you retire into'},
 ];
-
+// Starting beaters — every player begins with a real (old) car, matching their existing car loan
+const BEATERS=[
+  {name:'2006 Honda Civic',emoji:'🚗'},{name:'2008 Toyota Corolla',emoji:'🚗'},
+  {name:'2005 Ford Taurus',emoji:'🚗'},{name:'2009 Nissan Sentra',emoji:'🚗'},
+  {name:'2007 Chevy Impala',emoji:'🚗'},{name:'2010 Hyundai Sonata',emoji:'🚗'},
+  {name:'2004 Toyota Camry',emoji:'🚗'},{name:'2008 Mazda 6',emoji:'🚗'},
+  {name:'2011 Kia Optima',emoji:'🚗'},{name:'2006 Honda Odyssey',emoji:'🚐'},
+];
 // ── HOME CATALOG (Realty Office — personal residences, mortgage financed) ──
 // Prices scale with the city's loc.re multiplier. upkeep = HOA/tax/maintenance per month.
 const HOMES = [
@@ -2355,7 +2425,8 @@ function initGame(prof, location) {
       return{name:id.name||'You',avatar:id.avatar,ethnicityLabel:id.ethnicityLabel,ageStart:id.ageStart,age:id.ageStart};
     })(),
     gameYear:1, // 1 year passes per full board lap (turns are too granular — a lap ≈ a life chapter)
-    carOwned:null, carInsurance:0, delinq:{}, ccLateTier:0,
+    carOwned:(()=>{const b=BEATERS[Math.floor(Math.random()*BEATERS.length)];return{id:'beater',name:b.name,emoji:b.emoji,beater:true};})(),
+    carInsurance:0, delinq:{}, ccLateTier:0,
     rolling:false, milestones:{}, _stockPrices:{}, charityCount:0,
     childBirths:[],
     _achievements:[], _netWorthHistory:[], _doublesStreak:0,
@@ -2908,7 +2979,7 @@ function openCarDealership(fromBoard){
   });
   actions.push({label:fromBoard?'Just browsing — leave':'Close',cls:'btn-gold',fn:()=>{if(fromBoard)endTurn();}});
   openModal({band:'gold',title:'🚗 Car Dealership — Showroom',
-    desc:`Your credit: ${G.creditScore} (${tier.label}) → auto APR ${(apr*100).toFixed(1)}%, ${Math.round(CAR_DOWN_PCT[tier.label]*100)}% down. Current ride: ${G.carOwned?G.carOwned.emoji+' '+G.carOwned.name:'🚙 beater (paid off)'}. Pick a lot to browse.`,
+    desc:`Your credit: ${G.creditScore} (${tier.label}) → auto APR ${(apr*100).toFixed(1)}%, ${Math.round(CAR_DOWN_PCT[tier.label]*100)}% down. Current ride: ${G.carOwned?G.carOwned.emoji+' '+G.carOwned.name:'🚙 none'}. Pick a lot to browse.`,
     rows:[['Credit Tier',tier.label,''],['Your Auto APR',(apr*100).toFixed(1)+'%',''],['Down Payment Required',Math.round(CAR_DOWN_PCT[tier.label]*100)+'%','']],
     actions});
 }
@@ -7049,7 +7120,10 @@ function updateUI(){
     $('lh-name').textContent=(id.name||'Player')+' — '+G.prof.icon+' '+G.prof.name;
     $('lh-sub').textContent=`Age ${id.age||id.ageStart||'?'} · Year ${G.gameYear||1} · ${id.ethnicityLabel||''} · ${G.location?G.location.icon+' '+G.location.name:''}`;
     const carChip=$('lh-car-chip');
-    if(carChip)carChip.textContent=G.carOwned?`${G.carOwned.emoji} ${G.carOwned.name}`:'🚙 Beater (paid off)';
+    if(carChip){
+      const carLoanLive=(G.liabilities||[]).some(l=>(l.type==='carfin'||l.name==='Car Loan')&&l.amt>0);
+      carChip.textContent=G.carOwned?`${G.carOwned.emoji} ${G.carOwned.name}${carLoanLive?'':' · paid off'}`:'🚙 No car';
+    }
     const homeChip=$('lh-home-chip');
     if(homeChip){
       const hs=G.housingSituation||'renter';
@@ -7648,7 +7722,7 @@ function loadSave(){
     // Life-sim layer (v11) back-compat
     if(!G.identity)G.identity={name:'You',avatar:'\u{1F9D1}\u{1F3FD}',ethnicityLabel:'Medium',ageStart:G.prof.age||25,age:G.prof.age||25};
     if(G.gameYear===undefined)G.gameYear=1;
-    if(G.carOwned===undefined)G.carOwned=null;
+    if(!G.carOwned){const b=BEATERS[Math.floor(Math.random()*BEATERS.length)];G.carOwned={id:'beater',name:b.name,emoji:b.emoji,beater:true};}
     if(G.carInsurance===undefined)G.carInsurance=0;
     if(!G.delinq)G.delinq={};
     if(G.ccLateTier===undefined)G.ccLateTier=0;
@@ -8876,11 +8950,23 @@ const CHAR_STYLES=[
   {label:'Silver',       build:t=>'\u{1F9D1}'+t+ZWJ+'\u{1F9B3}'},       // 🧑‍🦳
   {label:'Headscarf',    build:t=>'\u{1F9D5}'+t},                       // 🧕
 ];
+const ETHNICITIES=[
+  {label:'Latino / Hispanic',icon:'🌎'},
+  {label:'Black / African American',icon:'✊'},
+  {label:'White / European',icon:'🏰'},
+  {label:'East Asian',icon:'🏮'},
+  {label:'South Asian',icon:'🪷'},
+  {label:'Middle Eastern / North African',icon:'🕌'},
+  {label:'Caribbean',icon:'🏝️'},
+  {label:'Native / Indigenous',icon:'🪶'},
+  {label:'Pacific Islander',icon:'🌴'},
+  {label:'Mixed / Multiracial',icon:'🌈'},
+];
 const CHAR_NAMES=['Alex','Jordan','Sam','Maya','Leo','Nina','Marcus','Sofia','Andre','Keisha','Diego','Amara','Chen','Priya','Omar','Luna','Zoe','Malik','Isabella','Kai','Aaliyah','Mateo','Yuki','Fatima','Ezra','Naomi','Dante','Selena','Ravi','Skye'];
 let selectedIdentity=null;
 function _charDefaultIdentity(){
   const seedAge=Math.min(40,Math.max(18,(selectedProf&&selectedProf.age)||25));
-  return{name:'',avatar:'\u{1F9D1}\u{1F3FD}',ethnicityLabel:'Medium',ageStart:seedAge};
+  return{name:'',avatar:'\u{1F9D1}\u{1F3FD}',ethnicityLabel:'',toneLabel:'Medium',ageStart:seedAge};
 }
 function buildCharacterScreen(){
   if(!selectedIdentity)selectedIdentity=_charDefaultIdentity();
@@ -8893,7 +8979,7 @@ function buildCharacterScreen(){
       cell.textContent=av;
       cell.title=style.label+' · '+tone.label;
       cell.onclick=()=>{
-        selectedIdentity.avatar=av;selectedIdentity.ethnicityLabel=tone.label;
+        selectedIdentity.avatar=av;selectedIdentity.toneLabel=tone.label;
         grid.querySelectorAll('.char-cell').forEach(d=>d.classList.remove('sel'));
         cell.classList.add('sel');
         const sl=$('char-style-label');if(sl)sl.textContent='— '+style.label+' · '+tone.label;
@@ -8902,6 +8988,20 @@ function buildCharacterScreen(){
       grid.appendChild(cell);
     });
   });
+  const ethGrid=$('char-eth-grid');
+  if(ethGrid){
+    ethGrid.innerHTML='';
+    ETHNICITIES.forEach(eth=>{
+      const chip=document.createElement('div');
+      const sel=selectedIdentity.ethnicityLabel===eth.label;
+      chip.style.cssText='cursor:pointer;font-size:.68rem;font-weight:700;font-family:Arial,sans-serif;padding:6px 11px;border-radius:18px;transition:all .13s;'+(sel
+        ?'background:rgba(240,192,32,.18);border:1.5px solid #f0c020;color:#f0dc90;box-shadow:0 0 12px rgba(240,192,32,.25)'
+        :'background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.14);color:rgba(220,205,255,.75)');
+      chip.textContent=eth.icon+' '+eth.label;
+      chip.onclick=()=>{selectedIdentity.ethnicityLabel=eth.label;buildCharacterScreen();playClick&&playClick();};
+      ethGrid.appendChild(chip);
+    });
+  }
   const ageEl=$('char-age');
   ageEl.value=selectedIdentity.ageStart;
   $('char-age-val').textContent=ageEl.value;
@@ -8922,7 +9022,8 @@ function charRandomize(){
   const tone=CHAR_TONES[Math.floor(Math.random()*CHAR_TONES.length)];
   selectedIdentity=selectedIdentity||_charDefaultIdentity();
   selectedIdentity.avatar=style.build(tone.mod);
-  selectedIdentity.ethnicityLabel=tone.label;
+  selectedIdentity.toneLabel=tone.label;
+  selectedIdentity.ethnicityLabel=ETHNICITIES[Math.floor(Math.random()*ETHNICITIES.length)].label;
   selectedIdentity.ageStart=18+Math.floor(Math.random()*23);
   if(!$('char-name').value.trim())selectedIdentity.name=CHAR_NAMES[Math.floor(Math.random()*CHAR_NAMES.length)];
   buildCharacterScreen();playClick&&playClick();
@@ -8930,7 +9031,7 @@ function charRandomize(){
 function _charSyncPreview(){
   $('char-prev-av').textContent=selectedIdentity.avatar;
   $('char-prev-name').textContent=selectedIdentity.name||'Your Name';
-  $('char-prev-sub').textContent='Age '+selectedIdentity.ageStart+' · '+selectedIdentity.ethnicityLabel+' · '+(selectedProf?selectedProf.icon+' '+selectedProf.name:'');
+  $('char-prev-sub').textContent='Age '+selectedIdentity.ageStart+' · '+(selectedIdentity.ethnicityLabel||selectedIdentity.toneLabel||'')+' · '+(selectedProf?selectedProf.icon+' '+selectedProf.name:'');
   if($('char-name').value!==(selectedIdentity.name||''))$('char-name').value=selectedIdentity.name||'';
 }
 $('btn-char-go').addEventListener('click',()=>{
