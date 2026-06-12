@@ -2537,29 +2537,54 @@ function doSpin(){
   isSpinning=true;
   spinChosen=PROFS[Math.floor(Math.random()*PROFS.length)];
   btn.textContent='⏳ Spinning…';btn.disabled=true;stage.classList.add('go');
-
-  // Reset to top instantly, force reflow, then animate in one smooth shot
   reel.style.transition='none';
-  reel.style.transform='translateY(0)';
-  reel.offsetHeight; // force reflow
-
-  const targetIdx=PROFS.indexOf(spinChosen)+PROFS.length; // land in 2nd copy
+  // Hidden tab: rAF never fires — skip the animation, go straight to the reveal
+  if(document.hidden){
+    isSpinning=false;stage.classList.remove('go');revealProf(spinChosen);return;
+  }
+  // rAF-driven spin: immune to the prefers-reduced-motion CSS override that was
+  // zeroing the old transition (reel "teleported" — looked completely broken).
+  const targetIdx=PROFS.indexOf(spinChosen)+PROFS.length*2; // land in 3rd copy = 2+ full loops
   const targetY=targetIdx*ITEM_H;
-  reel.style.transition=`transform 1.5s cubic-bezier(0.08,0.9,0.22,1)`;
-  reel.style.transform=`translateY(-${targetY}px)`;
-
-  setTimeout(()=>{
-    isSpinning=false;
-    stage.classList.remove('go');
-    // soft chime
-    if(!window._muted)
-    try{const ctx=new AudioContext(),o=ctx.createOscillator(),g=ctx.createGain();
-      o.connect(g);g.connect(ctx.destination);o.type='sine';
-      o.frequency.setValueAtTime(880,ctx.currentTime);o.frequency.linearRampToValueAtTime(1047,ctx.currentTime+.12);
-      g.gain.setValueAtTime(.18,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.45);
-      o.start();o.stop(ctx.currentTime+.5);}catch(e){}
-    revealProf(spinChosen);
-  },1540);
+  const D=2300;                                  // total spin time
+  const easeOutCubic=x=>1-Math.pow(1-x,3);
+  let lastTick=-1;
+  const t0=performance.now();
+  function frame(now){
+    const p=Math.min(1,(now-t0)/D);
+    const y=targetY*easeOutCubic(p);
+    reel.style.transform='translateY(-'+y+'px)';
+    // motion blur while the reel is fast, sharpens as it lands
+    const speed=1-p;
+    reel.style.filter=speed>0.3?'blur('+(speed*2.4).toFixed(2)+'px)':'none';
+    // soft tick as items pass the window (only in the readable second half)
+    const idx=Math.floor(y/ITEM_H);
+    if(idx!==lastTick){lastTick=idx;if(p>0.45&&p<0.985){try{playClick&&playClick();}catch(e){}}}
+    if(p<1){requestAnimationFrame(frame);return;}
+    reel.style.filter='none';
+    // landing flash on the winning row
+    const landed=reel.children[targetIdx];
+    if(landed){
+      landed.style.transition='background .15s,box-shadow .15s';
+      landed.style.background='rgba(240,192,32,.28)';
+      landed.style.boxShadow='inset 0 0 18px rgba(240,192,32,.35)';
+      landed.style.borderRadius='8px';
+      setTimeout(()=>{landed.style.background='';landed.style.boxShadow='';},700);
+    }
+    setTimeout(()=>{
+      isSpinning=false;
+      stage.classList.remove('go');
+      // soft chime
+      if(!window._muted)
+      try{const ctx=new AudioContext(),o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);o.type='sine';
+        o.frequency.setValueAtTime(880,ctx.currentTime);o.frequency.linearRampToValueAtTime(1047,ctx.currentTime+.12);
+        g.gain.setValueAtTime(.18,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.45);
+        o.start();o.stop(ctx.currentTime+.5);}catch(e){}
+      revealProf(spinChosen);
+    },480);
+  }
+  requestAnimationFrame(frame);
 }
 
 function revealProf(p){
