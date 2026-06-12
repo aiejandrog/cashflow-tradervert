@@ -470,7 +470,7 @@ body{
 /* Each interactive child inside board-center must opt back in */
 #board-center #dice-row .die,
 #board-center #die2-hint button,
-#board-center #die2-hint{pointer-events:auto;}
+#board-center #die2-hint,#center-roll-btn,#bc-turn-info,#finish-turn-btn{pointer-events:auto}
 .bc-logo{margin-bottom:6px;line-height:1;text-align:center}
 .bc-cash{
   display:block;font-family:'Brush Script MT','Segoe Script','Comic Sans MS',cursive;
@@ -630,7 +630,7 @@ body{
 
 /* ── LIFE FEED (right side, under the turn dialog) ── */
 #chat-log{
-  position:fixed;bottom:84px;right:20px;left:auto;transform:none;
+  position:fixed;top:calc(50% - 170px);bottom:auto;right:16px;left:auto;transform:none;
   width:330px;
   background:rgba(8,3,20,.92);
   border:1px solid rgba(120,70,190,.35);
@@ -727,8 +727,6 @@ body{
   box-shadow:0 12px 50px rgba(0,0,0,.6);animation:cPop .25s cubic-bezier(.175,.885,.32,1.275);
   position:relative;pointer-events:all;/* card captures clicks normally */
 }
-.ecm-band svg,.mbox-band svg{width:17px;height:17px;flex-shrink:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
-.ecm-band,.mbox-band{display:flex!important;align-items:center;justify-content:center;gap:8px}
 .ecm-band{
   padding:9px 14px;font-family:Georgia,serif;font-style:italic;font-weight:700;
   font-size:.92rem;color:#fff;display:flex;align-items:center;gap:8px;
@@ -4233,131 +4231,177 @@ function recalcChildCosts(){
 // ── PIXEL CAR SPRITES — Pixel Car Racer-style side views, generated from a
 // per-segment ASCII template + a deterministic paint color hashed from the
 // car's id. One <rect> per pixel, crispEdges — true chunky pixel art.
-const _PIX_TEMPLATES={
-  sedan:[
-    '....................................',
-    '.........HHHHHHHHHHHH..............',
-    '........BHWWWWSBWWWWHB.............',
-    '.......BBWWWWWSBWWWWWBB............',
-    '......BBBBBBBBBBBBBBBBBB...........',
-    '..BBBBBBBBBBBBBBBBBBBBBBBBBBBB....',
-    '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
-    '.XSSSSSSSSSSSSSSSSSSSSSSSSSSSSLL..',
-    '..SSS.TTTT.SSSSSSSSSSS.TTTT.SSS...',
-    '......TRRT.............TRRT.......',
-    '......TTTT.............TTTT.......',
-  ],
-  wedge:[
-    '..HH................................',
-    '..BBB........HHHHHHHHH.............',
-    '...BB......HHWWWWWWWWHBB...........',
-    '...BBB...BBBWWWWWWWWWWBBBB.........',
-    '...BBBBBBBBBBBBBBBBBBBBBBBBBBH.....',
-    '..BBBBBBBBBBBBBBBBBBBBBBBBBBBBBL...',
-    '.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
-    'XSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS..',
-    '.SSS.TTTT.SSSSSSSSSSSSSS.TTTT.SSS..',
-    '.....TRRT................TRRT......',
-    '.....TTTT................TTTT......',
-  ],
-  boxy:[
-    '....................................',
-    '.......HHHHHHHHHHHHHHHHH...........',
-    '......BBWWWWSBWWWWSBWWBB...........',
-    '......BBWWWWSBWWWWSBWWBB...........',
-    '.....BBBBBBBBBBBBBBBBBBBB..........',
-    '..BBBBBBBBBBBBBBBBBBBBBBBBBBBB....',
-    '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
-    '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
-    '..SSSSSSSSSSSSSSSSSSSSSSSSSSSS....',
-    '..SS.TTTTT.SSSSSSSSSS.TTTTT.SS....',
-    '.....TTRRT............TTRRT.......',
-    '.....TTTTT............TTTTT.......',
-  ],
-  truck:[
-    '....................................',
-    '....................BBBBBBBB.......',
-    '....................BWWWWSBB.......',
-    '....................BWWWWSBB.......',
-    '..BBBBBBBBBBBBBBBBBBBBBBBBBBB......',
-    '..BBBBBBBBBBBBBBBBBBBBBBBBBBBLL....',
-    '.XSSSSSSSSSSSSSSSSSSSSSSSSSSSLL....',
-    '..SS.TTTT.SSSSSSSSSSSS.TTTT.SS.....',
-    '.....TRRT..............TRRT........',
-    '.....TTTT..............TTTT........',
-  ],
-};
-_PIX_TEMPLATES.muscle=[ // long hood, fastback — Mustang/Camaro/M4 family
-  '....................................',
-  '..........HHHHHHHH.................',
-  '........BBWWWWWWWWBB...............',
-  '......BBBWWWWWWWWWWBBBBB...........',
-  '..BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..',
-  '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL.',
-  '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL.',
-  '..SSS.TTTT.SSSSSSSSSSSS.TTTT.SSS..',
-  '......TRRT..............TRRT......',
-  '......TTTT..............TTTT......',
+const _PIX_TEMPLATES={};
+// ── HI-RES SPRITE SET (52px wide) — Pixel Car Racer-class side profiles.
+// B body H highlight S shade D accent W glass T tire R rim L head X tail.
+// The renderer adds the black outline, underbody band and rim spokes.
+_PIX_TEMPLATES.sedan=[
+'....................................................',
+'..................HHHHHHHHHHHHHH....................',
+'................HBWWWWWWBBWWWWWWBH..................',
+'...............HBWWWWWWWBBWWWWWWWBB.................',
+'..............BBWWWWWWWWBBWWWWWWWWBB................',
+'.....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.......',
+'...BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.....',
+'..XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL...',
+'..XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL...',
+'...SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS....',
+'...SSS..TTTTTT..SSSSSSSSSSSSSSSSSS..TTTTTT..SSS....',
+'.......TTTRRTTT..................TTTRRTTT..........',
+'.......TTRRRRTT..................TTRRRRTT..........',
+'.......TTTRRTTT..................TTTRRTTT..........',
+'........TTTTTT....................TTTTTT...........',
 ];
-_PIX_TEMPLATES.exotic=[ // cab-forward mid-engine wedge — Lambo/Ferrari/McLaren family
-  '....................................',
-  '..........HHHHHHHH.................',
-  '.......HHWWWWWWWWWHB...............',
-  '....BBBBWWWWWWWWWWWBBB.............',
-  '..BBBBBBBBBBBBBBBBBBBBBBBBBBBL....',
-  '.XBBBBBBBBBBBSSBBBBBBBBBBBBBBBLL..',
-  '.XSSSSSSSSSSSSSSSSSSSSSSSSSSSSSL..',
-  '..SS.TTTT.SSSSSSSSSSSS.TTTT.SS....',
-  '.....TRRT..............TRRT.......',
-  '.....TTTT..............TTTT.......',
+_PIX_TEMPLATES.hatch=[
+'....................................................',
+'..............HHHHHHHHHHHHH........................',
+'.............HBWWWWWBBWWWWWBH......................',
+'............HBWWWWWWBBWWWWWWBB.....................',
+'............BWWWWWWWBBWWWWWWWBB....................',
+'...........BBBBBBBBBBBBBBBBBBBBBB..................',
+'..........BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB...........',
+'.........XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL.........',
+'.........XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL.........',
+'..........SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS...........',
+'..........SS..TTTTTT..SSSSSSSS..TTTTTT..SS.........',
+'.............TTTRRTTT........TTTRRTTT..............',
+'.............TTRRRRTT........TTRRRRTT..............',
+'.............TTTRRTTT........TTTRRTTT..............',
+'..............TTTTTT..........TTTTTT...............',
 ];
-_PIX_TEMPLATES.ev=[ // one-motion aero, flush nose — Tesla/Lucid family
-  '....................................',
-  '.........HHHHHHHHHHHH..............',
-  '.......HHWWWWWWWWWWWWHH............',
-  '.....BBBWWWWWWWWWWWWWWBBB..........',
-  '...BBBBBBBBBBBBBBBBBBBBBBBBBB.....',
-  '..BBBBBBBBBBBBBBBBBBBBBBBBBBBBL...',
-  '..SSSSSSSSSSSSSSSSSSSSSSSSSSSSL...',
-  '...SS.TTTT.SSSSSSSSSS.TTTT.SS.....',
-  '......TRRT............TRRT........',
-  '......TTTT............TTTT........',
+_PIX_TEMPLATES.muscle=[
+'....................................................',
+'..............HHHHHHHHHH...........................',
+'............HBWWWWWWWWWWBBB........................',
+'...........HBWWWWWWWWWWWWBBBBB.....................',
+'..........BBWWWWWWWWWWWWWBBBBBBBB..................',
+'....BBBBBBBBBBBBBBBBBBBBBBBBBDDBBBBBBBBBBBB........',
+'...BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.....',
+'..XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL...',
+'..XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL...',
+'...SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS....',
+'...SSS..TTTTTTT..SSSSSSSSSSSSSSSS..TTTTTTT..SSS....',
+'.......TTTRRRTTT................TTTRRRTTT..........',
+'.......TTRRRRRTT................TTRRRRRTT..........',
+'.......TTTRRRTTT................TTTRRRTTT..........',
+'........TTTTTTT..................TTTTTTT...........',
 ];
-_PIX_TEMPLATES.lux=[ // long formal three-box w/ chrome beltline — Rolls/Bentley/S-class family
-  '....................................',
-  '..........HHHHHHHHHHH..............',
-  '.........BWWWWSBWWWWWB.............',
-  '........BBWWWWSBWWWWWBB............',
-  '..BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..',
-  '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL.',
-  '.XHHHHHHHHHHHHHHHHHHHHHHHHHHHHHLL.',
-  '..SSS.TTTT.SSSSSSSSSSSS.TTTT.SSS..',
-  '......TRRT..............TRRT......',
-  '......TTTT..............TTTT......',
+_PIX_TEMPLATES.wedge=[
+'....BBB.............................................',
+'....HBB.............................................',
+'....BBBB..........HHHHHHHHHHHH.....................',
+'.....BBB........HHWWWWWWWWWWWWHH...................',
+'.....BBB......HWWWWWWWWWWWWWWWWWWBB................',
+'.....BBBB...BBWWWWWWWWWWWWWWWWWWWWBBBB.............',
+'.....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.......',
+'....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB....',
+'..XXBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
+'..XXBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
+'...SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS...',
+'...SSS..TTTTTT..SSSSSSSSSSSSSSSSSS..TTTTTT..SSS....',
+'.......TTTRRTTT..................TTTRRTTT..........',
+'.......TTRRRRTT..................TTRRRRTT..........',
+'.......TTTRRTTT..................TTTRRTTT..........',
+'........TTTTTT....................TTTTTT...........',
 ];
-_PIX_TEMPLATES.cyber=[ // the triangle — you know the one
-  '....................................',
-  '..................HH...............',
-  '..............HHHHWWHH.............',
-  '..........HHHHWWWWWWWWBB...........',
-  '......BBBBBBBBBBBBBBBBBBBB.........',
-  '..BBBBBBBBBBBBBBBBBBBBBBBBBBBB....',
-  '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBL...',
-  '..SS.TTTT.SSSSSSSSSSSS.TTTT.SS....',
-  '.....TRRT..............TRRT.......',
-  '.....TTTT..............TTTT.......',
+_PIX_TEMPLATES.exotic=[
+'....................................................',
+'..............HHHHHHHHHH...........................',
+'...........HHWWWWWWWWWWWHB.........................',
+'.........HWWWWWWWWWWWWWWWBBB.......................',
+'......BBBWWWWWWWWWWWWWWWWBBBBBB....................',
+'....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..............',
+'...BBBBBBBBBBBBBBBBBBBDDDBBBBBBBBBBBBBBBBBB........',
+'..XBBBBBBBBBBBBBBBBBBDDDDBBBBBBBBBBBBBBBBBBBLL.....',
+'..XSSSSSSSSSSSSSSSSSSSDDSSSSSSSSSSSSSSSSSSSSLL.....',
+'...SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS......',
+'...SS..TTTTTT..SSSSSSSSSSSSSSSS..TTTTTT..SSS.......',
+'......TTTRRTTT................TTTRRTTT.............',
+'......TTRRRRTT................TTRRRRTT.............',
+'......TTTRRTTT................TTTRRTTT.............',
+'.......TTTTTT..................TTTTTT..............',
 ];
-_PIX_TEMPLATES.hatch=[ // two-box hot hatch — Golf/Focus/Mazda3 family
-  '....................................',
-  '........HHHHHHHHHHH................',
-  '.......BWWWWSBWWWWWBB..............',
-  '.......BWWWWSBWWWWWWBB.............',
-  '......BBBBBBBBBBBBBBBBBB...........',
-  '...BBBBBBBBBBBBBBBBBBBBBBBBBB.....',
-  '..XBBBBBBBBBBBBBBBBBBBBBBBBBBLL...',
-  '...SS.TTTT.SSSSSSSSSS.TTTT.SS.....',
-  '......TRRT............TRRT........',
-  '......TTTT............TTTT........',
+_PIX_TEMPLATES.ev=[
+'....................................................',
+'..............HHHHHHHHHHHHHHHH.....................',
+'...........HHWWWWWWWWWWWWWWWWWWHH..................',
+'.........HWWWWWWWWWWWWWWWWWWWWWWWWB................',
+'.......BBWWWWWWWWWWWWWWWWWWWWWWWWWWBB..............',
+'.....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB...........',
+'....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB........',
+'...XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL......',
+'....SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS.......',
+'....SSS..TTTTTT..SSSSSSSSSSSSSS..TTTTTT..SS........',
+'........TTTRRTTT..............TTTRRTTT.............',
+'........TTRRRRTT..............TTRRRRTT.............',
+'........TTTRRTTT..............TTTRRTTT.............',
+'.........TTTTTT................TTTTTT..............',
+];
+_PIX_TEMPLATES.lux=[
+'....................................................',
+'.................HHHHHHHHHHHHHH....................',
+'................HBWWWWWBBWWWWWWBH...................',
+'...............BBWWWWWWBBWWWWWWWBB..................',
+'....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.....',
+'...BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB....',
+'..XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
+'..XHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHLL..',
+'...BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB....',
+'...SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS....',
+'...SSS..TTTTTT..SSSSSSSSSSSSSSSSSS..TTTTTT..SSS....',
+'.......TTTRRTTT..................TTTRRTTT..........',
+'.......TTRRRRTT..................TTRRRRTT..........',
+'.......TTTRRTTT..................TTTRRTTT..........',
+'........TTTTTT....................TTTTTT...........',
+];
+_PIX_TEMPLATES.boxy=[
+'....................................................',
+'..........HHHHHHHHHHHHHHHHHHHHHH...................',
+'.........HBWWWWWBBWWWWWBBWWWWWWBH..................',
+'.........HBWWWWWBBWWWWWBBWWWWWWBH..................',
+'........BBWWWWWWBBWWWWWBBWWWWWWWBB.................',
+'.....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB........',
+'....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB......',
+'...XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL....',
+'...XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL....',
+'....SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS......',
+'....SS..TTTTTTT..SSSSSSSSSSSSSS..TTTTTTT..SS......',
+'.......TTTRRRTTT..............TTTRRRTTT...........',
+'.......TTRRRRRTT..............TTRRRRRTT...........',
+'.......TTTRRRTTT..............TTTRRRTTT...........',
+'........TTTTTTT................TTTTTTT............',
+];
+_PIX_TEMPLATES.truck=[
+'....................................................',
+'..........................HHHHHHHHHH...............',
+'.........................HBWWWWBBWWBH..............',
+'.........................BWWWWWBBWWWBB.............',
+'....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB...........',
+'....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..........',
+'...XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL........',
+'...XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL........',
+'....SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS..........',
+'....SS..TTTTTTT..SSSSSSSSSSSS..TTTTTTT..SS.........',
+'.......TTTRRRTTT............TTTRRRTTT..............',
+'.......TTRRRRRTT............TTRRRRRTT..............',
+'.......TTTRRRTTT............TTTRRRTTT..............',
+'........TTTTTTT..............TTTTTTT...............',
+];
+_PIX_TEMPLATES.cyber=[
+'....................................................',
+'.......................HHH.........................',
+'...................HHHHWWWHHH......................',
+'...............HHHHWWWWWWWWWWHHH...................',
+'...........HHHHWWWWWWWWWWWWWWWWBBBB................',
+'.......BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB............',
+'....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB........',
+'...XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL......',
+'....SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS........',
+'....SS..TTTTTTT..SSSSSSSSSSSSSS..TTTTTTT..SS.......',
+'.......TTTRRRTTT..............TTTRRRTTT............',
+'.......TTRRRRRTT..............TTRRRRRTT............',
+'.......TTTRRRTTT..............TTTRRRTTT............',
+'........TTTTTTT................TTTTTTT.............',
 ];
 function _pixTemplateFor(car){
   const seg=car.segment,n=(car.name||'').toLowerCase();
@@ -4463,7 +4507,7 @@ function openShowroom(fromBoard){
     </div>
     <div id="sr-stage" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:grab;touch-action:none;position:relative">
       <div id="sr-spotlight" style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:340px;height:65%;background:linear-gradient(to bottom,rgba(240,220,150,.10),transparent);clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);pointer-events:none"></div>
-      <div id="sr-car" style="width:min(460px,72vw);aspect-ratio:36/12;filter:drop-shadow(0 22px 18px rgba(0,0,0,.75));transition:transform .15s;will-change:transform"></div>
+      <div id="sr-car" style="width:min(460px,72vw);aspect-ratio:52/15;filter:drop-shadow(0 22px 18px rgba(0,0,0,.75));transition:transform .15s;will-change:transform"></div>
       <div id="sr-pedestal" style="width:300px;height:26px;border-radius:50%;background:radial-gradient(ellipse,rgba(240,192,32,.25),rgba(0,0,0,.4) 70%);margin-top:-8px"></div>
       <div id="sr-name" style="margin-top:14px;font-size:1.25rem;font-weight:900;color:#fff;font-family:Georgia,serif"></div>
       <div id="sr-tag" style="font-size:.7rem;color:rgba(240,192,32,.8);font-weight:800;letter-spacing:2px;text-transform:uppercase"></div>
@@ -4932,9 +4976,43 @@ function collectPassByPayday(){
   updateUI();
 }
 
+// ── 🎆 LANDING FX — every space type erupts when you land on it ──
+function landingFX(sp){
+  if(document.hidden)return;
+  const el=document.getElementById('bs'+G.position);if(!el)return;
+  const r=el.getBoundingClientRect();if(!r.width)return;
+  const FX={
+    payday:{e:['💵','🪙','💰'],n:14},deal:{e:['🤝','📈','✨'],n:9},doodad:{e:['🛍️','💸'],n:9},
+    charity:{e:['❤️','✨'],n:10},baby:{e:['👶','🍼','✨'],n:9},market:{e:['📈','📊'],n:8},
+    tip:{e:['💡','📖'],n:7},credit:{e:['💳','✨'],n:8},dealer:{e:['🚗','🔑'],n:8},
+    lifeevent:{e:['🎲','✨'],n:8},wildcard:{e:['🎁','✨','🌟'],n:12},start:{e:['🏁','🎉'],n:10},
+    layoff:{e:['💀','📉'],n:10,shake:1},crisis:{e:['🚨','🔥'],n:12,shake:1},
+    recession:{e:['📉','🌧️'],n:10,shake:1},lawsuit:{e:['⚖️','📜'],n:9,shake:1},audit:{e:['🏛️','📋'],n:9,shake:1},
+  };
+  const fx=FX[sp.type]||{e:[sp.icon||'✨'],n:6};
+  const cx=r.left+r.width/2,cy=r.top+r.height/2;
+  for(let i=0;i<fx.n;i++){
+    const p=document.createElement('div');
+    p.textContent=fx.e[i%fx.e.length];
+    p.style.cssText='position:fixed;left:'+cx+'px;top:'+cy+'px;font-size:'+(13+Math.random()*11)+'px;z-index:300;pointer-events:none;will-change:transform,opacity';
+    document.body.appendChild(p);
+    const ang=(i/fx.n)*Math.PI*2+Math.random()*0.7,d=34+Math.random()*58;
+    p.animate([
+      {transform:'translate(-50%,-50%) scale(.5) rotate(0deg)',opacity:1},
+      {transform:'translate(calc(-50% + '+Math.round(Math.cos(ang)*d)+'px),calc(-50% + '+Math.round(Math.sin(ang)*d-26)+'px)) scale(1.15) rotate('+Math.round(Math.random()*220-110)+'deg)',opacity:0}
+    ],{duration:620+Math.random()*340,easing:'cubic-bezier(.2,.7,.4,1)',fill:'forwards'}).onfinish=()=>p.remove();
+  }
+  if(fx.shake){
+    const ba=document.getElementById('board-area');
+    if(ba)ba.animate([
+      {transform:'translate(0,0)'},{transform:'translate(-7px,3px)'},{transform:'translate(6px,-3px)'},
+      {transform:'translate(-4px,2px)'},{transform:'translate(2px,-1px)'},{transform:'translate(0,0)'}
+    ],{duration:420,easing:'ease-out'});
+  }
+}
 function onLand(){
   const sp=BOARD_SPACES[G.position];
-  flashSpace(G.position);spaceFX(G.position,sp.type);
+  flashSpace(G.position);spaceFX(G.position,sp.type);landingFX(sp);
   $('board-msg').textContent=`Landed on ${sp.label.replace('\n',' ')}`;
   if(document.hidden){triggerSpace(sp);}
   else{setTimeout(()=>triggerSpace(sp),550);}
@@ -6124,6 +6202,16 @@ function showDoodadEvent(){
     const btns=[{label:`💸 Take the Hit — $${fmt(cost)}`,cls:'btn-tan',fn:takeHit}];
     if(smartUnlocked)btns.push({label:`✅ ${d.choice.label}`,cls:'btn-gold',fn:takeAlt});
     else btns.push({label:`${d.choice.label} — Need 720+ credit`,locked:true});
+    // 🗣 Haggle works on these too — same variable-ratio gamble as plain doodads
+    btns.push({label:'🗣 Haggle — could go either way…',cls:'btn-tan',fn:()=>{
+      const r2=Math.random();let paid,line,cls2;
+      if(r2<0.45){paid=Math.max(50,Math.round(cost*0.5/50)*50);line=`Haggled it DOWN to $${fmt(paid)}. They caved. You absolute menace. 😎`;cls2='g';}
+      else if(r2<0.75){paid=cost;line=`They didn't budge. Full $${fmt(paid)} — plus the cashier's silent judgment.`;cls2='b';}
+      else{paid=Math.round(cost*1.3/50)*50;line=`You haggled so badly they invented a "negotiation fee". $${fmt(paid)}. 💀`;cls2='r';}
+      ensureCash(paid,`doodad: ${d.title}`);G.cash-=paid;if(G.cash<-50)boostCredit(-8);
+      if(d.fn)d.fn();
+      addLog('🗣',line,cls2);updateUI();endTurn();
+    }});
     showEventCard('setback',`🛍️ Doodad — ${d.title}`,d.story,d.tip,rows,btns);
     return;
   }
@@ -6149,10 +6237,23 @@ function showDoodadEvent(){
     if(d.fn)d.fn();
     addLog('🛍️',`Doodad: ${d.title} -$${fmt(cost)}`,'b');updateUI();endTurn();
   };
+  // 🗣 Haggle — variable-ratio gamble: 45% half price, 30% full, 25% it backfires
+  const haggleFn=()=>{
+    const r2=Math.random();
+    let paid,line,cls2;
+    if(r2<0.45){paid=Math.max(50,Math.round(cost*0.5/50)*50);line=`Haggled it DOWN to $${fmt(paid)}. They caved. You absolute menace. 😎`;cls2='g';}
+    else if(r2<0.75){paid=cost;line=`They didn't budge. Full $${fmt(paid)} — plus the cashier's silent judgment.`;cls2='b';}
+    else{paid=Math.round(cost*1.3/50)*50;line=`You haggled so badly they invented a "negotiation fee". $${fmt(paid)}. 💀`;cls2='r';}
+    ensureCash(paid,`doodad: ${d.title}`);
+    G.cash-=paid;if(G.cash<-50)boostCredit(-8);
+    if(d.fn)d.fn();
+    addLog('🗣',line,cls2);updateUI();endTurn();
+  };
   showEventCard('setback',`🛍️ Doodad — ${d.title}`,d.story,d.tip,rows,[
     canAfford
       ?{label:`💸 Pay $${fmt(cost)}`,cls:'btn-tan',fn:payFn}
       :{label:`🏦 Borrow $${fmt(shortage)} → Pay (+$${fmt(pmtDelta)}/mo)`,cls:'btn-tan',fn:payFn},
+    {label:'🗣 Haggle — could go either way…',cls:'btn-gold',fn:haggleFn},
   ]);
 }
 
@@ -6248,29 +6349,40 @@ function checkChildMilestones(){
 
 function showCharityEvent(){
   const cf=monthlyCF();
-  // Fix13: cap donation at available cash — high-CF outer-board player with low cash
-  // could donate past BANKRUPTCY_CASH_FLOOR (-$3000) and trigger false bankruptcy.
-  const don=Math.max(0,Math.min(Math.round(cf*.1),G.cash));if(don>0)G.cash-=don;
-  G.charityCount=(G.charityCount||0)+1;
-  const milestone=G.charityCount===3;
-  const bonusRows=milestone
-    ?[['🎁 Generosity Bonus','Next payday +50% CF','green']]
-    :G.charityCount<3?[['Donations',`${G.charityCount}/3 — bonus at 3`,'gold']]:[];
-  if(milestone)G._charityBonus=true;
-  saveGame(); // persist donation/charityCount/bonus flag before card
-  const negCF=cf<=0;
+  const don=Math.max(0,Math.min(Math.round(cf*.1),G.cash));
+  const dbl=Math.max(0,Math.min(don*2,G.cash));
+  const negCF=cf<=0||don<=0;
+  const commit=(amt,countAs,line)=>{
+    if(amt>0)G.cash-=amt;
+    G.charityCount=(G.charityCount||0)+countAs;
+    const milestone=(G.charityCount>=3&&!G._charityBonus);
+    if(milestone)G._charityBonus=true;
+    addLog('❤️',line+(milestone?' — 🎁 GENEROSITY BONUS: next payday +50% CF!':''),amt>0?'b':'g');
+    updateUI();saveGame();endTurn();
+  };
+  if(negCF){
+    showEventCard('charity','❤️ Charitable Giving',
+      'Your cashflow is negative this month — nothing to give. But you can still give TIME.',
+      'Generosity compounds like interest. Even broke, showing up builds the network that lifts you later.',
+      [['Your CF','$'+fmt(cf)+'/mo','red'],['Wallet says','volunteer instead','']],
+      [{label:'🤝 Volunteer a Saturday (free)',cls:'btn-gold',fn:()=>{
+          if(Math.random()<0.35){boostCredit(3,'community ties');commit(0,1,'Volunteered — someone there knew someone. Doors crack open.');}
+          else commit(0,1,'Volunteered a Saturday. Felt rich in the way money can\'t buy.');
+        }},
+       {label:'Walk past — survival mode',cls:'btn-tan',fn:()=>{addLog('😔','Walked past the donation table. The grind continues.','');endTurn();}}]);
+    return;
+  }
   showEventCard('charity','❤️ Charitable Giving',
-    negCF
-      ?`Your cashflow is negative this month — nothing to give. But landing here reminded you: build assets first. Income creates options.`
-      :milestone
-        ?`3 donations. Word got back. Your next payday pays you back — 50% bonus CF this cycle.`
-        :`You commit 10% of your cashflow ($${fmt(don)}) to your community. Something shifts.`,
-    'Giving forces you to calculate your cashflow clearly. That clarity is worth more than the donation.',
-    negCF
-      ?[['Your CF',cf+'/mo — build income first','red'],['Donated','$0 this time','']]
-      :[['Donated','$'+fmt(don),'red'],['Cash Left','$'+fmt(G.cash),'gold'],...bonusRows],
-    [{label:negCF?'Build income first':'Pay it forward 🙏',cls:'btn-tan',fn:endTurn}]);
-  addLog('❤️',don>0?`Donated $${fmt(don)} to charity${milestone?' — bonus unlocked!':''}`:'Charity — $0 CF, nothing to donate','');
+    `The community fund is asking. 10% of your cashflow is $${fmt(don)}. How generous are we feeling?`,
+    'Giving forces you to calculate your cashflow clearly. That clarity is worth more than the donation. 3 acts of giving = next payday +50%.',
+    [['10% Tithe','$'+fmt(don),''],['Go Big (counts ×2)','$'+fmt(dbl),'gold'],['Giving Streak',`${G.charityCount||0}/3 toward bonus`,'green']],
+    [{label:`🙏 Donate $${fmt(don)}`,cls:'btn-tan',fn:()=>commit(don,1,`Donated $${fmt(don)} to charity`)},
+     {label:`💎 Go Big — $${fmt(dbl)} (counts ×2)`,cls:'btn-gold',fn:()=>commit(dbl,2,`BIG donation: $${fmt(dbl)} — the room noticed`)},
+     {label:'🤝 Volunteer instead (free)',cls:'btn-tan',fn:()=>{
+        if(Math.random()<0.35){boostCredit(3,'community ties');commit(0,1,'Volunteered — met a contractor who owes you one now.');}
+        else commit(0,1,'Volunteered the weekend. Zero dollars, full heart.');
+      }},
+     {label:'Keep it — money\'s tight',cls:'btn-tan',fn:()=>{addLog('🤐','Kept the cash. The universe took notes.','');endTurn();}}]);
 }
 
 function showLayoffEvent(){
@@ -6779,7 +6891,7 @@ function showEventCard(bandCls,label,story,tip,numbers,actions){
   _resumeFn=()=>showEventCard(bandCls,label,story,tip,numbers,actions);
   openFS();
   $('ecm-band').className='ecm-band '+bandCls;
-  $('ecm-band').innerHTML=_popIcon(bandCls,label+' '+(story||'').slice(0,140))+'<span>'+String(label).replace(/[<>&]/g,'')+'</span>';
+  $('ecm-band').textContent=label;
   $('ecm-story').textContent=story;
   const tipEl=$('ecm-tip');
   if(tip){$('ecm-tip-txt').textContent=tip;tipEl.style.display='';}else tipEl.style.display='none';
@@ -8248,7 +8360,7 @@ function openSettings(){
 function openModal({band,title,desc,rows,actions,customInput,_noFS}){
   _resumeFn=()=>openModal({band,title,desc,rows,actions,customInput,_noFS});
   if(!_noFS)openFS();
-  $('mb-band').innerHTML=_popIcon(band||'gray',title+' '+(desc||'').slice(0,140))+'<span>'+String(title).replace(/[<>&]/g,'')+'</span>';
+  $('mb-band').textContent=title;
   $('mb-band').className='mbox-band '+(band||'gray');
   $('mb-title').textContent=title;$('mb-desc').textContent=desc||'';
   const tbl=$('mb-tbl');
@@ -10791,6 +10903,10 @@ function joinRoomFromBrowser(name,hasPass){
 // Poll the directory while the splash screen is up — fast enough to feel live
 setInterval(()=>{const s=document.querySelector('.screen.active');if(s&&s.id==='splash')refreshRoomBrowser();},4000);
 document.addEventListener('DOMContentLoaded',()=>setTimeout(refreshRoomBrowser,400));
+// the LIFE FEED is draggable by its header — park it wherever feels right
+document.addEventListener('DOMContentLoaded',()=>{
+  try{const cl=document.getElementById('chat-log');const hd=cl&&cl.querySelector('.cl-hdr');if(cl&&hd)makeDraggable(cl,hd);}catch(e){}
+});
 
 // ── HOST ────────────────────────────────────────────────
 function bcHostStart(){
