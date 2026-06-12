@@ -3901,14 +3901,27 @@ function spaceFX(tileIdx,type){
 let _lastHoverTick=0;
 document.addEventListener('mouseover',e=>{
   if(window._muted)return;
-  const t=e.target.closest&&e.target.closest('button,.char-cell,.loc-card,.dream-card,.tr-item,.mp-react-btn,.sp-mp-btn,.tw-card,#daily-card,#trophy-rack,.mp-lobby-slot,.dc-icon,.dream-card');
+  const t=e.target.closest&&e.target.closest('button,.char-cell,.loc-card,.dream-card,.tr-item,.mp-react-btn,.sp-mp-btn,.tw-card,#daily-card,#trophy-rack,.mp-lobby-slot,.dc-icon,.rp-room,.fsr,.bs');
   if(!t)return;
   const now=performance.now();
   if(now-_lastHoverTick<80)return;
   _lastHoverTick=now;
+  // the ROLL pill is the hero — it gets a richer two-note hover
+  if(t.id==='center-roll-btn'){try{_tone(660,.05,'triangle',.06,0,880);_tone(880,.04,'sine',.04,.04);}catch(e){}return;}
   const primary=t.classList&&(t.classList.contains('btn-gold')||t.classList.contains('btn-spin')||t.id==='btn-spin');
   try{_tone(primary?760:540,.035,'sine',primary?.05:.03,0,primary?900:580);}catch(e){}
 },{passive:true});
+// Click tick on EVERY button — tactile feedback everywhere, throttled
+let _lastClickTick=0;
+document.addEventListener('pointerdown',e=>{
+  if(window._muted)return;
+  const t=e.target.closest&&e.target.closest('button,.rp-room,.tr-item,.tw-card,.char-cell,.loc-card,.dream-card');
+  if(!t)return;
+  const now=performance.now();
+  if(now-_lastClickTick<60)return;
+  _lastClickTick=now;
+  try{playClick();}catch(e){}
+},{passive:true,capture:true});
 
 // ── DICE + MOVEMENT ───────────────────────────────────
 // Pip grid positions [row,col] in 3×3 grid (1-indexed)
