@@ -811,6 +811,47 @@ body{
     radial-gradient(1px 1px at 25% 75%, rgba(255,255,255,.3) 0%,transparent 100%),
     radial-gradient(1px 1px at 60% 68%, rgba(255,255,255,.25) 0%,transparent 100%);
 }
+/* ── Character creation UI ── */
+#char-scroll{
+  flex:1;overflow-y:auto;min-height:0;padding:4px 10px 10px 2px;
+  scrollbar-width:thin;scrollbar-color:rgba(240,192,32,.35) rgba(255,255,255,.04);
+}
+#char-scroll::-webkit-scrollbar{width:6px}
+#char-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,.04);border-radius:3px}
+#char-scroll::-webkit-scrollbar-thumb{background:rgba(240,192,32,.35);border-radius:3px}
+#char-scroll::-webkit-scrollbar-thumb:hover{background:rgba(240,192,32,.6)}
+.char-sec-hdr{
+  font-size:.66rem;letter-spacing:2px;text-transform:uppercase;color:rgba(240,192,32,.85);
+  font-weight:800;font-family:Arial,sans-serif;margin:10px 0 7px;
+  display:flex;align-items:center;gap:8px;
+}
+.char-sec-hdr::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(240,192,32,.3),transparent)}
+#char-avatar-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
+.char-cell{
+  display:flex;align-items:center;justify-content:center;font-size:1.65rem;
+  aspect-ratio:1;background:linear-gradient(155deg,rgba(26,8,54,.85),rgba(14,4,32,.9));
+  border:2px solid rgba(255,255,255,.1);border-radius:11px;cursor:pointer;
+  transition:transform .13s,border-color .13s,box-shadow .13s;position:relative;
+}
+.char-cell:hover{transform:scale(1.12);border-color:rgba(240,192,32,.55);box-shadow:0 4px 16px rgba(0,0,0,.5),0 0 14px rgba(240,192,32,.2);z-index:2}
+.char-cell.sel{
+  border-color:#f0c020;box-shadow:0 0 0 2px rgba(240,192,32,.35),0 0 18px rgba(240,192,32,.35);
+  background:linear-gradient(155deg,rgba(60,40,10,.9),rgba(30,18,4,.95));
+}
+.char-cell.sel::after{
+  content:'✓';position:absolute;top:-5px;right:-5px;width:15px;height:15px;border-radius:50%;
+  background:#f0c020;color:#1a0a30;font-size:.6rem;font-weight:900;
+  display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;
+}
+#char-name{
+  width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);
+  border:1.5px solid rgba(240,192,32,.35);border-radius:10px;padding:10px 12px;
+  color:#f0dc90;font-family:Georgia,serif;font-size:.95rem;font-weight:700;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+#char-name:focus{border-color:#f0c020;box-shadow:0 0 0 3px rgba(240,192,32,.15)}
+@media(max-width:700px){#char-avatar-grid{grid-template-columns:repeat(5,1fr)}.char-cell{font-size:1.5rem}}
+
 /* Wrap fills available height, grid scrolls inside */
 .loc-wrap{
   width:100%;max-width:720px;position:relative;z-index:2;
@@ -1349,30 +1390,40 @@ body{
 
 <!-- ══ CHARACTER (BitLife-style identity) ══ -->
 <div id="character" class="screen">
-  <div class="loc-wrap" style="max-width:560px">
+  <div class="loc-wrap" style="max-width:640px">
     <div class="loc-title">🪪 Create Your Character</div>
     <div class="loc-sub">Who are you in this life? Pick your look, name, and starting age.</div>
-    <div style="flex:1;overflow-y:auto;min-height:0;padding:4px 2px">
-      <div style="font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(240,192,32,.85);font-weight:800;font-family:Arial,sans-serif;margin:6px 0 6px">Your Look</div>
-      <div id="char-avatar-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px"></div>
-      <div style="font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(240,192,32,.85);font-weight:800;font-family:Arial,sans-serif;margin:14px 0 6px">Your Name</div>
-      <input id="char-name" type="text" maxlength="16" placeholder="Your name" autocomplete="off"
-        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1.5px solid rgba(240,192,32,.35);border-radius:10px;padding:10px 12px;color:#f0dc90;font-family:Georgia,serif;font-size:1rem;font-weight:700;outline:none">
-      <div style="font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(240,192,32,.85);font-weight:800;font-family:Arial,sans-serif;margin:14px 0 6px">Starting Age <span style="opacity:.5;text-transform:none;letter-spacing:0">(18–40)</span></div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <input id="char-age" type="range" min="18" max="40" value="25" style="flex:1;accent-color:#f0c020">
-        <div id="char-age-val" style="font-size:1.5rem;font-weight:900;color:#f0dc90;font-family:Georgia,serif;min-width:46px;text-align:center">25</div>
-        <button class="btn-og btn-tan" onclick="charRandomize()" style="padding:8px 14px;border-radius:8px;font-size:.78rem">🎲 Randomize</button>
-      </div>
-      <div id="char-preview" style="margin-top:14px;display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.04);border:1px solid rgba(240,192,32,.25);border-radius:12px;padding:10px 14px">
-        <div id="char-prev-av" style="font-size:2.6rem;line-height:1">🧑🏽</div>
-        <div style="flex:1">
-          <div id="char-prev-name" style="font-size:.92rem;font-weight:900;color:#f0dc90;font-family:Georgia,serif">Your Name</div>
-          <div id="char-prev-sub" style="font-size:.7rem;color:rgba(200,175,120,.65);font-style:italic">Age 25 · Pick your look above</div>
+    <div id="char-scroll">
+      <div class="char-sec-hdr">Your Look <span id="char-style-label" style="opacity:.55;text-transform:none;letter-spacing:0;font-style:italic"></span></div>
+      <div id="char-avatar-grid"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+        <div>
+          <div class="char-sec-hdr">Your Name</div>
+          <div style="display:flex;gap:6px">
+            <input id="char-name" type="text" maxlength="16" placeholder="Your name" autocomplete="off">
+            <button class="btn-og btn-tan" onclick="charRandomName()" title="Random name" style="padding:0 12px;border-radius:10px;font-size:.85rem;flex-shrink:0">🎲</button>
+          </div>
+        </div>
+        <div>
+          <div class="char-sec-hdr">Starting Age <span style="opacity:.5;text-transform:none;letter-spacing:0">(18–40)</span></div>
+          <div style="display:flex;align-items:center;gap:10px;height:42px">
+            <input id="char-age" type="range" min="18" max="40" value="25" style="flex:1;accent-color:#f0c020">
+            <div id="char-age-val" style="font-size:1.4rem;font-weight:900;color:#f0dc90;font-family:Georgia,serif;min-width:40px;text-align:center">25</div>
+          </div>
         </div>
       </div>
+      <div style="display:flex;gap:10px;margin-top:12px;align-items:stretch">
+        <div id="char-preview" style="flex:1;display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(240,192,32,.08),rgba(107,63,168,.12));border:1px solid rgba(240,192,32,.3);border-radius:12px;padding:10px 14px">
+          <div id="char-prev-av" style="font-size:2.6rem;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))">🧑🏽</div>
+          <div style="flex:1">
+            <div id="char-prev-name" style="font-size:.95rem;font-weight:900;color:#f0dc90;font-family:Georgia,serif">Your Name</div>
+            <div id="char-prev-sub" style="font-size:.7rem;color:rgba(200,175,120,.7);font-style:italic">Age 25 · Pick your look above</div>
+          </div>
+        </div>
+        <button class="btn-og btn-tan" onclick="charRandomize()" style="padding:0 16px;border-radius:12px;font-size:.8rem;flex-shrink:0">🎲<br>Surprise<br>Me</button>
+      </div>
     </div>
-    <button class="btn-og btn-gold" id="btn-char-go" style="margin-top:10px;font-size:.9rem;padding:10px;border-radius:8px">Where Do You Live? →</button>
+    <button class="btn-og btn-gold" id="btn-char-go" style="margin-top:10px;font-size:.9rem;padding:11px;border-radius:9px;flex-shrink:0">Where Do You Live? →</button>
   </div>
 </div>
 
@@ -1551,7 +1602,7 @@ body{
   <div id="fs-inner">
 
     <!-- Life Hub profile header (v11 life-sim layer) -->
-    <div id="lh-profile" style="grid-column:1/3;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(45,74,122,.14),rgba(107,63,168,.10));border:1px solid rgba(107,63,168,.25);border-radius:10px;padding:8px 12px;margin:2px 2px 0">
+    <div id="lh-profile" style="grid-row:1;grid-column:1/3;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(45,74,122,.14),rgba(107,63,168,.10));border:1px solid rgba(107,63,168,.25);border-radius:10px;padding:8px 12px;margin:2px 2px 0">
       <div id="lh-avatar" style="font-size:2.4rem;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.3))">🧑🏽</div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
@@ -1571,7 +1622,7 @@ body{
     </div>
 
     <!-- Loans with due dates -->
-    <div id="lh-loans-wrap" style="grid-column:1/3;padding:0 4px;display:none">
+    <div id="lh-loans-wrap" style="grid-row:2;grid-column:1/3;padding:0 4px;display:none">
       <div class="fsh">🏦 Loans & Due Dates</div>
       <div class="fst" id="lh-loans"></div>
     </div>
@@ -1649,7 +1700,7 @@ body{
     </div>
 
     <!-- Freedom Gauge (right col) -->
-    <div id="fs-freedom-panel" style="grid-column:2;grid-row:1/4;padding:10px 8px 6px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px">
+    <div id="fs-freedom-panel" style="grid-column:2;grid-row:3/5;padding:10px 8px 6px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px">
       <div style="font-size:.56rem;color:var(--purple2);font-weight:900;text-transform:uppercase;letter-spacing:2px;font-family:Arial,sans-serif;opacity:.8">🎯 Freedom Meter</div>
       <div style="position:relative;width:190px">
         <canvas id="freedom-gauge" width="190" height="118" style="display:block;width:190px;height:118px"></canvas>
@@ -8811,7 +8862,21 @@ const CHAR_TONES=[
   {mod:'\u{1F3FE}',label:'Medium-Dark'},
   {mod:'\u{1F3FF}',label:'Dark'},
 ];
-const CHAR_BASES=['\u{1F9D1}','\u{1F468}','\u{1F469}','\u{1F9D4}'];// 🧑 👨 👩 🧔
+// Avatar styles: base emoji + optional ZWJ hair component. Each style renders in all 5 tones.
+const ZWJ='‍'; // zero-width joiner for compound emoji (explicit escape so invisible literals can't get mangled)
+const CHAR_STYLES=[
+  {label:'Classic',      build:t=>'\u{1F9D1}'+t},                       // 🧑
+  {label:'Short Hair',   build:t=>'\u{1F468}'+t},                       // 👨
+  {label:'Long Hair',    build:t=>'\u{1F469}'+t},                       // 👩
+  {label:'Curly',        build:t=>'\u{1F9D1}'+t+ZWJ+'\u{1F9B1}'},       // 🧑‍🦱
+  {label:'Curly Long',   build:t=>'\u{1F469}'+t+ZWJ+'\u{1F9B1}'},       // 👩‍🦱
+  {label:'Red Hair',     build:t=>'\u{1F469}'+t+ZWJ+'\u{1F9B0}'},       // 👩‍🦰
+  {label:'Beard',        build:t=>'\u{1F9D4}'+t},                       // 🧔
+  {label:'Bald',         build:t=>'\u{1F468}'+t+ZWJ+'\u{1F9B2}'},       // 👨‍🦲
+  {label:'Silver',       build:t=>'\u{1F9D1}'+t+ZWJ+'\u{1F9B3}'},       // 🧑‍🦳
+  {label:'Headscarf',    build:t=>'\u{1F9D5}'+t},                       // 🧕
+];
+const CHAR_NAMES=['Alex','Jordan','Sam','Maya','Leo','Nina','Marcus','Sofia','Andre','Keisha','Diego','Amara','Chen','Priya','Omar','Luna','Zoe','Malik','Isabella','Kai','Aaliyah','Mateo','Yuki','Fatima','Ezra','Naomi','Dante','Selena','Ravi','Skye'];
 let selectedIdentity=null;
 function _charDefaultIdentity(){
   const seedAge=Math.min(40,Math.max(18,(selectedProf&&selectedProf.age)||25));
@@ -8819,19 +8884,20 @@ function _charDefaultIdentity(){
 }
 function buildCharacterScreen(){
   if(!selectedIdentity)selectedIdentity=_charDefaultIdentity();
-  // Re-seed default age from the (possibly re-spun) profession if player hasn't touched it
   const grid=$('char-avatar-grid');grid.innerHTML='';
-  CHAR_BASES.forEach(base=>{
+  CHAR_STYLES.forEach(style=>{
     CHAR_TONES.forEach(tone=>{
-      const av=base+tone.mod;
+      const av=style.build(tone.mod);
       const cell=document.createElement('div');
-      cell.style.cssText='display:flex;align-items:center;justify-content:center;font-size:2rem;padding:8px 0;background:rgba(255,255,255,.05);border:2px solid '+(selectedIdentity.avatar===av?'#f0c020':'rgba(255,255,255,.12)')+';border-radius:12px;cursor:pointer;transition:transform .12s';
+      cell.className='char-cell'+(selectedIdentity.avatar===av?' sel':'');
       cell.textContent=av;
+      cell.title=style.label+' · '+tone.label;
       cell.onclick=()=>{
         selectedIdentity.avatar=av;selectedIdentity.ethnicityLabel=tone.label;
-        grid.querySelectorAll('div').forEach(d=>d.style.borderColor='rgba(255,255,255,.12)');
-        cell.style.borderColor='#f0c020';
-        _charSyncPreview();
+        grid.querySelectorAll('.char-cell').forEach(d=>d.classList.remove('sel'));
+        cell.classList.add('sel');
+        const sl=$('char-style-label');if(sl)sl.textContent='— '+style.label+' · '+tone.label;
+        _charSyncPreview();playClick&&playClick();
       };
       grid.appendChild(cell);
     });
@@ -8845,15 +8911,20 @@ function buildCharacterScreen(){
   nameEl.oninput=()=>{selectedIdentity.name=nameEl.value.trim();_charSyncPreview();};
   _charSyncPreview();
 }
-function charRandomize(){
-  const base=CHAR_BASES[Math.floor(Math.random()*CHAR_BASES.length)];
-  const tone=CHAR_TONES[Math.floor(Math.random()*CHAR_TONES.length)];
-  const names=['Alex','Jordan','Sam','Maya','Leo','Nina','Marcus','Sofia','Andre','Keisha','Diego','Amara','Chen','Priya','Omar','Luna'];
+function charRandomName(){
   selectedIdentity=selectedIdentity||_charDefaultIdentity();
-  selectedIdentity.avatar=base+tone.mod;
+  selectedIdentity.name=CHAR_NAMES[Math.floor(Math.random()*CHAR_NAMES.length)];
+  $('char-name').value=selectedIdentity.name;
+  _charSyncPreview();playClick&&playClick();
+}
+function charRandomize(){
+  const style=CHAR_STYLES[Math.floor(Math.random()*CHAR_STYLES.length)];
+  const tone=CHAR_TONES[Math.floor(Math.random()*CHAR_TONES.length)];
+  selectedIdentity=selectedIdentity||_charDefaultIdentity();
+  selectedIdentity.avatar=style.build(tone.mod);
   selectedIdentity.ethnicityLabel=tone.label;
   selectedIdentity.ageStart=18+Math.floor(Math.random()*23);
-  if(!$('char-name').value.trim())selectedIdentity.name=names[Math.floor(Math.random()*names.length)];
+  if(!$('char-name').value.trim())selectedIdentity.name=CHAR_NAMES[Math.floor(Math.random()*CHAR_NAMES.length)];
   buildCharacterScreen();playClick&&playClick();
 }
 function _charSyncPreview(){
