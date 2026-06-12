@@ -4258,6 +4258,10 @@ function triggerSpace(sp){
   // Child lifecycle milestones / quarterly tax used to REPLACE the landed space
   // (land on BABY, see only the tax card, baby never fires — looked broken).
   // Now they chain: interrupt card first, then the space you actually landed on.
+  // Just-in-time teaching: the FIRST EVER landing on each space type shows a
+  // one-card micro-tip, then chains into the real event (same interrupt pattern
+  // as child milestones below). Seen-set is lifetime (localStorage), not per-run.
+  if(G.skipTurns===0&&_maybeShowSpaceTip(sp))return;
   if(G.skipTurns===0&&checkChildMilestones()){window._chainAfterCard=()=>dispatchSpace(sp);updateUI();return;}
   if(G.turn>0&&G.turn%8===0&&G.skipTurns===0){window._chainAfterCard=()=>dispatchSpace(sp);showQuarterlyTax();return;}
   if(G.skipTurns>0){
@@ -4288,6 +4292,36 @@ function triggerSpace(sp){
   dispatchSpace(sp);
 }
 
+const SPACE_TIPS={
+  deal:     {icon:'🤝',title:'Deal Spaces',tip:'This is where wealth gets built. Properties, notes, and businesses each add monthly passive income. Pay cash for a 7% discount, or finance to keep powder dry.'},
+  doodad:   {icon:'🛍️',title:'Doodads',tip:'Surprise lifestyle expenses. There\'s usually a cheaper option — taking it is how the disciplined win. Every dollar not burned here funds your next deal.'},
+  market:   {icon:'📈',title:'Market Spaces',tip:'The market moves — prices swing, rates shift, opportunities appear. Sometimes it pays you, sometimes it tests you.'},
+  baby:     {icon:'👶',title:'The Baby Space',tip:'Congratulations(?). Kids cost more as they grow — $200/mo as babies up to $300/mo as teens — and they show up in your Life Hub aging in real time.'},
+  lawsuit:  {icon:'⚖️',title:'Lawsuits',tip:'Someone wants your money the legal way. Good credit and cash reserves turn disasters into inconveniences.'},
+  audit:    {icon:'🏛️',title:'IRS Audit',tip:'The IRS found something. Payment plans exist, but they park themselves in your monthly expenses until cleared.'},
+  layoff:   {icon:'💀',title:'Layoff',tip:'Income can vanish — that\'s the whole argument for passive income. Your assets keep paying even when your boss doesn\'t.'},
+  credit:   {icon:'💳',title:'Credit Bureau',tip:'Your file gets pulled and things move — sometimes up, sometimes down. Your credit score controls every loan rate in the game. Guard it.'},
+  dealer:   {icon:'🚗',title:'Car Dealer',tip:'From $5k beaters to a $3.3M Bugatti. Cars are liabilities wearing asset costumes — but the showroom IS fun. Better credit = better financing.'},
+  lifeevent:{icon:'🎲',title:'Life Events',tip:'Life happens — weddings, health scares, windfalls, romance. Some you choose, some choose you. Your relationship status lives in the Life Hub.'},
+  wildcard: {icon:'🎁',title:'Mystery Box',tip:'Pure luck, weighted in your favor. Open it.'},
+  recession:{icon:'📉',title:'Recession',tip:'For 3 turns: salary cut, expenses up, ALL asset cash flow down. Reserves are armor. The prepared buy the dip.'},
+  crisis:   {icon:'🚨',title:'Crisis',tip:'The big one. Cash reserves and insurance thinking decide whether this is a setback or a bankruptcy.'},
+};
+function _maybeShowSpaceTip(sp){
+  try{
+    const tip=SPACE_TIPS[sp.type];
+    if(!tip)return false;
+    const seen=JSON.parse(localStorage.getItem('cf_seen_tips')||'{}');
+    if(seen[sp.type])return false;
+    seen[sp.type]=1;
+    localStorage.setItem('cf_seen_tips',JSON.stringify(seen));
+    window._chainAfterCard=()=>dispatchSpace(sp);
+    showEventCard('life',tip.icon+' First Time: '+tip.title,tip.tip,
+      'One-time tip — this space explains itself from now on.',
+      [],[{label:'Got it →',cls:'btn-gold',fn:endTurn}]);
+    return true;
+  }catch(e){return false;}
+}
 function dispatchSpace(sp){
   switch(sp.type){
     case'payday':  onPayday();break;
@@ -10731,39 +10765,18 @@ function claimMysteryPrize(){
 //  TUTORIAL
 // ══════════════════════════════════════════════════════
 const TUTORIAL_STEPS=[
-  {icon:'🎮',title:'Welcome to Cashflow',
-   body:'Your mission: build passive income that exceeds your monthly expenses and ESCAPE the Rat Race. This tutorial walks you through everything you need to know to start winning.',
+  {icon:'🎮',title:'Welcome to Freedom Race',
+   body:'One mission: build passive income that beats your monthly expenses and ESCAPE the Rat Race. Everything else — deals, debts, credit, life — is in service of that number.',
    hi:null},
   {icon:'🎲',title:'Roll to Move',
-   body:'Each turn you roll the dice and your token moves around the board. Different spaces trigger different events — some reward you, some cost you, some offer deals that change your life.',
+   body:'Roll the dice, ride the board. Deals build you, doodads bleed you, paydays pay you. Every space teaches itself the first time you land on it — no homework required.',
    hi:'#board-center'},
-  {icon:'🌾',title:'CASHFLOW DAY — Get Paid',
-   body:'Land on OR pass any 🌾 CASHFLOW DAY space and you instantly collect your monthly cash flow. More assets = bigger payday. This is how wealth compounds turn by turn.',
+  {icon:'🌾',title:'Payday & the Freedom Goal',
+   body:'Land on OR pass a 🌾 CASHFLOW DAY to collect your monthly cash flow. The goal: stack assets until passive income covers 100% of expenses — that\'s the escape, and the Freedom Meter tracks it live.',
    hi:null},
-  {icon:'🤝',title:'Small Deals — Build Assets',
-   body:'Deal spaces offer rental properties, mortgage notes, and businesses. Each one adds passive income to your monthly CF. You can pay cash (7% discount) or finance through a bank.',
-   hi:null},
-  {icon:'🛍️',title:'Doodads — The Wealth Killers',
-   body:"Doodad spaces hit you with surprise expenses — vacations, gadgets, repairs. They drain the cash you need for deals. Avoid lifestyle inflation. Every doodad sets you back weeks.",
-   hi:null},
-  {icon:'📊',title:'Your Life Hub',
-   body:'Hover (or tap) the glowing left tab to open your Life Hub. It tracks every dollar in and out — income, expenses, debts with payoff bars, and the Freedom Meter showing how close you are to escaping.',
+  {icon:'🪪',title:'Your Life Hub',
+   body:'Tap the glowing left tab anytime — income, expenses, debts with payoff bars, your credit score, your family, your Freedom Meter. If money moved, it\'s in here. Now go roll.',
    hi:'#fs-tab'},
-  {icon:'🏦',title:'Credit Score — Your Leverage',
-   body:'Your credit score controls your loan rates. 740+ = excellent rates, cheap debt, bigger deals. Pay off cards and the score climbs automatically every payday. Bad credit costs you thousands.',
-   hi:'#credit-chip'},
-  {icon:'🎯',title:'The Goal — Watch This Number',
-   body:'Freedom Gap = how much more passive income you need per month. When it hits $0, you escape the Rat Race and enter the Outer Board. Build assets, collect payday, watch this number shrink.',
-   hi:'#fs-freedom-panel'},
-  {icon:'🎯',title:'Your Dream — The Real Win',
-   body:'When you first pick your dream, it sets your win condition. Escape the Rat Race (100% passive income), then land on the ⭐ DREAM space on the Outer Board to truly win the game.',
-   hi:null},
-  {icon:'⚡',title:'The Outer Board — Fast Track',
-   body:'Hit 100% on the Freedom Meter and you\'re transported to the Outer Board. Here you buy major businesses — car washes, hotels, franchises — and chase your dream space.',
-   hi:null},
-  {icon:'🏆',title:'Ready to Build?',
-   body:'Roll. Collect. Buy assets. Kill debt. Watch the Freedom Meter climb. Hit 100% and enter the Outer Board. Land on your dream space. WIN. Go build your legacy.',
-   hi:null},
 ];
 
 let _tutIdx=0;
