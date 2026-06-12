@@ -864,6 +864,41 @@ body{
 /* hidden whenever the panel itself is hidden (non-game screens) */
 #fs-panel.fs-hidden ~ #lifehub-btn{display:none}
 
+/* ── 🌐 Online rooms panel (main menu, right wall) ── */
+#rooms-panel{
+  position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  width:232px;z-index:3;
+  background:linear-gradient(165deg,#101c26 0%,#0a1018 100%);
+  border:1px solid rgba(34,211,238,.28);border-radius:14px;
+  box-shadow:0 10px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06);
+  padding:12px;display:flex;flex-direction:column;gap:8px;max-height:72vh;
+}
+.rp-hdr{
+  font-size:.6rem;font-weight:900;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(34,211,238,.9);font-family:Arial,sans-serif;text-align:center;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+#rp-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;min-height:60px;scrollbar-width:thin}
+.rp-room{
+  display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:10px;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1px solid rgba(34,211,238,.18);
+  transition:border-color .15s,transform .15s;
+}
+.rp-room:hover{border-color:rgba(34,211,238,.6);transform:translateX(-2px)}
+.rp-room.rp-full{opacity:.45;cursor:default}
+.rp-room.rp-full:hover{border-color:rgba(34,211,238,.18);transform:none}
+.rp-name{flex:1;min-width:0;font-size:.74rem;font-weight:800;color:#d8f4fa;font-family:Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.rp-badge{font-size:.56rem;font-weight:900;font-family:Arial,sans-serif;border-radius:9px;padding:2px 7px;white-space:nowrap}
+.rp-empty{font-size:.62rem;color:rgba(255,255,255,.4);font-style:italic;text-align:center;padding:14px 6px;line-height:1.5}
+.rp-create{border-top:1px solid rgba(34,211,238,.15);padding-top:9px}
+.rp-size-btn{
+  flex:1;background:rgba(34,211,238,.08);border:1.5px solid rgba(34,211,238,.3);border-radius:9px;
+  color:#7ee0f0;font-size:.66rem;font-weight:800;padding:7px 0;cursor:pointer;font-family:Arial,sans-serif;
+  transition:all .15s;
+}
+.rp-size-btn:hover{background:rgba(34,211,238,.18);border-color:rgba(34,211,238,.7)}
+@media(max-width:1000px){#rooms-panel{display:none}}
+
 /* ── 🏆 Trophy rack (main menu, left wall) ── */
 #trophy-rack{
   position:absolute;left:16px;top:50%;transform:translateY(-50%);
@@ -1421,6 +1456,20 @@ body{
 <div id="splash" class="screen">
   <!-- 🏆 Trophy rack — garage-shelf display, Pixel Car Racer style -->
   <div id="trophy-rack" onclick="openTrophyWall()" title="Open Trophy Wall"></div>
+  <!-- 🌐 Online rooms — live directory, right wall -->
+  <div id="rooms-panel">
+    <div class="rp-hdr">🌐 ONLINE ROOMS <span id="rp-live" style="width:7px;height:7px;border-radius:50%;background:#4caf50;display:inline-block;animation:lhbGlow 2s infinite"></span></div>
+    <div id="rp-list"><div class="rp-empty">Checking for open rooms…</div></div>
+    <div class="rp-create">
+      <div style="font-size:.56rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(34,211,238,.8);font-weight:800;font-family:Arial,sans-serif;margin-bottom:6px">➕ Create a Room</div>
+      <div style="display:flex;gap:6px">
+        <button class="rp-size-btn" onclick="mpSetCount(2)">👥 2P</button>
+        <button class="rp-size-btn" onclick="mpSetCount(3)">👥 3P</button>
+        <button class="rp-size-btn" onclick="mpSetCount(4)">👥 4P</button>
+      </div>
+      <div style="font-size:.52rem;color:rgba(255,255,255,.35);font-style:italic;margin-top:5px;line-height:1.4">Name your room, spin your character — your friend sees it here within seconds.</div>
+    </div>
+  </div>
   <div class="logo-wrap">
     <div class="logo-cg">
       <svg class="logo-skyline-svg" width="220" height="38" viewBox="0 0 220 38" xmlns="http://www.w3.org/2000/svg">
@@ -1494,11 +1543,6 @@ body{
         <div style="font-size:.64rem;color:rgba(200,220,235,.6);line-height:1.4" id="daily-card-sub">Everyone gets the SAME character, city &amp; dream today. One attempt. Beat the world's time.</div>
       </div>
       <div style="font-size:.62rem;font-weight:800;color:rgba(34,211,238,.85);background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.35);border-radius:14px;padding:4px 11px;flex-shrink:0;font-family:Arial,sans-serif" id="daily-card-cta">PLAY →</div>
-    </div>
-    <!-- Live public room directory — hidden until at least one room is active -->
-    <div id="room-browser" style="display:none;max-width:420px;margin:14px auto 0;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(240,192,32,.25);border-radius:12px">
-      <div style="font-size:.68rem;letter-spacing:2px;text-transform:uppercase;color:rgba(240,192,32,.8);font-weight:700;font-family:Arial,sans-serif;margin-bottom:8px;text-align:center">🌐 Active Rooms — tap to join</div>
-      <div id="room-browser-list"></div>
     </div>
   </div>
   <div id="profile-strip" style="display:none;max-width:460px;margin:10px auto 0;text-align:center;font-size:.68rem;color:rgba(240,220,144,.85);font-family:Arial,sans-serif;font-weight:700;background:rgba(255,255,255,.04);border:1px solid rgba(240,192,32,.25);border-radius:10px;padding:7px 12px"></div>
@@ -9760,19 +9804,26 @@ async function roomsList(){
   }catch(e){return[];}
 }
 function refreshRoomBrowser(){
-  const box=$('room-browser'),list=$('room-browser-list');
-  if(!box||!list)return;
+  const list=$('rp-list');
+  if(!list)return;
   roomsList().then(rooms=>{
-    if(!rooms.length){box.style.display='none';return;}
-    box.style.display='';
+    if(!rooms.length){
+      list.innerHTML='<div class="rp-empty">No rooms open right now.<br>Create one below — your friend will see it here within seconds.</div>';
+      return;
+    }
     list.innerHTML=rooms.map(r=>{
-      const safeName=String(r.name||'').replace(/[<>&"]/g,'');
+      const safeName=String(r.name||'').replace(/[<>&"']/g,'');
       const full=(r.players||0)>=(r.capacity||2);
-      return `<div onclick="joinRoomFromBrowser('${safeName.replace(/'/g,'')}',${r.has_pass?'true':'false'})"
-        style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:9px;cursor:pointer;margin-bottom:6px;opacity:${full?'.55':'1'}">
-        <span>${r.has_pass?'🔐':'🔓'}</span>
-        <span style="flex:1;font-weight:700;color:#f0e8c8;font-size:.85rem;text-align:left">${safeName}</span>
-        <span style="font-size:.68rem;color:rgba(200,175,120,.6)">${r.players||0}/${r.capacity||2} · ${full?'full':r.in_game?'in game':'lobby'}</span>
+      const open=!full&&!r.in_game;
+      const badge=full
+        ?'<span class="rp-badge" style="background:rgba(120,120,120,.2);color:#999">FULL</span>'
+        :r.in_game
+        ?'<span class="rp-badge" style="background:rgba(180,140,30,.2);color:#fbbf24">IN GAME</span>'
+        :'<span class="rp-badge" style="background:rgba(76,175,80,.18);color:#7ee0a0">'+(r.players||1)+'/'+(r.capacity||2)+' — JOIN!</span>';
+      return `<div class="rp-room${full?' rp-full':''}" ${open?`onclick="joinRoomFromBrowser('${safeName}',${r.has_pass?'true':'false'})"`:''}>
+        <span style="font-size:.85rem">${r.has_pass?'🔐':'🔓'}</span>
+        <span class="rp-name">${safeName}</span>
+        ${badge}
       </div>`;
     }).join('');
   });
@@ -9786,9 +9837,9 @@ function joinRoomFromBrowser(name,hasPass){
     if(tgt)tgt.focus();
   },140);
 }
-// Poll the directory while the splash screen is up
-setInterval(()=>{const s=document.querySelector('.screen.active');if(s&&s.id==='splash')refreshRoomBrowser();},10000);
-document.addEventListener('DOMContentLoaded',()=>setTimeout(refreshRoomBrowser,500));
+// Poll the directory while the splash screen is up — fast enough to feel live
+setInterval(()=>{const s=document.querySelector('.screen.active');if(s&&s.id==='splash')refreshRoomBrowser();},4000);
+document.addEventListener('DOMContentLoaded',()=>setTimeout(refreshRoomBrowser,400));
 
 // ── HOST ────────────────────────────────────────────────
 function bcHostStart(){
