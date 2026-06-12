@@ -1573,6 +1573,14 @@ body{
           <!-- ⚡ Fast Track overlay — shown when player escapes Rat Race -->
           <div id="ob-game-panel" style="display:none;position:absolute;inset:0;z-index:25;background:rgba(5,15,8,.9);border-radius:50%;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:5px;overflow:hidden;pointer-events:auto">
             <div id="ob-dream-badge" class="ob-dream-badge" style="margin-bottom:2px;text-align:center">🎯 Dream: —</div>
+            <div style="width:100%;max-width:270px">
+              <div style="display:flex;justify-content:space-between;font-size:.52rem;color:rgba(255,255,255,.55);font-family:Arial,sans-serif;margin-bottom:2px">
+                <span>💰 DREAM FUND</span><span id="ob-dream-fund-lbl">$0 / $0</span>
+              </div>
+              <div style="width:100%;height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden">
+                <div id="ob-dream-fund-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#c8910c,#f0c020);border-radius:4px;transition:width .5s ease"></div>
+              </div>
+            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%;max-width:270px">
               <div class="ob-stat-box"><div class="ob-stat-label">Passive</div><div class="ob-stat-val" id="ob-passive">$0/mo</div></div>
               <div class="ob-stat-box"><div class="ob-stat-label">Cash</div><div class="ob-stat-val" id="ob-cash">$0</div></div>
@@ -2394,14 +2402,16 @@ const LOCATIONS = [
 
 // ── DREAMS ───────────────────────────────────────────
 const DREAMS = [
-  {id:'restaurant',name:'Restaurant Empire',icon:'🍽️',desc:'Own a chain of restaurants with your name above the door. Table for one? That\'s for employees.'},
-  {id:'carwash',name:'Car Wash Empire',icon:'🚗',desc:'A fully automated car wash running while you sleep. Recession-proof, cash-heavy.'},
-  {id:'hotel',name:'Hotel Owner',icon:'🏨',desc:'Your name on a hotel. Guests from 40 countries. Front desk works 24/7 so you don\'t have to.'},
-  {id:'retire',name:'Early Retirement',icon:'🏝️',desc:'Walk away from work forever at 40. Wake up whenever. Travel anywhere.'},
-  {id:'mogul',name:'Real Estate Mogul',icon:'🏗️',desc:'A portfolio of commercial properties generating generational wealth.'},
-  {id:'freedom',name:'Location Independence',icon:'✈️',desc:'Work from Bali, Lisbon, or Miami. No boss, no office, no alarm.'},
-  {id:'storage',name:'Storage Empire',icon:'📦',desc:'The boring business that silently prints money while you do nothing.'},
-  {id:'legacy',name:'Leave a Legacy',icon:'👑',desc:'Build something your grandchildren inherit. Generational wealth is the ultimate flex.'},
+  // cost = what you must PAY on the Dream space to win. Cheap dreams = easier target,
+  // expensive dreams = bragging rights (shown on the win screen as your dream tier).
+  {id:'carwash',name:'Car Wash Empire',icon:'🚗',cost:250000,desc:'A fully automated car wash running while you sleep. Recession-proof, cash-heavy.'},
+  {id:'freedom',name:'Location Independence',icon:'✈️',cost:300000,desc:'Work from Bali, Lisbon, or Miami. No boss, no office, no alarm.'},
+  {id:'restaurant',name:'Restaurant Empire',icon:'🍽️',cost:400000,desc:'Own a chain of restaurants with your name above the door. Table for one? That\'s for employees.'},
+  {id:'storage',name:'Storage Empire',icon:'📦',cost:450000,desc:'The boring business that silently prints money while you do nothing.'},
+  {id:'mogul',name:'Real Estate Mogul',icon:'🏗️',cost:550000,desc:'A portfolio of commercial properties generating generational wealth.'},
+  {id:'hotel',name:'Hotel Owner',icon:'🏨',cost:650000,desc:'Your name on a hotel. Guests from 40 countries. Front desk works 24/7 so you don\'t have to.'},
+  {id:'retire',name:'Early Retirement',icon:'🏝️',cost:750000,desc:'Walk away from work forever at 40. Wake up whenever. Travel anywhere.'},
+  {id:'legacy',name:'Leave a Legacy',icon:'👑',cost:1000000,desc:'Build something your grandchildren inherit. Generational wealth is the ultimate flex.'},
 ];
 
 // ── STATE ────────────────────────────────────────────
@@ -6683,7 +6693,7 @@ function enterOuterBoard(pass,exp){
     <div style="font-size:1.8rem;font-weight:900;color:#f0dc90;margin-bottom:8px">YOU ESCAPED THE RAT RACE!</div>
     <div style="font-size:1rem;color:rgba(255,255,255,.7);margin-bottom:6px">Passive: $${fmt(pass)}/mo — Expenses: $${fmt(exp)}/mo</div>
     <div style="font-size:.9rem;color:var(--gold3);margin-bottom:14px">Now pursue your dream: ${dream.icon} ${dream.name}</div>
-    <div style="font-size:.78rem;color:rgba(255,255,255,.5);margin-bottom:18px">Land on the ⭐ DREAM space on the Outer Board to win.</div>
+    <div style="font-size:.78rem;color:rgba(255,255,255,.5);margin-bottom:18px">Stack $${fmt(dream.cost||400000)} cash, land on ⭐, and BUY your dream to win.</div>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
       <button id="escape-share-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:10px 22px;font-size:.85rem;font-weight:700;color:#fff;cursor:pointer;font-family:Georgia,serif">🚀 Share This Moment</button>
       <button onclick="document.getElementById('escape-overlay')?.remove();_launchOuterBoard();" style="background:linear-gradient(135deg,#c8910c,#f0c020);border:none;border-radius:12px;padding:12px 32px;font-size:1rem;font-weight:900;color:#1a0800;cursor:pointer;font-family:Georgia,serif">Enter the Fast Track ⚡</button>
@@ -6762,6 +6772,17 @@ function obUpdateStats(){
   const on=$('ob-networth');if(on)on.textContent=(netWorth>=0?'$':'-$')+fmt(Math.abs(netWorth));
   const os=$('ob-surplus');if(os){os.textContent=(surplus>=0?'+$':'-$')+fmt(Math.abs(surplus))+'/mo';os.style.color=surplus>=0?'#4caf50':'#ef5350';}
   const ocr=$('ob-credit');if(ocr){const tier=creditTier(G.creditScore||650);ocr.textContent=`${G.creditScore||650} · ${tier.label}`;ocr.style.color=G.creditScore>=720?'#4caf50':G.creditScore>=660?'#f0c040':'#ef5350';}
+  // Dream Fund bar — cash progress toward the dream price (THE endgame tension meter)
+  const dreamCost=(G.dream&&G.dream.cost)||400000;
+  const fundPct=Math.min(100,Math.round(cash/dreamCost*100));
+  const fb=$('ob-dream-fund-bar');
+  if(fb){
+    fb.style.width=fundPct+'%';
+    fb.style.background=fundPct>=100?'linear-gradient(90deg,#2a8a2a,#4caf50)':'linear-gradient(90deg,#c8910c,#f0c020)';
+    if(fundPct>=100&&!G._fundFullToasted){G._fundFullToasted=true;obAddLog('💰 DREAM FUND FULL — land on ⭐ and BUY IT!');sfxWinSting();}
+    if(fundPct<100)G._fundFullToasted=false;
+  }
+  const fl=$('ob-dream-fund-lbl');if(fl)fl.textContent='$'+fmt(cash)+' / $'+fmt(dreamCost)+' ('+fundPct+'%)';
   // Dream proximity — countdown builds tension as you close in
   const di=OUTER_SPACES.findIndex(s=>s.type==='dream');
   const badge=$('ob-dream-badge');
@@ -6863,9 +6884,46 @@ function obMove(steps){
   step();
 }
 
+// Emoji pop anchored to an arbitrary element (outer-board tiles)
+function _emojiPopAtEl(el,emojis){
+  try{
+    if(!el)return;
+    const r=el.getBoundingClientRect();
+    const cx=r.left+r.width/2,cy=r.top+r.height/2;
+    for(let i=0;i<6;i++){
+      const p=document.createElement('div');
+      p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+      p.style.cssText='position:fixed;left:'+cx+'px;top:'+cy+'px;font-size:'+(1+Math.random()*.6)+'rem;pointer-events:none;z-index:8001;will-change:transform,opacity';
+      document.body.appendChild(p);
+      const ang=(-Math.PI/2)+(Math.random()-.5)*1.8,dist=46+Math.random()*60;
+      const dx=Math.cos(ang)*dist,dy=Math.sin(ang)*dist;
+      p.animate([
+        {transform:'translate(-50%,-50%) scale(.3)',opacity:1},
+        {transform:'translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px)) scale(1)',opacity:1,offset:.65},
+        {transform:'translate(calc(-50% + '+(dx*1.2)+'px),calc(-50% + '+(dy-22)+'px)) scale(.85)',opacity:0}
+      ],{duration:700+Math.random()*200,easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=()=>p.remove();
+    }
+  }catch(e){}
+}
+const OB_FX={
+  payday:{s:()=>{sfxCash();},e:['💰','🪙']},
+  deal:{s:()=>{sfxOpportunity();},e:['🏢','💼']},
+  pcf:{s:()=>{sfxTicker();},e:['📈','✨']},
+  event:{s:()=>{sfxMagic();},e:['⚡','✨']},
+  taxbreak:{s:()=>{sfxTicker();},e:['🧾','✨']},
+  charity:{s:()=>{sfxWarm();},e:['🎗️','❤️']},
+  network:{s:()=>{sfxOpportunity();},e:['🌐','🤝']},
+  danger:{s:()=>{},e:['⚠️']},   // sound fires inside the event with shake
+  dream:{s:()=>{},e:['⭐','✨','🌟']},
+};
 function obLand(){
   const sp=OUTER_SPACES[G._outerPos];
   obAddLog(`📍 Landed on: ${sp.name}`);
+  const fx=OB_FX[sp.type];
+  if(fx){
+    if(!window._muted&&fx.s)try{fx.s();}catch(e){}
+    _emojiPopAtEl(document.getElementById('ob-sp-'+G._outerPos),fx.e);
+  }
   switch(sp.type){
     case'payday':{
       // Tick crash recovery countdown FIRST — so restored CF is included in this payday
@@ -6897,6 +6955,7 @@ function obLand(){
       G._freedomHistory.push({t:G.turn,p:pass,e:expenses().total});
       if(G._freedomHistory.length>30)G._freedomHistory.shift();
       obAddLog(collect>0?`💰 Payday! +$${fmt(collect)} collected`:`💰 Payday — expenses exceeded passive income this turn`);
+      if(collect>0)spawnCoinBurst(false);
       obUpdateStats();saveGame();
       // Always show payday modal (even zero collect — player needs feedback)
       const obPayRows=[['Passive Income','+$'+fmt(pass)+'/mo'],['Expenses','-$'+fmt(expenses().total)+'/mo']];
@@ -6909,10 +6968,33 @@ function obLand(){
         rows:obPayRows,
         actions:[{label:'Roll Again →',cls:collect>0?'btn-gold':'btn-tan',fn:()=>{obUpdateStats();}}],_noFS:true});
       break;}
-    case'dream':
-      obAddLog('⭐ YOU LANDED ON YOUR DREAM!');
-      if(document.hidden){checkOuterWin();}else{setTimeout(()=>checkOuterWin(),500);}
-      break;
+    case'dream':{
+      const dream=G.dream||DREAMS[0];
+      const cost=dream.cost||400000;
+      if(G.cash>=cost){
+        obAddLog('⭐ YOU CAN AFFORD YOUR DREAM!');
+        sfxWinSting();spawnCoinBurst(true);
+        openModal({band:'dream',title:`⭐ ${dream.icon} ${dream.name} — IT'S YOURS IF YOU WANT IT`,
+          desc:`${dream.desc} The price: $${fmt(cost)}. Sign here and the game is over — you win.`,
+          rows:[['Dream Price','$'+fmt(cost),'gold'],['Your Cash','$'+fmt(G.cash),'green'],['Cash After','$'+fmt(G.cash-cost),'']],
+          actions:[
+            {label:`⭐ BUY YOUR DREAM — $${fmt(cost)}`,cls:'btn-gold',fn:()=>{
+              G.cash-=cost;saveGame();
+              if(document.hidden){checkOuterWin();}else{setTimeout(()=>checkOuterWin(),400);}
+            }},
+            {label:'Not yet — keep stacking',cls:'btn-tan',fn:()=>{obAddLog('Passed on the dream — building a bigger empire first.');}},
+          ],_noFS:true});
+      }else{
+        const gap=cost-G.cash;
+        sfxDownturn();
+        obAddLog(`⭐ Landed on your dream — $${fmt(gap)} short. Keep building!`);
+        openModal({band:'gray',title:`⭐ ${dream.icon} ${dream.name} — SO CLOSE`,
+          desc:`You're standing on your dream, but it costs $${fmt(cost)} and you have $${fmt(G.cash)}. Stack $${fmt(gap)} more in cash and come back around.`,
+          rows:[['Dream Price','$'+fmt(cost),'gold'],['Your Cash','$'+fmt(G.cash),'red'],['Still Need','$'+fmt(gap),'red'],
+            ['Tip','Mega deals build CF · paydays build cash','']],
+          actions:[{label:'Back to the grind →',cls:'btn-tan',fn:()=>{obUpdateStats();}}],_noFS:true});
+      }
+      break;}
     case'deal':
       obShowMegaDeal();
       break;
@@ -7026,40 +7108,67 @@ function obShowPotentialCF(){
 
 function obShowWindfall(){
   const boosted=G._obCharityLuck;if(boosted)delete G._obCharityLuck;
-  const base=50000+Math.floor(Math.random()*150000);
-  const amt=boosted?Math.round(base*1.6/1000)*1000:base;
-  G.cash+=amt;
-  saveGame(); // persist windfall before modal — crash during modal replays on reload
-  const windfallStories=[
-    {title:'⚡ Equity Liquidation Event!',desc:'A startup you backed 3 years ago just got acquired. Your equity check clears.'},
-    {title:'⚡ Royalty Windfall!',desc:'An old licensing deal triggers a backend royalty clause. Money you forgot about arrives.'},
-    {title:'⚡ Insurance Settlement!',desc:'A complex claim settles in your favor. Attorney fees already deducted. This is the net.'},
-    {title:'⚡ Real Estate Refinance Cash-Out!',desc:'A cash-out refi on your portfolio frees up equity as capital. Tax-free borrowing.'},
-    {title:'⚡ Silent Partner Exit!',desc:'Your LP position in a closed fund liquidates ahead of schedule. Above-projected return.'},
-  ];
-  const story=windfallStories[Math.floor(Math.random()*windfallStories.length)];
-  obAddLog(`⚡ WINDFALL${boosted?' ⭐ (charity boosted)':''}: +$${fmt(amt)}!`);
-  openModal({band:'gold',title:story.title+(boosted?' ⭐':''),desc:story.desc+(boosted?' Your giving earlier multiplied this return.':''),
-    rows:[['Amount Received','+$'+fmt(amt)],['New Balance','$'+fmt(G.cash)]],
-    actions:[{label:'Collect & Roll',cls:'btn-gold',fn:()=>{obUpdateStats();checkWin();saveGame();}}],_noFS:true});
+  // CHOICE: guaranteed money vs a real gamble — risk texture the fast track was missing
+  const safe=Math.round((40000+Math.random()*40000)/1000)*1000*(boosted?1.6:1);
+  const riskWin=Math.round(safe*3.2/1000)*1000;
+  const riskLose=Math.round(safe*0.7/1000)*1000;
+  const odds=boosted?0.62:0.5;
+  openModal({band:'gold',title:'⚡ Capital Event — Your Call'+(boosted?' ⭐':''),
+    desc:'Two doors. A clean liquidity event pays out now — or roll it all into a high-risk angel position.'+(boosted?' Your charity network tilted the odds in your favor.':''),
+    rows:[['🟢 Safe Exit','+$'+fmt(safe)+' guaranteed','green'],
+      ['🔴 Angel Bet',(Math.round(odds*100))+'% chance +$'+fmt(riskWin)+' · else -$'+fmt(riskLose),'red'],
+      ['Your Cash','$'+fmt(G.cash),'gold']],
+    actions:[
+      {label:`🟢 Take the Safe $${fmt(safe)}`,cls:'btn-gold',fn:()=>{
+        G.cash+=safe;saveGame();sfxCash();spawnCoinBurst(false);
+        obAddLog(`⚡ Safe exit: +$${fmt(safe)}`);obUpdateStats();checkWin();
+      }},
+      {label:`🔴 Angel Bet — swing for $${fmt(riskWin)}`,cls:'btn-tan',fn:()=>{
+        const won=Math.random()<odds;
+        if(won){G.cash+=riskWin;sfxWinSting();spawnCoinBurst(true);obAddLog(`🔥 ANGEL BET HITS: +$${fmt(riskWin)}!`);}
+        else{ensureCash(riskLose,'angel bet bust');G.cash-=riskLose;sfxDownturn();shakeBoard();obAddLog(`💥 Angel bet busts: -$${fmt(riskLose)}`);}
+        saveGame();
+        openModal({band:won?'gold':'red',title:won?'🔥 THE BET HITS':'💥 The Bet Busts',
+          desc:won?'The startup 10x\'d in a secondary sale. Your conviction paid.':'The startup folded. Tuition paid to the school of risk.',
+          rows:[[won?'Won':'Lost',(won?'+$':'-$')+fmt(won?riskWin:riskLose),won?'green':'red'],['Cash Now','$'+fmt(G.cash),'gold']],
+          actions:[{label:won?'LFG 🚀':'Shake it off','cls':'btn-tan',fn:()=>{obUpdateStats();checkWin();checkBankruptcy();}}],_noFS:true});
+      }},
+    ],_noFS:true});
 }
 
 function obShowPartnership(){
-  const cf=2000+Math.floor(Math.random()*6001);
-  const partnerNames=[
-    {name:'Distribution Partner',desc:'A logistics company shares margin in exchange for market access.'},
-    {name:'Tech Co-Founder',desc:'Silent equity stake in a SaaS product — $0 upfront, monthly distributions.'},
-    {name:'Retail JV',desc:'Joint venture with a regional chain. You supply capital, they supply operations.'},
-    {name:'Media Rights Deal',desc:'Your brand gets licensed to a media company. Monthly royalty check.'},
-  ];
-  const pick=partnerNames[Math.floor(Math.random()*partnerNames.length)];
-  const uid='pship_'+Date.now();
-  G.assets.push({uid,id:uid,type:'biz',name:pick.name,cost:0,down:0,cf,liability:0,purchaseTurn:G.turn,cashPurchase:true});
-  saveGame(); // persist new asset before modal
-  obAddLog(`🤝 PARTNERSHIP: ${pick.name} +$${fmt(cf)}/mo CF!`);
-  openModal({band:'gold',title:'🤝 '+pick.name,desc:pick.desc,
-    rows:[['Monthly CF Added','+$'+fmt(cf)+'/mo'],['Cost','FREE — Network Deal']],
-    actions:[{label:'Accept & Roll',cls:'btn-gold',fn:()=>{obUpdateStats();checkWin();saveGame();}}],_noFS:true});
+  const stable=2000+Math.floor(Math.random()*2500);
+  const aggro=Math.round(stable*2.6/100)*100;
+  const embezzle=Math.round((40000+Math.random()*30000)/1000)*1000;
+  openModal({band:'gold',title:'🤝 Two Partners Want In — Pick One',
+    desc:'A conservative operator offers steady distributions. A hungry shark promises more than double — but sharks bite.',
+    rows:[['🟢 The Operator','+$'+fmt(stable)+'/mo · reliable','green'],
+      ['🔴 The Shark','65% +$'+fmt(aggro)+'/mo · 35% embezzles -$'+fmt(embezzle),'red']],
+    actions:[
+      {label:`🟢 Partner with the Operator — +$${fmt(stable)}/mo`,cls:'btn-gold',fn:()=>{
+        const uid='pship_'+Date.now();
+        G.assets.push({uid,id:uid,type:'biz',name:'Operating Partner JV',cost:0,down:0,cf:stable,liability:0,purchaseTurn:G.turn,cashPurchase:true});
+        saveGame();sfxOpportunity();
+        obAddLog(`🤝 Operator JV: +$${fmt(stable)}/mo`);obUpdateStats();checkWin();
+      }},
+      {label:`🔴 Bet on the Shark — chase $${fmt(aggro)}/mo`,cls:'btn-tan',fn:()=>{
+        const won=Math.random()<0.65;
+        if(won){
+          const uid='pship_'+Date.now();
+          G.assets.push({uid,id:uid,type:'biz',name:'Shark Partnership',cost:0,down:0,cf:aggro,liability:0,purchaseTurn:G.turn,cashPurchase:true});
+          sfxWinSting();obAddLog(`🦈 Shark delivers: +$${fmt(aggro)}/mo!`);
+        }else{
+          ensureCash(embezzle,'partner embezzlement');G.cash-=embezzle;
+          sfxAlarm();shakeBoard();boostCredit(-10,'partner fraud');
+          obAddLog(`🦈 The shark BIT: -$${fmt(embezzle)} embezzled`);
+        }
+        saveGame();
+        openModal({band:won?'gold':'red',title:won?'🦈 The Shark Delivers':'🦈 The Shark Bites',
+          desc:won?'Aggressive, ruthless, and — this time — on your side. Distributions flow.':'Forensic accounting finds the wire transfers too late. The partnership dissolves in lawyers.',
+          rows:[[won?'New CF':'Stolen',won?'+$'+fmt(aggro)+'/mo':'-$'+fmt(embezzle),won?'green':'red'],['Cash','$'+fmt(G.cash),'gold']],
+          actions:[{label:won?'Ride the wave 🌊':'Lesson learned','cls':'btn-tan',fn:()=>{obUpdateStats();checkWin();checkBankruptcy();}}],_noFS:true});
+      }},
+    ],_noFS:true});
 }
 
 function obShowSetback(){
@@ -7071,7 +7180,11 @@ function obShowSetback(){
     {title:'⚠️ Vendor Dispute',desc:'A supplier contract dispute goes to arbitration. Arbitration costs and settlement land on you.'},
   ];
   const ev=setbackEvents[Math.floor(Math.random()*setbackEvents.length)];
-  const amt=20000+Math.floor(Math.random()*80000);
+  // Scales with net worth — a flat $50k is noise to a $2M empire
+  const assetVal=G.assets.reduce((s,a)=>s+(a.totalCost||a.cost||0),0);
+  const nw=Math.max(100000,G.cash+assetVal-totalLiabilities());
+  const amt=Math.min(250000,Math.max(25000,Math.round(nw*(0.025+Math.random()*0.02)/1000)*1000));
+  sfxAlarm();shakeBoard();
   ensureCash(amt,'outer board setback');G.cash-=amt;
   saveGame(); // persist setback before modal
   obAddLog(`⚠️ SETBACK: ${ev.title} -$${fmt(amt)}`);
