@@ -409,18 +409,18 @@ body{
 
 /* Board spaces — square tiles like OG */
 .bs{
-  position:absolute;width:54px;height:54px;border-radius:9px;
+  position:absolute;width:46px;height:46px;border-radius:8px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   border:2px solid rgba(255,255,255,.25);overflow:hidden;cursor:default;user-select:none;
   box-shadow:0 2px 10px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.15);
   transition:transform .12s,box-shadow .12s;
 }
 .bs:hover{transform:scale(1.07);box-shadow:0 4px 16px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.18)}
-.bs-ic{font-size:1.2rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.bs-ic{font-size:.98rem;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
 .bs-lb{
-  font-size:.31rem;text-transform:uppercase;letter-spacing:.3px;color:rgba(255,255,255,.92);
+  font-size:.3rem;text-transform:uppercase;letter-spacing:.2px;color:rgba(255,255,255,.92);
   font-weight:900;margin-top:2px;line-height:1.2;text-align:center;
-  font-family:Arial,sans-serif;max-width:52px;
+  font-family:Arial,sans-serif;max-width:44px;
 }
 .bs.land{animation:spaceLand .55s cubic-bezier(.175,.885,.32,1.275)}
 @keyframes spaceLand{0%{transform:scale(1)}30%{transform:scale(1.6)}65%{transform:scale(.9)}100%{transform:scale(1)}}
@@ -789,7 +789,7 @@ body{
 @keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-60px)}}
 
 /* ── LOCATION SCREEN ─────────────────────────────────── */
-#location{
+#location,#character{
   flex-direction:column;align-items:center;justify-content:center;
   height:100vh;height:100dvh;overflow:hidden;padding:14px 16px;
   background:
@@ -798,7 +798,7 @@ body{
     linear-gradient(160deg,#0e0520 0%,#190835 40%,#0a0312 100%);
   position:relative;
 }
-#location::before{
+#location::before,#character::before{
   content:'';position:absolute;inset:0;pointer-events:none;
   background-image:
     radial-gradient(1.5px 1.5px at 15% 20%, rgba(255,255,255,.5) 0%,transparent 100%),
@@ -2400,7 +2400,7 @@ function resetToSpin(){
 // ── BOARD CONSTANTS ───────────────────────────────────
 const OT_SZ=64, OT_TN=9, OT_SN=9;           // uniform tile, 9 per side → square inner
 const IW=OT_SZ*OT_TN, IH=OT_SZ*OT_SN;       // inner: 576 × 576 (square)
-const CX=IW/2, CY=IH/2, R=248;              // perfectly circular track
+const CX=IW/2, CY=IH/2, R=260;              // 32-space ring: 2πR/32 ≈ 51px spacing > 46px tile = clean gaps
 
 // ── OUTER TRACK ───────────────────────────────────────
 const OT_TOP=['market','deal','charity','payday','market','deal','market','deal','charity']; // 9
@@ -2442,15 +2442,15 @@ function buildBoard(){
   const svg=$('board-svg');
   svg.setAttribute('width',IW);svg.setAttribute('height',IH);
   // Oval track ring
-  svg.innerHTML=`<ellipse cx="${CX}" cy="${CY}" rx="${R+24}" ry="${R+24}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="46"/>
-    <ellipse cx="${CX}" cy="${CY}" rx="${R+24}" ry="${R+24}" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1.5"/>`;
+  svg.innerHTML=`<ellipse cx="${CX}" cy="${CY}" rx="${R+2}" ry="${R+2}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="40"/>
+    <ellipse cx="${CX}" cy="${CY}" rx="${R+2}" ry="${R+2}" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1.5"/>`;
 
   const cont=$('board-spaces');cont.innerHTML='';
   BOARD_SPACES.forEach((sp,i)=>{
     const{x,y}=getBXY(i);
     const el=document.createElement('div');
     el.className='bs'+(sp.type==='payday'?' bs-payday':'');el.id=`bs${i}`;
-    el.style.cssText=`left:${x-25}px;top:${y-25}px;background:${sp.color}`;
+    el.style.cssText=`left:${x-23}px;top:${y-23}px;background:${sp.color}`;
     el.innerHTML=`<span class="bs-ic">${sp.icon}</span><span class="bs-lb">${sp.label.replace('\n','<br>')}</span>`;
     cont.appendChild(el);
   });
@@ -2504,12 +2504,12 @@ function placeToken(pos,anim=true){
   const tok=$('player-token');
   tok.style.transition=anim?'left .32s cubic-bezier(.4,0,.2,1),top .32s cubic-bezier(.4,0,.2,1)':'none';
   tok.style.left=(x-11)+'px';tok.style.top=(y-11)+'px';
-  tok.textContent=G?G.prof.icon:'';
+  tok.textContent=G?((G.identity&&G.identity.avatar)||G.prof.icon):'';
   document.querySelectorAll('.bs').forEach(e=>e.classList.remove('cur'));
   document.getElementById(`bs${pos}`)?.classList.add('cur');
   // MP: stream my token position to spectators so they watch me move live
   if(PLAYERS.length>1&&!_bcLobbyPhase&&_bcRole&&ACTIVE_PLAYER_IDX===_bcMyIdx){
-    try{netSend({type:'spectate-pos',pos,icon:G?G.prof.icon:'•',color:PLAYERS[_bcMyIdx]?.color||'#22d3ee',from:_bcMyIdx});}catch(e){}
+    try{netSend({type:'spectate-pos',pos,icon:G?((G.identity&&G.identity.avatar)||G.prof.icon):'•',color:PLAYERS[_bcMyIdx]?.color||'#22d3ee',from:_bcMyIdx});}catch(e){}
   }
 }
 
