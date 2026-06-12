@@ -1402,8 +1402,17 @@ body{
       </div>
       <div class="sp-join-row">
         <button id="btn-join-room" onclick="mpOpenJoinModal()">🚪 Join Room</button>
-        <button id="btn-daily" onclick="startDailyRun()" title="Same run for everyone today — compare results!" style="margin-left:6px">📅 Daily Run</button>
       </div>
+    </div>
+    <!-- Daily Challenge — its own explained card, not a mystery button -->
+    <div id="daily-card" onclick="startDailyRun()" style="display:flex;align-items:center;gap:12px;max-width:420px;margin:10px auto 0;padding:10px 14px;background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(107,63,168,.12));border:1.5px solid rgba(34,211,238,.3);border-radius:12px;cursor:pointer;transition:all .15s;text-align:left"
+      onmouseenter="this.style.borderColor='rgba(34,211,238,.6)';this.style.transform='translateY(-1px)'" onmouseleave="this.style.borderColor='rgba(34,211,238,.3)';this.style.transform=''">
+      <div style="font-size:1.7rem;flex-shrink:0">📅</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.82rem;font-weight:900;color:#7ee0f0;font-family:Georgia,serif" id="daily-card-title">Today's Challenge</div>
+        <div style="font-size:.64rem;color:rgba(200,220,235,.6);line-height:1.4" id="daily-card-sub">Everyone gets the SAME character, city &amp; dream today. One attempt. Beat the world's time.</div>
+      </div>
+      <div style="font-size:.62rem;font-weight:800;color:rgba(34,211,238,.85);background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.35);border-radius:14px;padding:4px 11px;flex-shrink:0;font-family:Arial,sans-serif" id="daily-card-cta">PLAY →</div>
     </div>
     <!-- Live public room directory — hidden until at least one room is active -->
     <div id="room-browser" style="display:none;max-width:420px;margin:14px auto 0;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(240,192,32,.25);border-radius:12px">
@@ -2445,6 +2454,19 @@ function recordWin(){
   return{newPB,best:p.bestOverall,wins:p.wins};
 }
 function populateProfileStrip(){
+  // Daily card state: show today's result if already played
+  try{
+    const pd=loadProfile();
+    const today=new Date().toISOString().slice(0,10);
+    const d=pd.daily[today];
+    const cta=document.getElementById('daily-card-cta');
+    const sub=document.getElementById('daily-card-sub');
+    if(d&&cta&&sub){
+      cta.textContent='✅ '+d.turns+'t · '+d.grade;
+      cta.style.color='rgba(120,220,120,.9)';cta.style.borderColor='rgba(120,220,120,.4)';cta.style.background='rgba(60,180,60,.12)';
+      sub.textContent='Done for today — new challenge at midnight. Share your time!';
+    }
+  }catch(e){}
   const el=document.getElementById('profile-strip');if(!el)return;
   const p=loadProfile();
   if(!p.games){el.style.display='none';return;}
