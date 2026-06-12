@@ -1473,7 +1473,10 @@ body{
         </div>
       </div>
     </div>
-    <button class="btn-og btn-gold" id="btn-dream-go" disabled style="opacity:.45">Begin Game →</button>
+    <div style="display:flex;gap:10px;flex-shrink:0">
+      <button class="btn-og btn-tan" id="btn-dream-random" style="flex:0 0 auto;padding:10px 16px;border-radius:8px;font-size:.82rem">🎲 Random</button>
+      <button class="btn-og btn-gold" id="btn-dream-go" disabled style="opacity:.45;flex:1">Begin Game →</button>
+    </div>
   </div>
 </div>
 
@@ -1502,8 +1505,8 @@ body{
     </div>
     <div class="tb-space"></div>
     <div id="express-badge" style="display:none;background:#6040b0;border:1px solid #9060e0;border-radius:10px;padding:2px 9px;font-size:.62rem;font-weight:900;color:#e0c8ff;letter-spacing:1px;font-family:Arial,sans-serif">⚡ EXPRESS</div>
-    <button class="btn-og btn-tan" onclick="if(window.G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗 Dealer</button>
-    <button class="btn-og btn-tan" onclick="if(window.G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡 Realty</button>
+    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗 Dealer</button>
+    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡 Realty</button>
     <button class="btn-og btn-gold" onclick="toggleFS()" style="padding:6px 14px;font-size:.75rem;letter-spacing:.5px">🪪 Life Hub</button>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
@@ -3003,6 +3006,7 @@ function recalcChildCosts(){
 
 // ══ CAR DEALERSHIP (segment showroom → car detail) ════
 function openCarDealership(fromBoard){
+  window._modalFromBoard=!!fromBoard;
   const tier=creditTier(G.creditScore||650);
   const tierIdx=CAR_TIER_IDX[tier.label];
   const apr=loanRate()+0.02; // auto loans run ~2pts over the player's base rate
@@ -6127,6 +6131,7 @@ function openModal({band,title,desc,rows,actions,customInput,_noFS}){
   requestAnimationFrame(()=>makeDraggable(document.querySelector('.mbox'),$('mb-band')));
 }
 function closeModal(){
+  window._modalFromBoard=false;
   $('modal').classList.remove('vis');$('modal-bg').classList.remove('vis');
   $('fs-panel').classList.remove('open');
   ['event-modal','event-modal-bg','modal','modal-bg'].forEach(id=>{const el=$(id);if(el)el.style.paddingLeft='';});
@@ -7641,6 +7646,18 @@ function _spaceCanRoll(){
   }
   return true;
 }
+// ESC closes openModal dialogs (dealership, realty, bank). Event cards are exempt —
+// they carry consequences the player must explicitly acknowledge.
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  const m=$('modal');
+  if(m&&m.classList.contains('vis')){
+    e.preventDefault();
+    const fromBoard=window._modalFromBoard;window._modalFromBoard=false;
+    closeModal();
+    if(fromBoard&&typeof endTurn==='function')endTurn(); // board dealer space = "just browsing"
+  }
+});
 document.addEventListener('keydown',function(e){
   if(e.code!=='Space') return;
   if(e.repeat) return; // ignore key-held-down repeat fires
@@ -9160,6 +9177,12 @@ $('btn-dream-go').addEventListener('click',()=>{
   } else {
     clearSave();startGame(selectedProf,selectedLocation);
   }
+});
+$('btn-dream-random').addEventListener('click',()=>{
+  const d=DREAMS[Math.floor(Math.random()*DREAMS.length)];
+  const cards=document.querySelectorAll('.dream-card');
+  const card=cards[DREAMS.indexOf(d)];
+  if(card){pickDream(d,card);card.style.transform='scale(1.1)';setTimeout(()=>card.style.transform='',300);}
 });
 $('btn-loc-random').addEventListener('click',()=>{
   const loc=LOCATIONS[Math.floor(Math.random()*LOCATIONS.length)];
