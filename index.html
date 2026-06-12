@@ -3149,6 +3149,18 @@ function initSpinner(){
 
 const ITEM_H=68; // px — must match .sp-item height
 
+// ── CAREER LOTTERY — life isn't uniform. Elite careers are RARE (≈22%), the
+// comfortable middle is a third, and most lives start in the grind (≈45%).
+// Mirrors reality, makes a Doctor roll feel like hitting a jackpot, and makes
+// the grind runs the badge of honor they deserve. Within a bucket it's fair.
+function _spinCareerLottery(){
+  const elite=PROFS.filter(p=>p.salary>=7000);          // Doctor, Lawyer, Engineer
+  const middle=PROFS.filter(p=>p.salary>=4500&&p.salary<7000);
+  const grind=PROFS.filter(p=>p.salary<4500);
+  const r=Math.random();
+  const bucket=r<0.22?elite:r<0.55?middle:grind;
+  return bucket[Math.floor(Math.random()*bucket.length)]||PROFS[0];
+}
 function doSpin(){
   if(isSpinning)return;
   // LOCKED SPIN: a pending result from a previous spin (e.g. page reload during
@@ -3170,7 +3182,7 @@ function doSpin(){
   }catch(e){}
   const btn=$('btn-spin'),reel=$('spin-reel'),stage=$('sp-stage');
   isSpinning=true;
-  spinChosen=PROFS[Math.floor(Math.random()*PROFS.length)];
+  spinChosen=_spinCareerLottery();
   try{localStorage.setItem('cf_pending_spin',JSON.stringify({profId:spinChosen.id,ts:Date.now()}));}catch(e){}
   btn.textContent='⏳ Spinning…';btn.disabled=true;stage.classList.add('go');
   reel.style.transition='none';
@@ -3946,6 +3958,101 @@ function recalcChildCosts(){
 }
 
 // ══ 🎪 INTERACTIVE SHOWROOM — drag between cars, full spec sheets ══
+// ── PIXEL CAR SPRITES — Pixel Car Racer-style side views, generated from a
+// per-segment ASCII template + a deterministic paint color hashed from the
+// car's id. One <rect> per pixel, crispEdges — true chunky pixel art.
+const _PIX_TEMPLATES={
+  sedan:[
+    '....................................',
+    '.........BBBBBBBBBBBB..............',
+    '........BBWWWWSBWWWWBB.............',
+    '.......BBWWWWWSBWWWWWBB............',
+    '......BBBBBBBBBBBBBBBBBB...........',
+    '..BBBBBBBBBBBBBBBBBBBBBBBBBBBB....',
+    '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
+    '.XSSSSSSSSSSSSSSSSSSSSSSSSSSSSLL..',
+    '..SSS.TTTT.SSSSSSSSSSS.TTTT.SSS...',
+    '......TRRT.............TRRT.......',
+    '......TTTT.............TTTT.......',
+  ],
+  wedge:[
+    '....................................',
+    '.............BBBBBBBBBB............',
+    '...........BBWWWWWWWWBBB...........',
+    '.........BBBWWWWWWWWWWBBBB.........',
+    '.B....BBBBBBBBBBBBBBBBBBBBBBB......',
+    '.BB.BBBBBBBBBBBBBBBBBBBBBBBBBBBL...',
+    '.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
+    'XSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS..',
+    '.SSS.TTTT.SSSSSSSSSSSSSS.TTTT.SS...',
+    '.....TRRT................TRRT......',
+    '.....TTTT................TTTT......',
+  ],
+  boxy:[
+    '....................................',
+    '.......BBBBBBBBBBBBBBBBB...........',
+    '......BBWWWWSBWWWWSBWWBB...........',
+    '......BBWWWWSBWWWWSBWWBB...........',
+    '.....BBBBBBBBBBBBBBBBBBBB..........',
+    '..BBBBBBBBBBBBBBBBBBBBBBBBBBBB....',
+    '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
+    '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL..',
+    '..SSSSSSSSSSSSSSSSSSSSSSSSSSSS....',
+    '..SS.TTTTT.SSSSSSSSSS.TTTTT.SS....',
+    '.....TTRRT............TTRRT.......',
+    '.....TTTTT............TTTTT.......',
+  ],
+  truck:[
+    '....................................',
+    '....................BBBBBBBB.......',
+    '....................BWWWWSBB.......',
+    '....................BWWWWSBB.......',
+    '..BBBBBBBBBBBBBBBBBBBBBBBBBBB......',
+    '..BBBBBBBBBBBBBBBBBBBBBBBBBBBLL....',
+    '.XSSSSSSSSSSSSSSSSSSSSSSSSSSSLL....',
+    '..SS.TTTT.SSSSSSSSSSSS.TTTT.SS.....',
+    '.....TRRT..............TRRT........',
+    '.....TTTT..............TTTT........',
+  ],
+};
+function _pixTemplateFor(seg){
+  if(seg==='Sport'||seg==='Exotic'||seg==='Supercar'||seg==='Dream'||seg==='EV')return _PIX_TEMPLATES.wedge;
+  if(seg==='SUV')return _PIX_TEMPLATES.boxy;
+  if(seg==='Truck')return _PIX_TEMPLATES.truck;
+  return _PIX_TEMPLATES.sedan;
+}
+function _pixPaint(car){
+  // deterministic hue from id; premium tiers get loud paint, used lots stay humble
+  let h=0;for(let i=0;i<car.id.length;i++)h=(h*31+car.id.charCodeAt(i))>>>0;
+  const seg=car.segment;
+  const vivid=['#d22b2b','#e8650f','#f0c020','#2e9e44','#1f7ad4','#8332c4','#d4317f','#10b3a6'];
+  const humble=['#8a8d93','#7a6a55','#5f7287','#6e7d62','#9c8f7a','#74675e'];
+  const pal=(seg==='Used'||seg==='Entry')?humble:vivid;
+  return pal[h%pal.length];
+}
+function _shade(hex,f){
+  const n=parseInt(hex.slice(1),16);
+  const r=Math.max(0,Math.min(255,Math.round(((n>>16)&255)*f))),
+        g=Math.max(0,Math.min(255,Math.round(((n>>8)&255)*f))),
+        b=Math.max(0,Math.min(255,Math.round((n&255)*f)));
+  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+function pixelCarSVG(car){
+  const tpl=_pixTemplateFor(car.segment);
+  const body=_pixPaint(car);
+  const gold=['Sport','Exotic','Supercar','Dream','Luxury'].indexOf(car.segment)>=0;
+  const C={B:body,S:_shade(body,0.62),W:'#9fd9f0',T:'#17171c',R:gold?'#f0c020':'#b9bdc4',L:'#ffe27a',X:'#e23b3b'};
+  const w=tpl[0].length,hh=tpl.length;
+  let rects='';
+  for(let y=0;y<hh;y++){
+    const row=tpl[y];
+    for(let x=0;x<row.length;x++){
+      const c=row[x];if(c==='.'||!C[c])continue;
+      rects+='<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="'+C[c]+'"/>';
+    }
+  }
+  return '<svg viewBox="0 0 '+w+' '+hh+'" shape-rendering="crispEdges" style="width:100%;height:100%;display:block">'+rects+'</svg>';
+}
 function carSpecs(car){
   // Deterministic plausible specs from segment + price
   const base={Used:{hp:130,zs:9.5,top:115},Entry:{hp:170,zs:8.2,top:125},SUV:{hp:260,zs:7.2,top:130},
@@ -3959,7 +4066,7 @@ function openShowroom(fromBoard){
   _srFromBoard=!!fromBoard;
   let el=document.getElementById('showroom');if(el)el.remove();
   el=document.createElement('div');el.id='showroom';
-  el.style.cssText='position:fixed;inset:0;z-index:9550;display:flex;flex-direction:column;background:radial-gradient(ellipse 80% 50% at 50% 100%,rgba(60,45,10,.5),transparent 60%),linear-gradient(170deg,#0a0a14 0%,#16121f 55%,#241a08 100%);overflow:hidden;user-select:none';
+  el.style.cssText='position:fixed;inset:0;z-index:9550;display:flex;flex-direction:column;background:repeating-linear-gradient(180deg,transparent 0 26px,rgba(255,255,255,.025) 26px 28px),radial-gradient(ellipse 70% 40% at 50% 96%,rgba(240,200,80,.10),transparent 65%),linear-gradient(180deg,#2a2d34 0%,#262930 56%,#41454e 56.5%,#56412a 58.5%,#191a1f 59%,#202126 100%);overflow:hidden;user-select:none';
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px">
       <div style="font-size:1.1rem;font-weight:900;color:#f0dc90;font-family:'Arial Black',Arial,sans-serif">🎪 THE SHOWROOM</div>
@@ -3968,7 +4075,7 @@ function openShowroom(fromBoard){
     </div>
     <div id="sr-stage" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:grab;touch-action:none;position:relative">
       <div id="sr-spotlight" style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:340px;height:65%;background:linear-gradient(to bottom,rgba(240,220,150,.10),transparent);clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);pointer-events:none"></div>
-      <div id="sr-car" style="font-size:7.5rem;line-height:1;filter:drop-shadow(0 24px 22px rgba(0,0,0,.7));transition:transform .15s;will-change:transform">🚗</div>
+      <div id="sr-car" style="width:min(460px,72vw);aspect-ratio:36/12;filter:drop-shadow(0 22px 18px rgba(0,0,0,.75));transition:transform .15s;will-change:transform"></div>
       <div id="sr-pedestal" style="width:300px;height:26px;border-radius:50%;background:radial-gradient(ellipse,rgba(240,192,32,.25),rgba(0,0,0,.4) 70%);margin-top:-8px"></div>
       <div id="sr-name" style="margin-top:14px;font-size:1.25rem;font-weight:900;color:#fff;font-family:Georgia,serif"></div>
       <div id="sr-tag" style="font-size:.7rem;color:rgba(240,192,32,.8);font-weight:800;letter-spacing:2px;text-transform:uppercase"></div>
@@ -4019,7 +4126,7 @@ function _srRender(dir){
   const sp=carSpecs(car);
   const carEl=document.getElementById('sr-car');
   if(carEl){
-    carEl.textContent=car.emoji;
+    carEl.innerHTML=pixelCarSVG(car);
     carEl.animate([
       {transform:'translateX('+(dir>0?120:dir<0?-120:0)+'px) scale(.7)',opacity:0},
       {transform:'translateX(0) scale(1)',opacity:1}
@@ -4128,24 +4235,41 @@ function sellCurrentCar(saleVal,loanBal,fromBoard){
   const net=saleVal-loanBal;
   G.cash+=net;
   _clearOldCarLoans();
-  const b=BEATERS[Math.floor(Math.random()*BEATERS.length)];
-  G.carOwned={id:'beater',name:b.name,emoji:b.emoji,beater:true};
   G.carInsurance=0;
   G.expenseOverrides=G.expenseOverrides||{};
   G.expenseOverrides.car=0;
   saveGame();sfxCash();
   addLog('💰',`Sold ${sold.name} for $${fmt(saleVal)}${loanBal>0?` — paid off $${fmt(loanBal)} loan`:''} (net ${net>=0?'+':'-'}$${fmt(Math.abs(net))})`,net>=0?'g':'r');
-  const lost=sold.price-saleVal;
-  showEventCard(net>=0?'opportunity':'setback','💰 Car Sold — '+sold.name,
-    `The dealer cuts you a check for $${fmt(saleVal)}${loanBal>0?`, the bank takes $${fmt(loanBal)} for the loan,`:''} and you drive off in a ${b.name}. Depreciation ate $${fmt(lost)} of what you originally paid.`,
-    'Cars lose ~10-15% the moment they leave the lot and ~40% by year three. Sell the payment, keep the freedom — every $500/mo car payment is a rental property\'s down payment every two years.',
-    [['Sale Price','$'+fmt(saleVal),'gold'],...(loanBal>0?[['Loan Payoff','-$'+fmt(loanBal),'red']]:[]),
-     ['Net to You',(net>=0?'+':'-')+'$'+fmt(Math.abs(net)),net>=0?'green':'red'],
-     ['Depreciation Lost','-$'+fmt(lost),'red'],
-     ['Monthly Freed','+$'+fmt((G.prof?0:0))+' payment + insurance gone','green'],
-     ['New Ride',b.name,'']],
-    [{label:'Cash > Cars 💪',cls:'btn-gold',fn:fromBoard?endTurn:()=>{}}]);
+  openTransportChoice(sold,saleVal,loanBal,net,fromBoard);
   updateUI();
+}
+// ── 🚲 TRANSPORT TIERS — sold the car? Pick how you get around. Each tier
+// trades comfort for monthly cash flow; the bike is the FIRE-movement flex.
+function openTransportChoice(sold,saleVal,loanBal,net,fromBoard){
+  const after=fromBoard?endTurn:()=>{};
+  const pick=(id,name,emoji,oneTime,monthly,ins,quip)=>{
+    if(oneTime>G.cash){addLog('🚫','Not enough cash for the '+name,'r');return;}
+    G.cash-=oneTime;
+    G.carOwned={id:id,name:name,emoji:emoji,beater:true};
+    G.carInsurance=ins;
+    G.expenseOverrides=G.expenseOverrides||{};
+    G.expenseOverrides.car=monthly;
+    addLog(emoji,`${name}${oneTime>0?' — $'+fmt(oneTime):''}${(monthly+ins)>0?' · $'+fmt(monthly+ins)+'/mo':' · $0/mo'} — ${quip}`,'b');
+    updateUI();saveGame();after();
+  };
+  const lost=(sold.price||saleVal)-saleVal;
+  const b=BEATERS[Math.floor(Math.random()*BEATERS.length)];
+  showEventCard(net>=0?'opportunity':'setback','💰 Car Sold — How Do You Roll Now?',
+    `The dealer cuts you a check for $${fmt(saleVal)}${loanBal>0?`, the bank takes $${fmt(loanBal)} for the loan`:''}. Now choose your wheels — every dollar you don't spend on transport is a dollar buying assets.`,
+    'Transportation is the #2 wealth killer after housing. The rich drive boring cars and own exciting assets.',
+    [['Net to You',(net>=0?'+':'-')+'$'+fmt(Math.abs(net)),net>=0?'green':'red'],
+     ['Depreciation Lost','-$'+fmt(Math.max(0,lost)),'red']],
+    [
+      {label:'🚲 Bicycle — $300 once · $0/mo',cls:'btn-tan',fn:()=>pick('bike','Bicycle','🚲',300,0,0,'legs are the engine, savings are the prize')},
+      {label:'🚌 Transit Pass — $140/mo',cls:'btn-tan',fn:()=>pick('transit','Transit Pass','🚌',0,140,0,'reading time on every commute')},
+      {label:'🏍 Motorbike — $2,500 + $45/mo ins',cls:'btn-tan',fn:()=>pick('motorbike','Motorbike','🏍',2500,0,45,'cheap thrills, cheaper parking')},
+      {label:'🚙 Free Beater — '+b.name+' · $0/mo',cls:'btn-gold',fn:()=>pick('beater',b.name,b.emoji,0,0,0,'ugly, paid off, beautiful')},
+    ]);
 }
 function _clearOldCarLoans(){
   G.liabilities=(G.liabilities||[]).filter(l=>!(l.type==='carfin'||l.name==='Car Loan'));
@@ -6073,7 +6197,9 @@ function showMarketEvent(){
   if(me.assetId){
     asset=G.assets.find(a=>a.id&&a.id.startsWith(me.assetId.split('_')[0]));
   } else if(me.assetType){
-    const pool=G.assets.filter(a=>a.type===me.assetType);
+    // Primary home is only on the table for SELL booms once the escrow window
+    // has passed — and never for crash/refi events (those are investment plays).
+    const pool=G.assets.filter(a=>a.type===me.assetType&&(!a.isPrimaryHome||(me.action==='sell'&&_homeSellWait()===0)));
     asset=pool.length?pool[Math.floor(Math.random()*pool.length)]:null;
   }
   if(!asset){
@@ -6099,6 +6225,13 @@ function showMarketEvent(){
      ['Sell Price','$'+fmt(sellProceeds),me.action==='sell'?'green':'red'],
      ['Bought At','$'+fmt(boughtAt),''],['Gain/Loss',(gain>=0?'+':'-')+'$'+fmt(Math.abs(gain)),gain>=0?'green':'red']],
     [{label:'Sell — $'+fmt(sellProceeds),cls:me.action==='sell'?'btn-gold':'btn-tan',fn:()=>{
+        // PRIMARY HOME: route through the one true pipeline (clears 'Home Mortgage',
+        // flips to renter, opens the rental browser). The generic path below used a
+        // name filter that missed it — the source of the infamous double-sell bug.
+        if(asset.isPrimaryHome){
+          _finalizePrimaryHomeSale(sellProceeds,'Unsolicited offer accepted');
+          endTurn();return;
+        }
         // Clear associated liability (mortgage/loan) — equity = proceeds − remaining debt
         const remainingDebt=asset.liability||0;
         const equity=sellProceeds-remainingDebt;
@@ -7052,6 +7185,59 @@ function showTenantSearch(uid,unitIdx){
   renderSearch();
 }
 
+// How many turns before the primary home can be sold (escrow/closing realism +
+// stops the "spawn with house → flip it turn 1 for free cash" exploit).
+const HOME_MIN_OWN_TURNS=8;
+function _homeSellWait(){
+  const home=(G.assets||[]).find(a=>a.isPrimaryHome);
+  if(!home)return 0;
+  const since=G.turn-(home.purchaseTurn>0?home.purchaseTurn:0); // starting home: counts from turn 0
+  return Math.max(0,HOME_MIN_OWN_TURNS-since);
+}
+// THE one true home-sale pipeline. The old market "RE Boom" path removed the
+// asset but left the 'Home Mortgage' liability + owner status behind (its name
+// filter only matched '<name> Loan/Mtg') — the house could be sold twice.
+function _finalizePrimaryHomeSale(salePrice,label){
+  const lMort=G.liabilities.find(l=>l.name==='Home Mortgage');
+  const debt=lMort?lMort.amt:0;
+  const equity=Math.max(0,salePrice-debt);
+  G.cash+=equity;
+  G.liabilities=G.liabilities.filter(l=>l.name!=='Home Mortgage');
+  const homeAsset=G.assets.find(a=>a.isPrimaryHome);
+  if(homeAsset&&G._propState)delete G._propState[homeAsset.uid];
+  G.assets=G.assets.filter(a=>!a.isPrimaryHome);
+  G.housingSituation='renter';G.isRenting=true;
+  G.expenseOverrides=G.expenseOverrides||{};
+  // safety-net rent until the player picks a rental in the browser below
+  G.expenseOverrides.mortgage=Math.round(G.prof.mortgage*0.90/25)*25||G.prof.mortgage;
+  boostCredit(8);
+  addLog('🏠',`${label||'Sold home'} → $${fmt(equity)} equity${debt>0?' (after $'+fmt(debt)+' payoff)':''}. Credit +8`,'gold');
+  updateUI();checkWin();saveGame();
+  setTimeout(()=>openRentalBrowser(),450);
+  return equity;
+}
+// ── 🔑 RENTAL BROWSER — pops after every home sale: pick where you live now ──
+function openRentalBrowser(){
+  const base=G.prof.mortgage||800;
+  const R=v=>Math.max(150,Math.round(base*v/25)*25);
+  const opts=[
+    {e:'🏚',n:'Eastside Studio',     rent:R(0.38),safe:2,sqft:420, vibe:'Bars on the windows, character in the walls. Maximum savings.'},
+    {e:'🏢',n:'Midtown 1BR',         rent:R(0.65),safe:3,sqft:680, vibe:'Nothing fancy, nothing broken. The sensible middle.'},
+    {e:'🏘',n:'Suburban 2BR',        rent:R(0.92),safe:4,sqft:950, vibe:'Quiet street, good schools, HOA passive-aggression included.'},
+    {e:'🌇',n:'Skyline High-Rise',   rent:R(1.35),safe:5,sqft:880, vibe:'Doorman, gym, rooftop pool. Your landlord thanks you for the cash flow.'},
+  ];
+  const shield=s=>'🛡'.repeat(s)+'·'.repeat(5-s);
+  openModal({band:'gold',title:'🔑 Pick Your Rental',
+    desc:'You sold the house — now you rent. Cheaper digs = more cash flow for deals. Your call.',
+    rows:opts.map(o=>[o.e+' '+o.n,'$'+fmt(o.rent)+'/mo · '+shield(o.safe)+' · '+o.sqft+' sq ft','']),
+    actions:opts.map(o=>({label:o.e+' '+o.n+' — $'+fmt(o.rent)+'/mo',cls:o.safe===3?'btn-gold':'btn-tan',fn:()=>{
+      G.expenseOverrides=G.expenseOverrides||{};
+      G.expenseOverrides.mortgage=o.rent;
+      G.rentalHome={name:o.n,emoji:o.e,rent:o.rent,safe:o.safe,sqft:o.sqft};
+      addLog(o.e,`Moved into ${o.n} — $${fmt(o.rent)}/mo rent (safety ${o.safe}/5). ${o.vibe}`,'b');
+      updateUI();saveGame();
+    }})),_noFS:true});
+}
 function sellPrimaryResidence(){
   const hs=G.housingSituation||(G.isRenting?'renter':'owner');
   if(hs==='family'){
@@ -7062,7 +7248,15 @@ function sellPrimaryResidence(){
     openModal({band:'gray',title:'You\'re Renting',desc:'No home to sell — your landlord owns this place. Buy a deal to start building equity.',rows:[],actions:[{label:'Got it',cls:'btn-tan',fn:()=>{}}]});
     return;
   }
-  // Owner — find any remaining mortgage (may be paid off if lMort is absent)
+  // Owner — escrow window: no flipping your residence in the opening turns
+  const wait=_homeSellWait();
+  if(wait>0){
+    openModal({band:'gray',title:'🏠 Too Soon to Sell',
+      desc:`You just got the keys — title, escrow and the market need time. You can list your home in ${wait} turn${wait===1?'':'s'}.`,
+      rows:[['Earliest Sale','Turn '+(G.turn+wait),''],['Why','Closing costs would eat any flip this fast','']],
+      actions:[{label:'Got it',cls:'btn-tan',fn:()=>{}}],_noFS:true});
+    return;
+  }
   const lMort=G.liabilities.find(l=>l.name==='Home Mortgage');
   const origVal=G.prof.mortgage_d;
   const debtLeft=lMort?lMort.amt:0;
@@ -7078,19 +7272,7 @@ function sellPrimaryResidence(){
     ],
     actions:[
       {label:'Sell & Pocket $'+fmt(equity),cls:'btn-gold',fn:()=>{
-        G.cash+=equity;
-        G.liabilities=G.liabilities.filter(l=>l.name!=='Home Mortgage');
-        G.expenseOverrides=G.expenseOverrides||{};
-        // Renter pays ~90% of the mortgage expense as rent (same rate as new-game renters)
-        G.expenseOverrides.mortgage=Math.round(G.prof.mortgage*0.90/25)*25||G.prof.mortgage;
-        G.housingSituation='renter';G.isRenting=true;
-        // Remove primary home asset
-        const homeAsset=G.assets.find(a=>a.isPrimaryHome);
-        if(homeAsset&&G._propState)delete G._propState[homeAsset.uid];
-        G.assets=G.assets.filter(a=>!a.isPrimaryHome);
-        boostCredit(8);
-        addLog('🏠',`Sold home → $${fmt(equity)} equity. Credit +8`,'gold');
-        updateUI();checkWin();saveGame();
+        _finalizePrimaryHomeSale(salePrice,'Sold home');
       }},
       {label:'Keep It',cls:'btn-tan',fn:()=>{}}
     ]
