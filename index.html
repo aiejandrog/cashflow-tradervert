@@ -2932,6 +2932,102 @@ function sfxDiceRoll(){
   }catch(e){}
 }
 
+// ══ PER-SPACE PERSONALITY FX — every tile sounds & feels different ══
+function _noiseBurst(dur,filterType,freq,vol,delay){
+  const ctx=_ctx();if(!ctx)return;
+  try{
+    const buf=ctx.createBuffer(1,ctx.sampleRate*dur,ctx.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(ctx.sampleRate*dur*.35));
+    const s=ctx.createBufferSource();s.buffer=buf;
+    const f=ctx.createBiquadFilter();f.type=filterType||'lowpass';f.frequency.value=freq||800;
+    const g=ctx.createGain();g.gain.value=vol||.3;
+    s.connect(f);f.connect(g);g.connect(ctx.destination);
+    s.start(ctx.currentTime+(delay||0));
+  }catch(e){}
+}
+function sfxBaby(){ // wah... waah!
+  _tone(560,.32,'sine',.22,0,390);
+  _tone(590,.45,'sine',.24,.42,360);
+  _tone(1180,.30,'triangle',.06,.42,720);
+}
+function sfxScanner(){ _tone(1400,.07,'square',.10,0);_tone(1400,.07,'square',.10,.14);_tone(1800,.10,'square',.08,.30); }
+function sfxTicker(){ _tone(880,.07,'square',.09,0);_tone(990,.07,'square',.09,.10);_tone(1175,.10,'square',.10,.20); }
+function sfxOpportunity(){ _tone(659.25,.16,'triangle',.18,0);_tone(880,.30,'triangle',.20,.12); }
+function sfxWarm(){ _tone(261.6,.7,'sine',.10,0);_tone(329.6,.7,'sine',.10,.04);_tone(392,.8,'sine',.10,.08); }
+function sfxGavel(){ _noiseBurst(.08,'lowpass',240,.55,0);_noiseBurst(.08,'lowpass',220,.5,.22); }
+function sfxTrombone(){ // womp womp womp woooomp
+  _tone(233,.28,'sawtooth',.13,0,220);
+  _tone(220,.28,'sawtooth',.13,.30,207);
+  _tone(207,.28,'sawtooth',.13,.60,196);
+  _tone(196,.75,'sawtooth',.14,.90,155);
+}
+function sfxOminous(){ _tone(110,.85,'sawtooth',.10,0,82);_noiseBurst(.1,'lowpass',200,.4,.5); }
+function sfxDownturn(){ _tone(440,.22,'sine',.14,0,392);_tone(392,.22,'sine',.14,.22,349);_tone(349,.4,'sine',.15,.44,262); }
+function sfxAlarm(){ for(let i=0;i<3;i++){_tone(820,.10,'square',.11,i*.24);_tone(620,.10,'square',.11,i*.24+.12);} }
+function sfxEngine(){ _tone(70,.65,'sawtooth',.16,0,240);_noiseBurst(.5,'bandpass',900,.12,.05); }
+function sfxSwipe(){ _noiseBurst(.18,'bandpass',2600,.18,0);_tone(1046,.12,'sine',.12,.22); }
+function sfxMystery(){ const pent=[523,587,659,784,880];for(let i=0;i<4;i++)_tone(pent[Math.floor(Math.random()*5)],.14,'triangle',.10,i*.10); }
+function sfxMagic(){ _tone(420,.5,'sine',.13,0,1680);_tone(840,.4,'sine',.07,.1,2200); }
+function sfxPage(){ _noiseBurst(.14,'highpass',2200,.16,0); }
+// Emoji pop at the landed tile (WAAPI — reduced-motion immune)
+function spawnEmojiPop(tileIdx,emojis,big){
+  try{
+    const el=document.getElementById('bs'+tileIdx);if(!el)return;
+    const r=el.getBoundingClientRect();
+    const cx=r.left+r.width/2,cy=r.top+r.height/2;
+    const N=big?8:6;
+    for(let i=0;i<N;i++){
+      const p=document.createElement('div');
+      p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+      p.style.cssText='position:fixed;left:'+cx+'px;top:'+cy+'px;font-size:'+(1+Math.random()*.7)+'rem;pointer-events:none;z-index:8001;will-change:transform,opacity';
+      document.body.appendChild(p);
+      const ang=(-Math.PI/2)+(Math.random()-.5)*1.8; // mostly upward fan
+      const dist=50+Math.random()*70;
+      const dx=Math.cos(ang)*dist,dy=Math.sin(ang)*dist;
+      p.animate([
+        {transform:'translate(-50%,-50%) scale(.3)',opacity:1},
+        {transform:'translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px)) scale(1.05)',opacity:1,offset:.65},
+        {transform:'translate(calc(-50% + '+(dx*1.2)+'px),calc(-50% + '+(dy-26)+'px)) scale(.85)',opacity:0}
+      ],{duration:700+Math.random()*250,easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=()=>p.remove();
+    }
+  }catch(e){}
+}
+// Board shake for the bad ones (WAAPI)
+function shakeBoard(){
+  try{
+    const b=$('board-outer')||$('board-area');if(!b)return;
+    b.animate([
+      {transform:'translate(0,0)'},{transform:'translate(-7px,3px)'},{transform:'translate(6px,-4px)'},
+      {transform:'translate(-5px,-3px)'},{transform:'translate(4px,3px)'},{transform:'translate(-2px,1px)'},{transform:'translate(0,0)'}
+    ],{duration:380,easing:'ease-out'});
+  }catch(e){}
+}
+// type → {sound, emoji pop, shake}. payday handled by onPayday's cha-ching/coin burst.
+const SPACE_FX={
+  baby:     {s:sfxBaby,       e:['👶','🍼','💕']},
+  doodad:   {s:sfxScanner,    e:['🛍️','💸']},
+  market:   {s:sfxTicker,     e:['📈','💹']},
+  deal:     {s:sfxOpportunity,e:['🤝','💼','✨']},
+  charity:  {s:sfxWarm,       e:['❤️','✨']},
+  lawsuit:  {s:sfxGavel,      e:['⚖️','📜'],   shake:1},
+  layoff:   {s:sfxTrombone,   e:['💀','📦'],   shake:1},
+  audit:    {s:sfxOminous,    e:['🏛️','📋'],  shake:1},
+  recession:{s:sfxDownturn,   e:['📉'],        shake:1},
+  crisis:   {s:sfxAlarm,      e:['🚨','🔥'],   shake:1},
+  dealer:   {s:sfxEngine,     e:['🚗','💨']},
+  credit:   {s:sfxSwipe,      e:['💳','✨']},
+  lifeevent:{s:sfxMystery,    e:['🎲','✨']},
+  wildcard: {s:sfxMagic,      e:['🎁','✨','🌟']},
+  tip:      {s:sfxPage,       e:['📖','💡']},
+};
+function spaceFX(tileIdx,type){
+  const fx=SPACE_FX[type];
+  if(!fx){if(type!=='payday'&&type!=='start')playLand();return;}
+  if(!window._muted&&fx.s)try{fx.s();}catch(e){}
+  if(fx.e)spawnEmojiPop(tileIdx,fx.e,!!fx.shake);
+  if(fx.shake)shakeBoard();
+}
+
 // ── DICE + MOVEMENT ───────────────────────────────────
 // Pip grid positions [row,col] in 3×3 grid (1-indexed)
 const PIP_POS={
@@ -3418,7 +3514,7 @@ function collectPassByPayday(){
 
 function onLand(){
   const sp=BOARD_SPACES[G.position];
-  flashSpace(G.position);playLand();
+  flashSpace(G.position);spaceFX(G.position,sp.type);
   $('board-msg').textContent=`Landed on ${sp.label.replace('\n',' ')}`;
   if(document.hidden){triggerSpace(sp);}
   else{setTimeout(()=>triggerSpace(sp),550);}
