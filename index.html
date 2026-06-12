@@ -348,6 +348,7 @@ body{
   border-bottom:1px solid rgba(0,0,0,.06);padding:2px 0;min-height:19px;
 }
 .fsr:last-child{border-bottom:none}
+.fst .fsr:nth-child(even){background:rgba(107,63,168,.045);border-radius:4px}
 .fsr .fl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:4px}
 .fsr .fv{font-weight:700;text-align:right;min-width:60px}
 .fv.g{color:#166534}.fv.r{color:#991b1b}.fv.m{color:#888}
@@ -957,6 +958,7 @@ body{
   #credit-chip #pc-credit-tier{display:none}
   /* FS button shrinks to icon-ish size */
   #top-bar .btn-og{padding:5px 8px!important;font-size:.62rem!important;letter-spacing:0!important}
+  #goals-box{display:none!important}
   /* FS panel: full-width slide-over on phones (was hard-broken at 660px fixed) */
   #fs-panel{max-height:none;width:100vw;transform:translateX(calc(-100vw + 42px))}
   #fs-panel.open{transform:translateX(0)}
@@ -1534,7 +1536,7 @@ body{
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
   <!-- Rotating goals (objectives system) -->
-  <div id="goals-box" style="display:none;position:fixed;top:56px;right:8px;width:215px;z-index:30;background:rgba(8,3,20,.88);border:1px solid rgba(240,192,32,.3);border-radius:10px;padding:6px 10px;backdrop-filter:blur(6px);box-shadow:0 4px 16px rgba(0,0,0,.4)"></div>
+  <div id="goals-box" style="display:none;position:fixed;top:58px;left:8px;width:208px;z-index:30;background:linear-gradient(160deg,rgba(8,3,20,.92),rgba(25,8,53,.88));border:1px solid rgba(240,192,32,.35);border-left:3px solid rgba(240,192,32,.6);border-radius:10px;padding:7px 11px;backdrop-filter:blur(6px);box-shadow:0 4px 16px rgba(0,0,0,.45)"></div>
 
   <!-- Multiplayer player strip (hidden in solo mode) -->
   <div id="mp-strip"></div>
@@ -3421,6 +3423,15 @@ function openCarDealership(fromBoard){
       fn:()=>showCarSegment(seg.key,fromBoard),
     };
   });
+  // Sell the current ride (not the free beater — nobody's buying that)
+  if(G.carOwned&&!G.carOwned.beater&&G.carOwned.price){
+    const saleVal=Math.round(G.carOwned.price*0.62/100)*100; // ~38% depreciation — the lesson IS the haircut
+    const loanBal=(G.liabilities||[]).filter(l=>l.type==='carfin').reduce((s,l)=>s+l.amt,0);
+    const net=saleVal-loanBal;
+    actions.push({label:`💰 Sell ${G.carOwned.name} — ${net>=0?'get $'+fmt(net):'PAY $'+fmt(-net)+' (underwater)'}`,
+      cls:'btn-tan',locked:net<0&&G.cash<-net,
+      fn:()=>sellCurrentCar(saleVal,loanBal,fromBoard)});
+  }
   actions.push({label:fromBoard?'Just browsing — leave':'Close',cls:'btn-gold',fn:()=>{if(fromBoard)endTurn();}});
   openModal({band:'gold',title:'🚗 Car Dealership — Showroom',
     desc:`Your credit: ${G.creditScore} (${tier.label}) → auto APR ${(apr*100).toFixed(1)}%, ${Math.round(CAR_DOWN_PCT[tier.label]*100)}% down. Current ride: ${G.carOwned?G.carOwned.emoji+' '+G.carOwned.name:'🚙 none'}. Pick a lot to browse.`,
@@ -3474,6 +3485,30 @@ function showCarDetail(car,fromBoard){
       {label:`Pay Cash — $${fmt(car.price+oldBal)}${oldBal>0?' (incl. $'+fmt(oldBal)+' loan payoff)':''}`,cls:'btn-tan',locked:!canCash,fn:()=>buyCarCash(car,fromBoard)},
       {label:'← Back',cls:'btn-tan',fn:()=>openCarDealership(fromBoard)},
     ]});
+}
+function sellCurrentCar(saleVal,loanBal,fromBoard){
+  const sold=G.carOwned;
+  const net=saleVal-loanBal;
+  G.cash+=net;
+  _clearOldCarLoans();
+  const b=BEATERS[Math.floor(Math.random()*BEATERS.length)];
+  G.carOwned={id:'beater',name:b.name,emoji:b.emoji,beater:true};
+  G.carInsurance=0;
+  G.expenseOverrides=G.expenseOverrides||{};
+  G.expenseOverrides.car=0;
+  saveGame();sfxCash();
+  addLog('💰',`Sold ${sold.name} for $${fmt(saleVal)}${loanBal>0?` — paid off $${fmt(loanBal)} loan`:''} (net ${net>=0?'+':'-'}$${fmt(Math.abs(net))})`,net>=0?'g':'r');
+  const lost=sold.price-saleVal;
+  showEventCard(net>=0?'opportunity':'setback','💰 Car Sold — '+sold.name,
+    `The dealer cuts you a check for $${fmt(saleVal)}${loanBal>0?`, the bank takes $${fmt(loanBal)} for the loan,`:''} and you drive off in a ${b.name}. Depreciation ate $${fmt(lost)} of what you originally paid.`,
+    'Cars lose ~10-15% the moment they leave the lot and ~40% by year three. Sell the payment, keep the freedom — every $500/mo car payment is a rental property\'s down payment every two years.',
+    [['Sale Price','$'+fmt(saleVal),'gold'],...(loanBal>0?[['Loan Payoff','-$'+fmt(loanBal),'red']]:[]),
+     ['Net to You',(net>=0?'+':'-')+'$'+fmt(Math.abs(net)),net>=0?'green':'red'],
+     ['Depreciation Lost','-$'+fmt(lost),'red'],
+     ['Monthly Freed','+$'+fmt((G.prof?0:0))+' payment + insurance gone','green'],
+     ['New Ride',b.name,'']],
+    [{label:'Cash > Cars 💪',cls:'btn-gold',fn:fromBoard?endTurn:()=>{}}]);
+  updateUI();
 }
 function _clearOldCarLoans(){
   G.liabilities=(G.liabilities||[]).filter(l=>!(l.type==='carfin'||l.name==='Car Loan'));
@@ -7725,21 +7760,40 @@ function updateUI(){
           <span style="font-size:.46rem;color:#6b5535">$${fmt(st.cost)}</span></span>`;
       }).join(''):'';
     }
-    // Loans & due dates list — every liability + bank loan, with payment + due day
+    // Loans & due dates — card rows: icon, balance, payment + due chips, working Pay button
     const loansWrap=$('lh-loans-wrap'),loansEl=$('lh-loans');
     if(loansWrap&&loansEl){
       const exp2=expenses();
-      const pmtMap={'Home Mortgage':exp2.mortgage,'School Loan':exp2.school,'Car Loan':exp2.car,'Credit Cards':exp2.cc};
+      const pmtMap={'Home Mortgage':exp2.mortgage,'School Loan':exp2.school,'Student Loans':exp2.school,'Car Loan':exp2.car,'Credit Cards':exp2.cc};
+      const iconFor=l=>l.type==='carfin'?'🚗':l.type==='biz'||l.type==='business'?'🏪':l.type==='note'?'📜':
+        l.name==='Home Mortgage'?'🏠':l.name.includes('School')||l.name.includes('Student')?'🎓':
+        l.name==='Car Loan'?'🚗':l.name==='Credit Cards'?'💳':'💼';
+      const chip=(txt,color)=>`<span style="font-size:.55rem;font-weight:800;font-family:Arial,sans-serif;background:${color}18;border:1px solid ${color}55;color:${color};border-radius:8px;padding:0 6px;white-space:nowrap">${txt}</span>`;
+      const payBtn=key=>`<span onclick="event.stopPropagation();fsPayModal('${key.replace(/'/g,"\\'")}')" style="cursor:pointer;font-size:.55rem;font-weight:900;font-family:Arial,sans-serif;background:rgba(42,138,42,.15);border:1px solid rgba(42,138,42,.5);color:#2a8a2a;border-radius:8px;padding:0 8px;white-space:nowrap">💸 PAY</span>`;
       const rows=[];
       (G.liabilities||[]).forEach(l=>{
         if(l.amt<=0)return;
         const pmt=l.type==='carfin'?l.pmt:(pmtMap[l.name]||l.pmt||0);
-        const due=l.type==='carfin'?`day ${l.dueDay}`:'CASHFLOW DAY';
+        const due=l.type==='carfin'?'day '+l.dueDay:'payday';
         const late=l.name==='Credit Cards'&&(G.ccLateTier||0)>0;
-        rows.push(`<div class="fsr"><span class="fl">${late?'🚨 ':''}${l.name}:</span><span class="fv ${late?'r':''}">$${fmt(l.amt)}${pmt?` · $${fmt(pmt)}/mo`:''} · due ${due}</span></div>`);
+        rows.push(`<div style="display:flex;align-items:center;gap:7px;padding:4px 7px;margin:2px 0;border-radius:7px;background:${late?'rgba(180,30,30,.10)':'rgba(0,0,0,.035)'};border:1px solid ${late?'rgba(180,30,30,.35)':'rgba(0,0,0,.05)'}">
+          <span style="font-size:.95rem;flex-shrink:0">${late?'🚨':iconFor(l)}</span>
+          <span style="flex:1;min-width:0;font-size:.68rem;font-weight:700;font-family:Arial,sans-serif;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.name}${late?' — '+(G.ccLateTier>=3?'COLLECTIONS':G.ccLateTier*30+' DAYS LATE'):''}</span>
+          <span style="font-size:.72rem;font-weight:900;font-family:Georgia,serif;color:${late?'#b01e1e':'#8a4a10'}">$${fmt(l.amt)}</span>
+          ${pmt?chip('$'+fmt(pmt)+'/mo','#8a4a10'):''}
+          ${chip('due '+due,'#2d4a7a')}
+          ${payBtn(l.name)}
+        </div>`);
       });
-      if(G.bankLoan>0)rows.push(`<div class="fsr"><span class="fl">🏦 Bank Loan:</span><span class="fv">$${fmt(G.bankLoan)} · $${fmt(G.extraBankPmt||0)}/mo · due CASHFLOW DAY</span></div>`);
-      loansEl.innerHTML=rows.join('');
+      if(G.bankLoan>0)rows.push(`<div style="display:flex;align-items:center;gap:7px;padding:4px 7px;margin:2px 0;border-radius:7px;background:rgba(0,0,0,.035);border:1px solid rgba(0,0,0,.05)">
+        <span style="font-size:.95rem;flex-shrink:0">🏦</span>
+        <span style="flex:1;font-size:.68rem;font-weight:700;font-family:Arial,sans-serif;color:var(--txt)">Bank Loan <span style="opacity:.55;font-weight:400">(${Math.round(loanRate()*100)}% APR)</span></span>
+        <span style="font-size:.72rem;font-weight:900;font-family:Georgia,serif;color:#8a4a10">$${fmt(G.bankLoan)}</span>
+        ${chip('$'+fmt(G.extraBankPmt||0)+'/mo','#8a4a10')}
+        ${chip('due payday','#2d4a7a')}
+        ${payBtn('Bank Loan')}
+      </div>`);
+      loansEl.innerHTML=rows.length?rows.join(''):'';
       loansWrap.style.display=rows.length?'':'none';
     }
     // Insurance expense row
