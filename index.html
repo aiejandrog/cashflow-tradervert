@@ -1685,6 +1685,7 @@ body{
           <span id="lh-car-chip" style="font-size:.58rem;background:rgba(45,74,122,.12);border:1px solid rgba(45,74,122,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#2d4a7a">🚙 Beater</span>
           <span id="lh-credit-chip" style="font-size:.58rem;background:rgba(107,63,168,.12);border:1px solid rgba(107,63,168,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#6b3fa8">💳 —</span>
           <span id="lh-delinq-chip" style="display:none;font-size:.58rem;background:rgba(180,30,30,.15);border:1px solid rgba(180,30,30,.4);border-radius:10px;padding:1px 8px;font-weight:900;color:#8b1a1a">🚨 DELINQUENT</span>
+          <span id="lh-rel-chip" style="font-size:.58rem;background:rgba(180,60,120,.12);border:1px solid rgba(180,60,120,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#a83c78">Single</span>
           <span id="lh-home-chip" style="font-size:.58rem;background:rgba(45,122,74,.12);border:1px solid rgba(45,122,74,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#2d7a4a">🔑 Renting</span>
           <span onclick="openCarDealership(false)" style="cursor:pointer;font-size:.58rem;background:rgba(200,145,12,.14);border:1px solid rgba(200,145,12,.4);border-radius:10px;padding:1px 8px;font-weight:800;color:#9a6e08">🚗 Dealership</span>
           <span onclick="openRealtyOffice()" style="cursor:pointer;font-size:.58rem;background:rgba(45,122,74,.14);border:1px solid rgba(45,122,74,.4);border-radius:10px;padding:1px 8px;font-weight:800;color:#1e6e3e">🏡 Realty Office</span>
@@ -2753,9 +2754,10 @@ function initGame(prof, location) {
     // BitLife-style identity layer — set on the character screen (solo AND mp joiner)
     identity:(()=>{
       const id=selectedIdentity||{name:'You',avatar:'\u{1F9D1}\u{1F3FD}',ethnicityLabel:'Medium',ageStart:Math.min(40,Math.max(18,prof.age||25))};
-      return{name:id.name||'You',avatar:id.avatar,ethnicityLabel:id.ethnicityLabel,ageStart:id.ageStart,age:id.ageStart};
+      return{name:id.name||'You',avatar:id.avatar,ethnicityLabel:id.ethnicityLabel,toneLabel:id.toneLabel||'Medium',gender:id.gender||'n',ageStart:id.ageStart,age:id.ageStart};
     })(),
     objectives:[], _objectivesDone:[],
+    relationship:{status:'single',partner:null,income:0,sharedExp:0},
     gameYear:1, // 1 year passes per full board lap (turns are too granular — a lap ≈ a life chapter)
     carOwned:(()=>{const b=BEATERS[Math.floor(Math.random()*BEATERS.length)];return{id:'beater',name:b.name,emoji:b.emoji,beater:true};})(),
     carInsurance:0, delinq:{}, ccLateTier:0,
@@ -3593,6 +3595,103 @@ function recalcChildCosts(){
   G.extraChildren=G.childBirths.reduce((s,c)=>s+childStage(G.turn-c.born).cost,0);
 }
 
+// ══ 🎪 INTERACTIVE SHOWROOM — drag between cars, full spec sheets ══
+function carSpecs(car){
+  // Deterministic plausible specs from segment + price
+  const base={Used:{hp:130,zs:9.5,top:115},Entry:{hp:170,zs:8.2,top:125},SUV:{hp:260,zs:7.2,top:130},
+    Truck:{hp:350,zs:6.6,top:120},Sport:{hp:380,zs:4.6,top:160},EV:{hp:420,zs:4.2,top:150},
+    Luxury:{hp:430,zs:4.8,top:165},Exotic:{hp:560,zs:3.4,top:190},Supercar:{hp:700,zs:2.9,top:210},Dream:{hp:900,zs:2.6,top:230}}[car.segment]||{hp:200,zs:7,top:130};
+  const f=Math.min(2,car.price/60000+0.6);
+  return{hp:Math.round(base.hp*Math.min(f,1.6)/10)*10,zs:Math.max(2.3,(base.zs/Math.min(f,1.3))).toFixed(1),top:Math.round(base.top*Math.min(f,1.25)/5)*5};
+}
+let _srIdx=0,_srFromBoard=false,_srDrag=null;
+function openShowroom(fromBoard){
+  _srFromBoard=!!fromBoard;
+  let el=document.getElementById('showroom');if(el)el.remove();
+  el=document.createElement('div');el.id='showroom';
+  el.style.cssText='position:fixed;inset:0;z-index:9550;display:flex;flex-direction:column;background:radial-gradient(ellipse 80% 50% at 50% 100%,rgba(60,45,10,.5),transparent 60%),linear-gradient(170deg,#0a0a14 0%,#16121f 55%,#241a08 100%);overflow:hidden;user-select:none';
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px">
+      <div style="font-size:1.1rem;font-weight:900;color:#f0dc90;font-family:'Arial Black',Arial,sans-serif">🎪 THE SHOWROOM</div>
+      <div style="font-size:.66rem;color:rgba(255,255,255,.45);font-style:italic">drag the car · or use the arrows</div>
+      <button onclick="closeShowroom()" style="background:rgba(255,255,255,.08);border:1.5px solid rgba(240,192,32,.4);border-radius:10px;color:#f0dc90;font-size:.8rem;font-weight:800;padding:8px 18px;cursor:pointer;font-family:Georgia,serif">✕ Leave</button>
+    </div>
+    <div id="sr-stage" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:grab;touch-action:none;position:relative">
+      <div id="sr-spotlight" style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:340px;height:65%;background:linear-gradient(to bottom,rgba(240,220,150,.10),transparent);clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);pointer-events:none"></div>
+      <div id="sr-car" style="font-size:7.5rem;line-height:1;filter:drop-shadow(0 24px 22px rgba(0,0,0,.7));transition:transform .15s;will-change:transform">🚗</div>
+      <div id="sr-pedestal" style="width:300px;height:26px;border-radius:50%;background:radial-gradient(ellipse,rgba(240,192,32,.25),rgba(0,0,0,.4) 70%);margin-top:-8px"></div>
+      <div id="sr-name" style="margin-top:14px;font-size:1.25rem;font-weight:900;color:#fff;font-family:Georgia,serif"></div>
+      <div id="sr-tag" style="font-size:.7rem;color:rgba(240,192,32,.8);font-weight:800;letter-spacing:2px;text-transform:uppercase"></div>
+      <button id="sr-prev" style="position:absolute;left:18px;top:45%;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.2);border-radius:50%;width:46px;height:46px;color:#fff;font-size:1.1rem;cursor:pointer">‹</button>
+      <button id="sr-next" style="position:absolute;right:18px;top:45%;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.2);border-radius:50%;width:46px;height:46px;color:#fff;font-size:1.1rem;cursor:pointer">›</button>
+    </div>
+    <div id="sr-specs" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 16px"></div>
+    <div style="display:flex;gap:10px;justify-content:center;padding:14px 16px 20px">
+      <button id="sr-buy" class="btn-og btn-gold" style="padding:11px 26px;font-size:.85rem">View Deal →</button>
+    </div>`;
+  document.body.appendChild(el);
+  // start on the cheapest affordable-ish car
+  _srIdx=Math.max(0,CARS.findIndex(c=>c.price>=18000));
+  _srRender(0);
+  document.getElementById('sr-prev').onclick=()=>_srMove(-1);
+  document.getElementById('sr-next').onclick=()=>_srMove(1);
+  document.getElementById('sr-buy').onclick=()=>{const car=CARS[_srIdx];closeShowroom(true);showCarDetail(car,_srFromBoard);};
+  // drag/swipe
+  const stage=document.getElementById('sr-stage');
+  stage.addEventListener('pointerdown',e=>{_srDrag={x:e.clientX,moved:0};stage.style.cursor='grabbing';stage.setPointerCapture(e.pointerId);});
+  stage.addEventListener('pointermove',e=>{
+    if(!_srDrag)return;
+    const dx=e.clientX-_srDrag.x;_srDrag.moved=dx;
+    const car=document.getElementById('sr-car');
+    if(car)car.style.transform='translateX('+(dx*0.45)+'px) rotate('+(dx*0.02)+'deg) scale('+(1-Math.min(.12,Math.abs(dx)/900))+')';
+  });
+  const release=e=>{
+    if(!_srDrag)return;
+    const dx=_srDrag.moved;_srDrag=null;stage.style.cursor='grab';
+    const car=document.getElementById('sr-car');
+    if(Math.abs(dx)>70){_srMove(dx<0?1:-1);}
+    else if(car)car.style.transform='';
+  };
+  stage.addEventListener('pointerup',release);
+  stage.addEventListener('pointercancel',release);
+}
+function closeShowroom(skipTurn){
+  const el=document.getElementById('showroom');if(el)el.remove();
+  if(_srFromBoard&&!skipTurn){_srFromBoard=false;endTurn();}
+}
+function _srMove(dir){
+  _srIdx=(_srIdx+dir+CARS.length)%CARS.length;
+  _srRender(dir);
+  if(!window._muted)try{sfxEngine();}catch(e){}
+}
+function _srRender(dir){
+  const car=CARS[_srIdx];
+  const sp=carSpecs(car);
+  const carEl=document.getElementById('sr-car');
+  if(carEl){
+    carEl.textContent=car.emoji;
+    carEl.animate([
+      {transform:'translateX('+(dir>0?120:dir<0?-120:0)+'px) scale(.7)',opacity:0},
+      {transform:'translateX(0) scale(1)',opacity:1}
+    ],{duration:320,easing:'cubic-bezier(.2,.7,.3,1)'});
+    carEl.style.transform='';
+  }
+  document.getElementById('sr-name').textContent=car.name;
+  const tier=creditTier(G&&G.creditScore||650);
+  const tierIdx=CAR_TIER_IDX[tier.label];
+  const gated=tierIdx<car.minTier;
+  document.getElementById('sr-tag').textContent=car.segment+' · $'+fmt(car.price)+(gated?' · 🔒 needs '+['any','Fair','Good','Very Good','Excellent'][car.minTier]+' credit':'');
+  const apr=(loanRate()+0.02);
+  const down=Math.round(car.price*CAR_DOWN_PCT[tier.label]/100)*100;
+  const pmt=carMonthlyPmt(car.price-down,apr,60);
+  const chip=(l,v)=>`<div style="background:rgba(255,255,255,.05);border:1px solid rgba(240,192,32,.25);border-radius:10px;padding:7px 14px;text-align:center;min-width:78px"><div style="font-size:.95rem;font-weight:900;color:#f0dc90;font-family:Georgia,serif">${v}</div><div style="font-size:.54rem;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45)">${l}</div></div>`;
+  document.getElementById('sr-specs').innerHTML=
+    chip('Horsepower',sp.hp+' hp')+chip('0–60 mph',sp.zs+'s')+chip('Top Speed',sp.top+' mph')+
+    chip('Insurance','$'+fmt(car.ins)+'/mo')+chip('Est. Payment','$'+fmt(pmt)+'/mo')+chip('Down',Math.round(CAR_DOWN_PCT[tier.label]*100)+'% · $'+fmt(down));
+  const buy=document.getElementById('sr-buy');
+  if(buy)buy.textContent=(G&&G.cash>=down&&!gated)?'💳 View Deal — '+car.name+' →':(G&&G.cash>=car.price+((G.liabilities||[]).filter(l=>l.type==='carfin').reduce((s,l)=>s+l.amt,0))?'💵 Cash Deal — '+car.name+' →':'👀 Window Shopping — details →');
+}
+
 // ══ CAR DEALERSHIP (segment showroom → car detail) ════
 function openCarDealership(fromBoard){
   window._modalFromBoard=!!fromBoard;
@@ -3609,6 +3708,7 @@ function openCarDealership(fromBoard){
       fn:()=>showCarSegment(seg.key,fromBoard),
     };
   });
+  actions.unshift({label:'🎪 Walk the Showroom — see every car',cls:'btn-gold',fn:()=>openShowroom(fromBoard)});
   // Sell the current ride (not the free beater — nobody's buying that)
   if(G.carOwned&&!G.carOwned.beater&&G.carOwned.price){
     const saleVal=Math.round(G.carOwned.price*0.62/100)*100; // ~38% depreciation — the lesson IS the haircut
@@ -4052,7 +4152,103 @@ function showCreditBureauEvent(){
 }
 
 // ── LIFE EVENT space — BitLife-style random life moment ──
+function _partnerFor(){
+  const g=(G.identity&&G.identity.gender)||'n';
+  const pool=g==='m'?NAMES_F:g==='f'?NAMES_M:(Math.random()<.5?NAMES_M:NAMES_F);
+  const name=pool[Math.floor(Math.random()*pool.length)];
+  const toneMod=(CHAR_TONES.find(t=>t.label===(G.identity&&G.identity.toneLabel))||CHAR_TONES[2]).mod;
+  const avatar=(NAMES_F.includes(name)?'\u{1F469}':'\u{1F468}')+toneMod;
+  return{name,avatar};
+}
+function showRelationshipEvent(){
+  const r=G.relationship||(G.relationship={status:'single',partner:null,income:0,sharedExp:0});
+  if(r.status==='single'){
+    const p=_partnerFor();
+    showEventCard('life',`${p.avatar} You Met Someone`,
+      `${p.name} laughs at your jokes and doesn't run when you explain cash-on-cash returns. This could be something.`,
+      'Relationships are the best investment with the worst spreadsheet. Choose with your eyes open.',
+      [['First Dates','~$120/mo lifestyle','red'],['Upside','companionship · future household income','green']],
+      [{label:`💕 Ask ${p.name} out`,cls:'btn-gold',fn:()=>{
+          r.status='dating';r.partner=p;
+          G.expenseOverrides=G.expenseOverrides||{};
+          G.expenseOverrides.other=(G.expenseOverrides.other!==undefined?G.expenseOverrides.other:G.prof.other)+120;
+          r.sharedExp=120;
+          saveGame();sfxWarm();
+          addLog('💕',`Now dating ${p.name} (+$120/mo lifestyle)`,'b');
+          updateUI();endTurn();
+        }},
+       {label:'Stay focused on the grind',cls:'btn-tan',fn:()=>{addLog('🧊','Passed on romance — the portfolio is the partner.','');endTurn();}}]);
+    return true;
+  }
+  if(r.status==='dating'){
+    const wedding=Math.round((8000+Math.random()*12000)*(G.location?G.location.exp:1)/500)*500;
+    const inc=Math.round((900+Math.random()*700)/50)*50;
+    const exp=Math.round((500+Math.random()*400)/50)*50;
+    showEventCard('life',`💍 The Question — ${r.partner.name}`,
+      `It's time. ${r.partner.name} has been hinting with the subtlety of a billboard. A wedding runs about $${fmt(wedding)} here, and married life means a second income (+$${fmt(inc)}/mo) but a bigger household (+$${fmt(exp)}/mo).`,
+      'Marriage is the biggest financial merger most people ever do — and the only one done without due diligence.',
+      [['Wedding','$'+fmt(wedding),'red'],['Partner Income','+$'+fmt(inc)+'/mo','green'],['Shared Expenses','+$'+fmt(exp)+'/mo','red'],['Net','+$'+fmt(inc-exp)+'/mo','green']],
+      [{label:`💍 Marry ${r.partner.name} — $${fmt(wedding)}`,cls:'btn-gold',fn:()=>{
+          ensureCash(wedding,'wedding');G.cash-=wedding;
+          r.status='married';r.income=inc;
+          G.salaryBoost=(G.salaryBoost||0)+inc;
+          G.expenseOverrides=G.expenseOverrides||{};
+          G.expenseOverrides.other=(G.expenseOverrides.other!==undefined?G.expenseOverrides.other:G.prof.other)+exp;
+          r.sharedExp=(r.sharedExp||0)+exp;
+          saveGame();sfxWinSting();spawnCoinBurst(false);
+          addLog('💍',`Married ${r.partner.name}! +$${fmt(inc)}/mo income, +$${fmt(exp)}/mo household`,'gold');
+          checkTrophies('ui');updateUI();endTurn();
+        }},
+       {label:'Not yet…',cls:'btn-tan',fn:()=>{
+          if(Math.random()<0.25){
+            const exName=r.partner.name;
+            G.expenseOverrides.other=Math.max(0,(G.expenseOverrides.other||G.prof.other)-(r.sharedExp||0));
+            G.relationship={status:'single',partner:null,income:0,sharedExp:0};
+            addLog('💔',`${exName} got tired of waiting. Single again.`,'r');
+            showEventCard('setback','💔 They Walked',`${exName} said "I can't compete with a spreadsheet" and left. The lifestyle expense leaves with them.`,
+              'Opportunity cost applies to people too.',[['Status','Single','red']],[{label:'Back to the grind',cls:'btn-tan',fn:endTurn}]);
+          }else{addLog('⏳',`${r.partner.name} accepts the wait. For now.`,'');endTurn();}
+        }}]);
+    return true;
+  }
+  if(r.status==='married'){
+    const assetVal=G.assets.reduce((s,a)=>s+(a.totalCost||a.cost||0),0);
+    const nw=Math.max(20000,G.cash+assetVal-totalLiabilities());
+    const divorceCost=Math.round(nw*0.30/500)*500;
+    showEventCard('setback',`⛈ Rough Patch — ${r.partner.name}`,
+      `Late nights on deals, missed dinners. ${r.partner.name} is over it. Counseling costs $2,000 and fixes it. Ignoring it... gambles the house. Literally — a divorce here would run ~$${fmt(divorceCost)} (30% of your net worth).`,
+      'The most expensive sentence in finance is "we need to talk."',
+      [['Counseling','$2,000','red'],['Divorce Exposure','~$'+fmt(divorceCost)+' (30% net worth)','red']],
+      [{label:'💆 Pay $2,000 — work on it',cls:'btn-gold',fn:()=>{
+          ensureCash(2000,'counseling');G.cash-=2000;saveGame();
+          addLog('💆',`Counseling with ${r.partner.name} — crisis averted`,'b');endTurn();
+        }},
+       {label:'🎲 Ignore it (30% divorce)',cls:'btn-tan',fn:()=>{
+          if(Math.random()<0.30){
+            const exName=r.partner.name;
+            ensureCash(divorceCost,'divorce settlement');G.cash-=divorceCost;
+            G.salaryBoost=(G.salaryBoost||0)-(r.income||0);
+            G.expenseOverrides.other=Math.max(0,(G.expenseOverrides.other||G.prof.other)-(r.sharedExp||0));
+            G.relationship={status:'single',partner:null,income:0,sharedExp:0};
+            G._divorced=true;
+            saveGame();sfxAlarm();shakeBoard();
+            addLog('💔',`DIVORCED. ${exName} took $${fmt(divorceCost)}.`,'r');
+            showEventCard('setback','💔 DIVORCE',
+              `${exName} kept the dog, the air fryer, AND $${fmt(divorceCost)}. Their lawyer sent a fruit basket with the paperwork. You're single, lighter, and somehow paying for two Netflix accounts.`,
+              'Half of marriages end in divorce. 100% of divorces end in spreadsheets.',
+              [['Settlement','-$'+fmt(divorceCost),'red'],['Income Lost','-$'+fmt(r.income||0)+'/mo','red'],['Cash Left','$'+fmt(G.cash),'gold']],
+              [{label:'Sign here. 🖊',cls:'btn-tan',fn:()=>{updateUI();endTurn();checkBankruptcy();}}]);
+          }else{addLog('😮‍💨',`It blew over. ${r.partner.name} stayed.`,'');endTurn();}
+        }}]);
+    return true;
+  }
+  return false;
+}
 function showLifeEvent(){
+  // Relationship arc takes priority on a share of LIFE EVENT landings
+  const rs=(G.relationship&&G.relationship.status)||'single';
+  const chance=rs==='single'?0.30:rs==='dating'?0.40:0.22;
+  if(Math.random()<chance&&showRelationshipEvent())return;
   const age=(G.identity&&G.identity.age)||25;
   const events=[
     {w:14,icon:'💍',title:'Wedding Invitation',story:'Your best friend is getting married — destination wedding. Flights, suit, gift. You can\'t say no. Or can you?',
@@ -4973,7 +5169,8 @@ function showDoodadEvent(){
 }
 
 function showBabyEvent(){
-  const twins=G.numChildren===0&&Math.random()<.15;
+  const _wed=G.relationship&&G.relationship.status==='married';
+  const twins=G.numChildren===0&&Math.random()<(_wed?.30:.15);
   const triplets=G.numChildren>0&&Math.random()<.05;
   const count=triplets?3:twins?2:1;
   G.numChildren+=count;
@@ -7985,6 +8182,11 @@ function updateUI(){
       const carLoanLive=(G.liabilities||[]).some(l=>(l.type==='carfin'||l.name==='Car Loan')&&l.amt>0);
       carChip.textContent=G.carOwned?`${G.carOwned.emoji} ${G.carOwned.name}${carLoanLive?'':' · paid off'}`:'🚙 No car';
     }
+    const relChip=$('lh-rel-chip');
+    if(relChip){
+      const r=G.relationship||{status:'single'};
+      relChip.textContent=r.status==='married'?`💍 Married to ${r.partner.name}`:r.status==='dating'?`💕 Dating ${r.partner.name}`:'Single';
+    }
     const homeChip=$('lh-home-chip');
     if(homeChip){
       const hs=G.housingSituation||'renter';
@@ -8471,6 +8673,10 @@ function _spaceCanRoll(){
 // they carry consequences the player must explicitly acknowledge.
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape')return;
+  const sr=document.getElementById('showroom');
+  if(sr){e.preventDefault();closeShowroom();return;}
+  const tw=document.getElementById('trophy-wall');
+  if(tw){e.preventDefault();tw.remove();return;}
   const m=$('modal');
   // No modal open? ESC closes the Life Hub panel
   if((!m||!m.classList.contains('vis'))&&!($('event-modal')&&$('event-modal').classList.contains('vis'))){
@@ -8624,6 +8830,7 @@ function loadSave(key){
     if(G.homeOwned===undefined)G.homeOwned=null;
     if(!G.objectives)G.objectives=_drawObjectives(2);
     if(!G._objectivesDone)G._objectivesDone=[];
+    if(!G.relationship)G.relationship={status:'single',partner:null,income:0,sharedExp:0};
     // New fields (achievements, sparkline, doubles streak, market effects)
     if(!G._achievements)G._achievements=[];
     if(!G._netWorthHistory)G._netWorthHistory=[];
