@@ -1686,12 +1686,6 @@ body{
       <div id="lh-kids" style="display:flex;gap:5px;flex-wrap:wrap;max-width:200px;justify-content:flex-end"></div>
     </div>
 
-    <!-- Loans with due dates -->
-    <div id="lh-loans-wrap" style="grid-row:2;grid-column:1/3;padding:0 4px;display:none">
-      <div class="fsh">🏦 Loans & Due Dates</div>
-      <div class="fst" id="lh-loans"></div>
-    </div>
-
     <!-- Income -->
     <div style="grid-column:1;padding:4px 4px 0">
       <div class="fsh">📊 Income</div>
@@ -1702,8 +1696,6 @@ body{
         <div class="fsr"><span class="fl" style="color:#6b5535;font-style:italic">Cash Runway:</span><span class="fv" id="fs-runway" style="font-size:.73rem">—</span></div>
         <div class="fsr"><span class="fl" id="fs-re-lbl">RE & Note Income:</span><span class="fv g" id="fs-re-inc">—</span></div>
         <div class="fsr"><span class="fl">Business Income:</span><span class="fv g" id="fs-biz-inc">—</span></div>
-        <div class="fsr"><span class="fl" style="color:#6b5535;font-style:italic">Passive Rate:</span><span class="fv" id="fs-prate" style="font-size:.73rem">—</span></div>
-        <div class="fsr"><span class="fl" style="color:#6b5535;font-style:italic">Freedom Gap:</span><span class="fv" id="fs-fgap" style="font-size:.73rem">—</span></div>
       </div>
     </div>
 
@@ -1743,7 +1735,6 @@ body{
         <div class="fs-tot-row"><span>Total Expenses:</span><span class="tv r" id="fs-tot-exp">-$0</span></div>
         <div class="fs-tot-row payday"><span>PAYDAY CF</span><span class="tv" id="fs-payday">$0</span></div>
         <div class="fs-tot-row" style="border-top:1px solid var(--parch-b);margin-top:3px;padding-top:3px"><span>Net Worth:</span><span class="tv" id="fs-networth">$0</span></div>
-        <div class="fs-tot-row" style="margin-top:2px;padding-top:2px"><span>Credit Score:</span><span class="tv" id="fs-credit-score" style="font-weight:900">—</span></div>
       </div>
     </div>
 
@@ -1765,7 +1756,7 @@ body{
     </div>
 
     <!-- Freedom Gauge (right col) -->
-    <div id="fs-freedom-panel" style="grid-column:2;grid-row:3/5;padding:10px 8px 6px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px">
+    <div id="fs-freedom-panel" style="grid-column:2;grid-row:2/4;padding:10px 8px 6px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px">
       <div style="font-size:.56rem;color:var(--purple2);font-weight:900;text-transform:uppercase;letter-spacing:2px;font-family:Arial,sans-serif;opacity:.8">🎯 Freedom Meter</div>
       <div style="position:relative;width:190px">
         <canvas id="freedom-gauge" width="190" height="118" style="display:block;width:190px;height:118px"></canvas>
@@ -1775,14 +1766,6 @@ body{
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;width:100%">
-        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);border-radius:6px;padding:3px 8px">
-          <span style="font-size:.6rem;font-weight:700;color:#166534;font-family:Arial,sans-serif">💰 Passive</span>
-          <span id="fs-freedom-pass" style="font-size:.68rem;font-weight:900;color:#15803d;font-family:Georgia,serif">$0/mo</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:3px 8px">
-          <span style="font-size:.6rem;font-weight:700;color:#7f1d1d;font-family:Arial,sans-serif">🎯 Target</span>
-          <span id="fs-freedom-need" style="font-size:.68rem;font-weight:900;color:#991b1b;font-family:Georgia,serif">$0/mo</span>
-        </div>
         <div id="fs-gap-row" style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.1);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:3px 8px">
           <span style="font-size:.6rem;font-weight:700;color:#6b7280;font-family:Arial,sans-serif">📊 Gap</span>
           <span id="fs-freedom-gap" style="font-size:.68rem;font-weight:900;color:#6b7280;font-family:Georgia,serif">—</span>
@@ -1795,7 +1778,7 @@ body{
 
     <!-- Liabilities -->
     <div style="grid-column:2;padding:4px 4px 0">
-      <div class="fsh">📋 Liabilities</div>
+      <div class="fsh">🏦 Debts & Loans <span style="font-size:.52rem;font-weight:600;font-style:italic;opacity:.65;text-transform:none;letter-spacing:0">— auto-paid every CASHFLOW DAY</span></div>
       <div class="fst" style="min-height:90px">
         <div class="fsr"><span class="fl" id="fs-liab-mort-lbl">Home Mortgage:</span><span class="fv r" id="fs-liab-mort">$0</span></div>
         <div class="fsr"><span class="fl">Car Loans:</span><span class="fv r" id="fs-liab-car">$0</span></div>
@@ -3539,7 +3522,7 @@ function buyCarFinance(car,down,principal,pmt,apr,fromBoard){
   G.cash-=down;
   _clearOldCarLoans();
   const dueDay=1+Math.floor(Math.random()*28);
-  G.liabilities.push({name:`${car.emoji} ${car.name} Loan`,amt:principal,type:'carfin',pmt,dueDay,carId:car.id});
+  G.liabilities.push({name:`${car.emoji} ${car.name} Loan`,amt:principal,orig:principal,type:'carfin',pmt,dueDay,carId:car.id});
   G.expenseOverrides=G.expenseOverrides||{};
   G.expenseOverrides.car=pmt;           // replaces the old car payment line
   G.carInsurance=car.ins;
@@ -7660,8 +7643,8 @@ function drawFreedomGauge(passive,expenses){
     statusEl.style.color=pct>=1?'#fbbf24':pct>=.75?'#4ade80':pct>=.25?'#fde68a':'#9ca3af';
   }
   // Pill badges
-  $('fs-freedom-pass').textContent='$'+fmt(passive)+'/mo';
-  $('fs-freedom-need').textContent='$'+fmt(expenses)+'/mo';
+  const _fp=$('fs-freedom-pass');if(_fp)_fp.textContent='$'+fmt(passive)+'/mo';
+  const _fn=$('fs-freedom-need');if(_fn)_fn.textContent='$'+fmt(expenses)+'/mo';
   const gapEl=$('fs-freedom-gap'),gapRow=$('fs-gap-row');
   if(gapEl&&gapRow){
     const gap=Math.max(0,expenses-passive);
@@ -7781,42 +7764,6 @@ function updateUI(){
           <span style="font-size:.5rem;font-weight:800;color:#8a3060">${Math.min(tAge,25)}y</span>
           <span style="font-size:.46rem;color:#6b5535">$${fmt(st.cost)}</span></span>`;
       }).join(''):'';
-    }
-    // Loans & due dates — card rows: icon, balance, payment + due chips, working Pay button
-    const loansWrap=$('lh-loans-wrap'),loansEl=$('lh-loans');
-    if(loansWrap&&loansEl){
-      const exp2=expenses();
-      const pmtMap={'Home Mortgage':exp2.mortgage,'School Loan':exp2.school,'Student Loans':exp2.school,'Car Loan':exp2.car,'Credit Cards':exp2.cc};
-      const iconFor=l=>l.type==='carfin'?'🚗':l.type==='biz'||l.type==='business'?'🏪':l.type==='note'?'📜':
-        l.name==='Home Mortgage'?'🏠':l.name.includes('School')||l.name.includes('Student')?'🎓':
-        l.name==='Car Loan'?'🚗':l.name==='Credit Cards'?'💳':'💼';
-      const chip=(txt,color)=>`<span style="font-size:.55rem;font-weight:800;font-family:Arial,sans-serif;background:${color}18;border:1px solid ${color}55;color:${color};border-radius:8px;padding:0 6px;white-space:nowrap">${txt}</span>`;
-      const payBtn=key=>`<span onclick="event.stopPropagation();fsPayModal('${key.replace(/'/g,"\\'")}')" style="cursor:pointer;font-size:.55rem;font-weight:900;font-family:Arial,sans-serif;background:rgba(42,138,42,.15);border:1px solid rgba(42,138,42,.5);color:#2a8a2a;border-radius:8px;padding:0 8px;white-space:nowrap">💸 PAY</span>`;
-      const rows=[];
-      (G.liabilities||[]).forEach(l=>{
-        if(l.amt<=0)return;
-        const pmt=l.type==='carfin'?l.pmt:(pmtMap[l.name]||l.pmt||0);
-        const due=l.type==='carfin'?'day '+l.dueDay:'payday';
-        const late=l.name==='Credit Cards'&&(G.ccLateTier||0)>0;
-        rows.push(`<div style="display:flex;align-items:center;gap:7px;padding:4px 7px;margin:2px 0;border-radius:7px;background:${late?'rgba(180,30,30,.10)':'rgba(0,0,0,.035)'};border:1px solid ${late?'rgba(180,30,30,.35)':'rgba(0,0,0,.05)'}">
-          <span style="font-size:.95rem;flex-shrink:0">${late?'🚨':iconFor(l)}</span>
-          <span style="flex:1;min-width:0;font-size:.68rem;font-weight:700;font-family:Arial,sans-serif;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.name}${late?' — '+(G.ccLateTier>=3?'COLLECTIONS':G.ccLateTier*30+' DAYS LATE'):''}</span>
-          <span style="font-size:.72rem;font-weight:900;font-family:Georgia,serif;color:${late?'#b01e1e':'#8a4a10'}">$${fmt(l.amt)}</span>
-          ${pmt?chip('$'+fmt(pmt)+'/mo','#8a4a10'):''}
-          ${chip('due '+due,'#2d4a7a')}
-          ${payBtn(l.name)}
-        </div>`);
-      });
-      if(G.bankLoan>0)rows.push(`<div style="display:flex;align-items:center;gap:7px;padding:4px 7px;margin:2px 0;border-radius:7px;background:rgba(0,0,0,.035);border:1px solid rgba(0,0,0,.05)">
-        <span style="font-size:.95rem;flex-shrink:0">🏦</span>
-        <span style="flex:1;font-size:.68rem;font-weight:700;font-family:Arial,sans-serif;color:var(--txt)">Bank Loan <span style="opacity:.55;font-weight:400">(${Math.round(loanRate()*100)}% APR)</span></span>
-        <span style="font-size:.72rem;font-weight:900;font-family:Georgia,serif;color:#8a4a10">$${fmt(G.bankLoan)}</span>
-        ${chip('$'+fmt(G.extraBankPmt||0)+'/mo','#8a4a10')}
-        ${chip('due payday','#2d4a7a')}
-        ${payBtn('Bank Loan')}
-      </div>`);
-      loansEl.innerHTML=rows.length?rows.join(''):'';
-      loansWrap.style.display=rows.length?'':'none';
     }
     // Insurance expense row
     const insRow=$('fs-ins-row'),insVal=$('fs-insurance');
@@ -7994,8 +7941,24 @@ function updateUI(){
         :'<span style="color:#2a8a2a;font-weight:700">$0 ✅</span>';
     }
   }
-  const carEl=$('fs-liab-car');if(carEl)carEl.innerHTML=debtBar(lCar?lCar.amt:0,G.prof.carLoan,null,'Car Loan');
-  const ccEl=$('fs-liab-cc');if(ccEl)ccEl.innerHTML=debtBar(lCC?lCC.amt:0,G.prof.ccDebt,null,'Credit Cards');
+  const carEl=$('fs-liab-car');
+  if(carEl){
+    const carfins=(G.liabilities||[]).filter(l=>l.type==='carfin');
+    const carfinAmt=carfins.reduce((s,l)=>s+l.amt,0);
+    const carfinOrig=carfins.reduce((s,l)=>s+(l.orig||l.amt),0);
+    const carCur=(lCar?lCar.amt:0)+carfinAmt;
+    // financed-car principal already absorbed any rolled-in old balance — don't double-count it
+    const carOrig=carfins.length?carfinOrig+(lCar?lCar.amt:0):(G.prof.carLoan||0);
+    const carLbl=document.querySelector('.fsr #fs-liab-car')?.closest('.fsr')?.querySelector('.fl');
+    if(carLbl)carLbl.textContent=carfins.length?(G.carOwned?G.carOwned.emoji+' '+G.carOwned.name+':':'Car Loans:')+(carfins[0].dueDay?' (due day '+carfins[0].dueDay+')':''):'Car Loans:';
+    carEl.innerHTML=debtBar(carCur,Math.max(carOrig,carCur||1),null,carfins.length?carfins[0].name:'Car Loan');
+  }
+  const ccEl=$('fs-liab-cc');
+  if(ccEl){
+    const late=(G.ccLateTier||0)>0;
+    const lateTag=late?`<span style="font-size:.54rem;font-weight:900;background:rgba(180,30,30,.18);border:1px solid rgba(180,30,30,.45);color:#b01e1e;border-radius:6px;padding:0 5px;margin-left:4px">🚨 ${G.ccLateTier>=3?'COLLECTIONS':G.ccLateTier*30+'d LATE'}</span>`:'';
+    ccEl.innerHTML=debtBar(lCC?lCC.amt:0,Math.max(G.prof.ccDebt,(lCC?lCC.amt:0)||1),lateTag,'Credit Cards');
+  }
   const schEl=$('fs-liab-school');if(schEl)schEl.innerHTML=debtBar(lSchool?lSchool.amt:0,G.prof.schoolDebt,null,'School Loan');
   const bankEl=$('fs-liab-bank');
   if(bankEl){if(G.bankLoan>0){bankEl.innerHTML=`<span style="display:flex;align-items:center;justify-content:flex-end;gap:4px"><span style="font-weight:700">$${fmt(G.bankLoan)}</span><button onclick="fsPayModal('Bank Loan')" class="fs-pay-btn">PAY</button></span>`;}else bankEl.textContent='—';}
@@ -9958,15 +9921,15 @@ const TUTORIAL_STEPS=[
   {icon:'🛍️',title:'Doodads — The Wealth Killers',
    body:"Doodad spaces hit you with surprise expenses — vacations, gadgets, repairs. They drain the cash you need for deals. Avoid lifestyle inflation. Every doodad sets you back weeks.",
    hi:null},
-  {icon:'📊',title:'Your Financial Statement',
-   body:'Hover the left panel to open your Financial Statement. It tracks every dollar in and out. Check the three insight metrics — Cash Runway, Passive Rate, and Freedom Gap — every turn.',
+  {icon:'📊',title:'Your Life Hub',
+   body:'Hover (or tap) the glowing left tab to open your Life Hub. It tracks every dollar in and out — income, expenses, debts with payoff bars, and the Freedom Meter showing how close you are to escaping.',
    hi:'#fs-tab'},
   {icon:'🏦',title:'Credit Score — Your Leverage',
    body:'Your credit score controls your loan rates. 740+ = excellent rates, cheap debt, bigger deals. Pay off cards and the score climbs automatically every payday. Bad credit costs you thousands.',
-   hi:'#fs-credit-score'},
+   hi:'#credit-chip'},
   {icon:'🎯',title:'The Goal — Watch This Number',
    body:'Freedom Gap = how much more passive income you need per month. When it hits $0, you escape the Rat Race and enter the Outer Board. Build assets, collect payday, watch this number shrink.',
-   hi:'#fs-fgap'},
+   hi:'#fs-freedom-panel'},
   {icon:'🎯',title:'Your Dream — The Real Win',
    body:'When you first pick your dream, it sets your win condition. Escape the Rat Race (100% passive income), then land on the ⭐ DREAM space on the Outer Board to truly win the game.',
    hi:null},
