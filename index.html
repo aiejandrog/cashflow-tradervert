@@ -297,7 +297,21 @@ body{
   box-shadow:4px 0 14px rgba(0,0,0,.35);
 }
 #fs-tab::before{content:'📊';writing-mode:horizontal-tb;font-size:1rem;display:block;margin-bottom:6px}
-#fs-tab:hover{background:linear-gradient(180deg,var(--purple),var(--purple3))}
+#fs-tab::after{
+  content:'▶';writing-mode:horizontal-tb;font-size:.7rem;display:block;margin-top:6px;
+  color:#f0c020;animation:fsTabArrow 1.4s ease-in-out infinite;
+}
+/* Idle attention pulse — tells players the panel slides out on hover */
+#fs-tab{animation:fsTabGlow 2.6s ease-in-out infinite}
+@keyframes fsTabGlow{
+  0%,100%{box-shadow:4px 0 14px rgba(0,0,0,.35)}
+  50%{box-shadow:4px 0 14px rgba(0,0,0,.35),0 0 18px rgba(240,192,32,.55),0 0 34px rgba(240,192,32,.25)}
+}
+@keyframes fsTabArrow{0%,100%{transform:translateX(0);opacity:.7}50%{transform:translateX(4px);opacity:1}}
+#fs-tab:hover{background:linear-gradient(180deg,var(--purple),var(--purple3));animation:none;box-shadow:4px 0 18px rgba(0,0,0,.45),0 0 22px rgba(240,192,32,.6)}
+/* Stop nagging once the panel is open */
+#fs-panel.open #fs-tab{animation:none}
+#fs-panel.open #fs-tab::after{animation:none;content:'◀'}
 
 /* FS content */
 #fs-inner{padding:8px 10px 8px 8px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto auto;gap:0;overflow-y:auto;height:100%;scrollbar-width:thin;scrollbar-color:rgba(79,45,127,.3) transparent;-ms-overflow-style:none;scroll-behavior:smooth}
@@ -4842,6 +4856,10 @@ function showEventCard(bandCls,label,story,tip,numbers,actions){
 }
 function closeEventCard(){
   $('event-modal').classList.remove('vis');$('event-modal-bg').classList.remove('vis');
+  // FS panel dismisses WITH the card (if the next action opens another card, openFS() re-adds
+  // the class in the same frame — no flicker). Hover on the edge tab brings it back anytime.
+  $('fs-panel').classList.remove('open');
+  ['event-modal','event-modal-bg','modal','modal-bg'].forEach(id=>{const el=$(id);if(el)el.style.paddingLeft='';});
   const ecm=document.querySelector('.ecm');if(ecm)ecm.style.cssText='';
   // If turn still in progress and no other overlay open, prompt user to tap die
   if(G&&G.rolling&&_resumeFn){
@@ -6085,6 +6103,8 @@ function openModal({band,title,desc,rows,actions,customInput,_noFS}){
 }
 function closeModal(){
   $('modal').classList.remove('vis');$('modal-bg').classList.remove('vis');
+  $('fs-panel').classList.remove('open');
+  ['event-modal','event-modal-bg','modal','modal-bg'].forEach(id=>{const el=$(id);if(el)el.style.paddingLeft='';});
   // Restore .mbox if fsPayModal had replaced its content
   if(window._mboxSavedHTML!==undefined){
     const box=document.querySelector('.mbox');
