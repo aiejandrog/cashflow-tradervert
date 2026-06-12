@@ -575,7 +575,7 @@ body{
 /* ── CHAT PANEL (left side) ── */
 #chat-log{
   position:fixed;bottom:90px;left:65px;transform:none;
-  width:260px;
+  width:340px;
   background:rgba(8,3,20,.92);
   border:1px solid rgba(120,70,190,.35);
   border-radius:12px;
@@ -597,21 +597,24 @@ body{
 }
 .cl-hdr-title{display:flex;align-items:center;gap:5px}
 .cl-toggle-btn{background:none;border:none;color:rgba(180,150,255,.6);cursor:pointer;font-size:.75rem;padding:0 2px;line-height:1}
-#cl-rows{max-height:160px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(120,70,190,.4) transparent;flex:1}
+#cl-rows{max-height:240px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(120,70,190,.4) transparent;flex:1}
 #cl-rows::-webkit-scrollbar{width:3px}
 #cl-rows::-webkit-scrollbar-thumb{background:rgba(120,70,190,.4);border-radius:2px}
 .cl-row{
-  display:flex;gap:6px;font-size:.63rem;color:rgba(220,210,240,.55);
-  padding:3px 10px;font-family:Arial,sans-serif;align-items:flex-start;
-  border-bottom:1px solid rgba(255,255,255,.03);line-height:1.35;
+  display:flex;gap:7px;font-size:.72rem;color:rgba(220,210,240,.65);
+  padding:4px 10px;font-family:Arial,sans-serif;align-items:flex-start;
+  border-bottom:1px solid rgba(255,255,255,.04);line-height:1.4;
 }
 .cl-row:last-child{border-bottom:none}
-.cl-row.g{color:#86efac}.cl-row.b{color:#fca5a5}.cl-row.gold{color:#fde68a}
+.cl-row.g{color:#86efac}.cl-row.b{color:#fca5a5}.cl-row.gold{color:#fde68a}.cl-row.r{color:#f87171}
 .cl-row.chat-msg{color:#e0d0ff;background:rgba(80,40,140,.18)}
 .cl-row.chat-gif{flex-direction:column;gap:3px;padding:5px 10px}
 .cl-row.chat-gif img{width:100%;border-radius:6px;display:block}
-.cl-i{flex-shrink:0;font-size:.72rem;margin-top:1px}
+.cl-row.cl-new{animation:clFlash 1.6s ease-out}
+@keyframes clFlash{0%{background:rgba(240,192,32,.22)}100%{background:transparent}}
+.cl-i{flex-shrink:0;font-size:.85rem;margin-top:0}
 .cl-t{flex:1;min-width:0;word-break:break-word;white-space:normal}
+.cl-turn{flex-shrink:0;font-size:.52rem;font-weight:800;color:rgba(180,150,255,.45);background:rgba(120,70,190,.12);border-radius:4px;padding:1px 4px;margin-top:1px;font-family:Arial,sans-serif}
 /* Input bar */
 #cl-input-row{
   display:flex;align-items:center;gap:5px;padding:5px 8px;
@@ -1559,7 +1562,9 @@ body{
           <span id="lh-car-chip" style="font-size:.58rem;background:rgba(45,74,122,.12);border:1px solid rgba(45,74,122,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#2d4a7a">🚙 Beater</span>
           <span id="lh-credit-chip" style="font-size:.58rem;background:rgba(107,63,168,.12);border:1px solid rgba(107,63,168,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#6b3fa8">💳 —</span>
           <span id="lh-delinq-chip" style="display:none;font-size:.58rem;background:rgba(180,30,30,.15);border:1px solid rgba(180,30,30,.4);border-radius:10px;padding:1px 8px;font-weight:900;color:#8b1a1a">🚨 DELINQUENT</span>
+          <span id="lh-home-chip" style="font-size:.58rem;background:rgba(45,122,74,.12);border:1px solid rgba(45,122,74,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#2d7a4a">🔑 Renting</span>
           <span onclick="openCarDealership(false)" style="cursor:pointer;font-size:.58rem;background:rgba(200,145,12,.14);border:1px solid rgba(200,145,12,.4);border-radius:10px;padding:1px 8px;font-weight:800;color:#9a6e08">🚗 Dealership</span>
+          <span onclick="openRealtyOffice()" style="cursor:pointer;font-size:.58rem;background:rgba(45,122,74,.14);border:1px solid rgba(45,122,74,.4);border-radius:10px;padding:1px 8px;font-weight:800;color:#1e6e3e">🏡 Realty Office</span>
         </div>
       </div>
       <div id="lh-kids" style="display:flex;gap:5px;flex-wrap:wrap;max-width:200px;justify-content:flex-end"></div>
@@ -1940,18 +1945,70 @@ const BIG_DEALS = [
   { id:'b14', type:'re', name:'Industrial Land + Billboard', cost:175000, down:22000, cf:1100, isLand:true, story:'Corner lot on a major corridor. One billboard facing the highway pays $1,600/month net. A developer is already asking about optioning the land for $220k. You haven\'t returned the call.', tip:'Billboards on high-traffic land are a two-layer asset — billboard cash flow today, land appreciation always.' },
 ];
 
-// ── CAR CATALOG (entry → exotic, credit-gated financing) ──
+// ── CAR CATALOG (real makes/models, entry → supercar, credit-gated financing) ──
 // minTier index: 0=Poor 1=Fair 2=Good 3=Very Good 4=Excellent — min tier required to FINANCE
 const CARS = [
-  { id:'civic',   name:'Honda Civic',        emoji:'🚗', price:24000,  segment:'Entry',   ins:120, minTier:0 },
-  { id:'camry',   name:'Toyota Camry',       emoji:'🚙', price:29000,  segment:'Entry',   ins:135, minTier:0 },
-  { id:'f150',    name:'Ford F-150',         emoji:'🛻', price:42000,  segment:'Mid',     ins:170, minTier:1 },
-  { id:'bmw3',    name:'BMW 3 Series',       emoji:'🏎️', price:48000,  segment:'Mid',     ins:220, minTier:2 },
-  { id:'tesla3',  name:'Tesla Model 3',      emoji:'⚡', price:46000,  segment:'Mid',     ins:200, minTier:2 },
-  { id:'rover',   name:'Range Rover Sport',  emoji:'🚐', price:92000,  segment:'Luxury',  ins:340, minTier:3 },
-  { id:'p911',    name:'Porsche 911',        emoji:'🏁', price:128000, segment:'Exotic',  ins:480, minTier:4 },
-  { id:'huracan', name:'Lamborghini Huracán',emoji:'🟡', price:265000, segment:'Exotic',  ins:900, minTier:4 },
+  // Entry — anyone can finance
+  { id:'versa',   name:'Nissan Versa',          emoji:'🚗', price:18000,  segment:'Entry',    ins:95,  minTier:0 },
+  { id:'elantra', name:'Hyundai Elantra',       emoji:'🚗', price:22000,  segment:'Entry',    ins:110, minTier:0 },
+  { id:'civic',   name:'Honda Civic',           emoji:'🚗', price:25000,  segment:'Entry',    ins:120, minTier:0 },
+  { id:'mazda3',  name:'Mazda 3',               emoji:'🚗', price:26000,  segment:'Entry',    ins:125, minTier:0 },
+  { id:'camry',   name:'Toyota Camry',          emoji:'🚙', price:29000,  segment:'Entry',    ins:135, minTier:0 },
+  // Mid — Fair credit+
+  { id:'accord',  name:'Honda Accord',          emoji:'🚙', price:32000,  segment:'Mid',      ins:145, minTier:1 },
+  { id:'rav4',    name:'Toyota RAV4',           emoji:'🚙', price:34000,  segment:'Mid',      ins:150, minTier:1 },
+  { id:'outback', name:'Subaru Outback',        emoji:'🚙', price:36000,  segment:'Mid',      ins:155, minTier:1 },
+  { id:'wrangler',name:'Jeep Wrangler',         emoji:'🛻', price:40000,  segment:'Mid',      ins:175, minTier:1 },
+  { id:'f150',    name:'Ford F-150',            emoji:'🛻', price:45000,  segment:'Mid',      ins:180, minTier:1 },
+  { id:'silverado',name:'Chevy Silverado',      emoji:'🛻', price:47000,  segment:'Mid',      ins:185, minTier:1 },
+  // Sport — Good credit+
+  { id:'mustang', name:'Ford Mustang GT',       emoji:'🏎️', price:46000,  segment:'Sport',    ins:240, minTier:2 },
+  { id:'camaro',  name:'Chevy Camaro SS',       emoji:'🏎️', price:48000,  segment:'Sport',    ins:250, minTier:2 },
+  { id:'tesla3',  name:'Tesla Model 3 Perf.',   emoji:'⚡', price:53000,  segment:'Sport',    ins:210, minTier:2 },
+  { id:'bmw3',    name:'BMW M340i',             emoji:'🏎️', price:60000,  segment:'Sport',    ins:260, minTier:2 },
+  { id:'audia4',  name:'Audi S4',               emoji:'🏎️', price:58000,  segment:'Sport',    ins:255, minTier:2 },
+  // Luxury — Very Good credit+
+  { id:'mbe',     name:'Mercedes E 450',        emoji:'🚘', price:74000,  segment:'Luxury',   ins:300, minTier:3 },
+  { id:'teslas',  name:'Tesla Model S',         emoji:'⚡', price:82000,  segment:'Luxury',   ins:320, minTier:3 },
+  { id:'bmwm4',   name:'BMW M4 Competition',    emoji:'🏎️', price:85000,  segment:'Luxury',   ins:360, minTier:3 },
+  { id:'escalade',name:'Cadillac Escalade',     emoji:'🚐', price:90000,  segment:'Luxury',   ins:340, minTier:3 },
+  { id:'rover',   name:'Range Rover Sport',     emoji:'🚐', price:95000,  segment:'Luxury',   ins:350, minTier:3 },
+  // Exotic — Excellent credit only
+  { id:'vette',   name:'Corvette Z06',          emoji:'🏁', price:115000, segment:'Exotic',   ins:430, minTier:4 },
+  { id:'p911',    name:'Porsche 911 Carrera S', emoji:'🏁', price:135000, segment:'Exotic',   ins:490, minTier:4 },
+  { id:'maserati',name:'Maserati GranTurismo',  emoji:'🏁', price:175000, segment:'Exotic',   ins:600, minTier:4 },
+  // Supercar — Excellent credit only
+  { id:'huracan', name:'Lamborghini Huracán',   emoji:'🟡', price:265000, segment:'Supercar', ins:900, minTier:4 },
+  { id:'ferrari', name:'Ferrari 296 GTB',       emoji:'🔴', price:340000, segment:'Supercar', ins:1100,minTier:4 },
+  { id:'mclaren', name:'McLaren 750S',          emoji:'🟠', price:330000, segment:'Supercar', ins:1050,minTier:4 },
+  { id:'rolls',   name:'Rolls-Royce Ghost',     emoji:'👑', price:350000, segment:'Supercar', ins:1200,minTier:4 },
 ];
+const CAR_SEGMENTS=[
+  {key:'Entry',   icon:'🚗', blurb:'Reliable daily drivers'},
+  {key:'Mid',     icon:'🛻', blurb:'SUVs & trucks'},
+  {key:'Sport',   icon:'🏎️', blurb:'Performance machines'},
+  {key:'Luxury',  icon:'🚘', blurb:'Premium badges'},
+  {key:'Exotic',  icon:'🏁', blurb:'Six-figure thrills'},
+  {key:'Supercar',icon:'👑', blurb:'The 1% club'},
+];
+
+// ── HOME CATALOG (Realty Office — personal residences, mortgage financed) ──
+// Prices scale with the city's loc.re multiplier. upkeep = HOA/tax/maintenance per month.
+const HOMES = [
+  { id:'studio',   name:'Studio Condo',         emoji:'🏢', price:120000,  upkeep:280,  minTier:0, blurb:'400 sqft of YOURS. No more landlord.' },
+  { id:'condo1br', name:'1BR City Condo',       emoji:'🏢', price:165000,  upkeep:340,  minTier:0, blurb:'A real bedroom and a skyline view.' },
+  { id:'townhouse',name:'2BR Townhouse',        emoji:'🏘️', price:225000,  upkeep:300,  minTier:1, blurb:'Two floors, a garage, tiny yard.' },
+  { id:'starter',  name:'3BR Starter House',    emoji:'🏠', price:280000,  upkeep:350,  minTier:1, blurb:'The classic first family home.' },
+  { id:'suburban', name:'4BR Suburban Home',    emoji:'🏡', price:380000,  upkeep:450,  minTier:2, blurb:'Good schools, cul-de-sac, BBQs.' },
+  { id:'loft',     name:'Modern Downtown Loft', emoji:'🌆', price:430000,  upkeep:520,  minTier:2, blurb:'Exposed brick, 14-ft ceilings.' },
+  { id:'waterfront',name:'Waterfront Condo',    emoji:'🌊', price:520000,  upkeep:640,  minTier:3, blurb:'Wake up to the water every day.' },
+  { id:'executive',name:'5BR Executive Home',   emoji:'🏰', price:680000,  upkeep:780,  minTier:3, blurb:'Three-car garage. Home office wing.' },
+  { id:'hillside', name:'Hillside Modern',      emoji:'🌄', price:850000,  upkeep:900,  minTier:4, blurb:'Glass walls, infinity pool, views.' },
+  { id:'penthouse',name:'Penthouse Suite',      emoji:'🌃', price:1200000, upkeep:1400, minTier:4, blurb:'Top floor. Private elevator.' },
+  { id:'estate',   name:'Gated Estate',         emoji:'🏯', price:1800000, upkeep:2000, minTier:4, blurb:'Two acres behind your own gate.' },
+  { id:'beachfront',name:'Beachfront Mansion',  emoji:'🏖️', price:2600000, upkeep:2800, minTier:4, blurb:'Sand in your backyard. The dream.' },
+];
+const HOME_DOWN_PCT={'Poor':0.30,'Fair':0.20,'Good':0.15,'Very Good':0.10,'Excellent':0.10};
 const CAR_TIER_IDX={'Poor':0,'Fair':1,'Good':2,'Very Good':3,'Excellent':4};
 // Down-payment % by credit tier — better credit = less skin required
 const CAR_DOWN_PCT={'Poor':0.30,'Fair':0.20,'Good':0.15,'Very Good':0.10,'Excellent':0.05};
@@ -2783,25 +2840,44 @@ function recalcChildCosts(){
   G.extraChildren=G.childBirths.reduce((s,c)=>s+childStage(G.turn-c.born).cost,0);
 }
 
-// ══ CAR DEALERSHIP ════════════════════════════════════
+// ══ CAR DEALERSHIP (segment showroom → car detail) ════
 function openCarDealership(fromBoard){
   const tier=creditTier(G.creditScore||650);
   const tierIdx=CAR_TIER_IDX[tier.label];
   const apr=loanRate()+0.02; // auto loans run ~2pts over the player's base rate
-  const actions=CARS.map(car=>{
-    const gated=tierIdx<car.minTier;
-    const canCash=G.cash>=car.price;
-    const locked=gated&&!canCash;
+  const actions=CAR_SEGMENTS.map(seg=>{
+    const cars=CARS.filter(c=>c.segment===seg.key);
+    const lo=Math.min(...cars.map(c=>c.price)),hi=Math.max(...cars.map(c=>c.price));
+    const allGated=cars.every(c=>tierIdx<c.minTier&&G.cash<c.price);
     return{
-      label:`${car.emoji} ${car.name} — $${fmt(car.price)}${gated?(canCash?' (cash only)':' 🔒 credit '+['Poor','Fair','Good','Very Good','Excellent'][car.minTier]+'+'):''}`,
-      cls:'btn-tan',locked,
-      fn:()=>showCarDetail(car,fromBoard),
+      label:`${seg.icon} ${seg.key} — ${seg.blurb} ($${fmt(lo)}–$${fmt(hi)})${allGated?' 🔒':''}`,
+      cls:'btn-tan',locked:allGated,
+      fn:()=>showCarSegment(seg.key,fromBoard),
     };
   });
   actions.push({label:fromBoard?'Just browsing — leave':'Close',cls:'btn-gold',fn:()=>{if(fromBoard)endTurn();}});
-  openModal({band:'gold',title:'🚗 Car Dealership',
-    desc:`Your credit: ${G.creditScore} (${tier.label}) → auto APR ${(apr*100).toFixed(1)}%, ${Math.round(CAR_DOWN_PCT[tier.label]*100)}% down required. Current ride: ${G.carOwned?G.carOwned.emoji+' '+G.carOwned.name:'🚙 beater (paid off)'}.`,
+  openModal({band:'gold',title:'🚗 Car Dealership — Showroom',
+    desc:`Your credit: ${G.creditScore} (${tier.label}) → auto APR ${(apr*100).toFixed(1)}%, ${Math.round(CAR_DOWN_PCT[tier.label]*100)}% down. Current ride: ${G.carOwned?G.carOwned.emoji+' '+G.carOwned.name:'🚙 beater (paid off)'}. Pick a lot to browse.`,
     rows:[['Credit Tier',tier.label,''],['Your Auto APR',(apr*100).toFixed(1)+'%',''],['Down Payment Required',Math.round(CAR_DOWN_PCT[tier.label]*100)+'%','']],
+    actions});
+}
+function showCarSegment(segKey,fromBoard){
+  const tier=creditTier(G.creditScore||650);
+  const tierIdx=CAR_TIER_IDX[tier.label];
+  const seg=CAR_SEGMENTS.find(s=>s.key===segKey);
+  const actions=CARS.filter(c=>c.segment===segKey).map(car=>{
+    const gated=tierIdx<car.minTier;
+    const canCash=G.cash>=car.price;
+    return{
+      label:`${car.emoji} ${car.name} — $${fmt(car.price)} · $${fmt(car.ins)}/mo ins${gated?(canCash?' (cash only)':' 🔒'):''}`,
+      cls:'btn-tan',locked:gated&&!canCash,
+      fn:()=>showCarDetail(car,fromBoard),
+    };
+  });
+  actions.push({label:'← Showroom',cls:'btn-gold',fn:()=>openCarDealership(fromBoard)});
+  openModal({band:'gold',title:`${seg.icon} ${segKey} Lot`,
+    desc:`${seg.blurb}. ${tierIdx<CAR_TIER_IDX[tier.label]?'':''}Financing needs ${['any credit','Fair+','Good+','Very Good+','Excellent'][Math.max(...CARS.filter(c=>c.segment===segKey).map(c=>c.minTier))]} credit — cash always talks.`,
+    rows:[['Your Credit',G.creditScore+' ('+tier.label+')',''],['Your Cash','$'+fmt(G.cash),'gold']],
     actions});
 }
 function showCarDetail(car,fromBoard){
@@ -2870,6 +2946,99 @@ function buyCarCash(car,fromBoard){
     'Paying cash for depreciating assets only makes sense when the cash is surplus. The wealthy finance appreciating assets and pay cash for toys — after the assets pay for them.',
     [['Paid','$'+fmt(car.price),'red'],['Monthly Payment','$0 ✅','green'],['Cash Left','$'+fmt(G.cash),'gold']],
     [{label:'Debt-free ride 😎',cls:'btn-gold',fn:fromBoard?endTurn:()=>{}}]);
+  updateUI();
+}
+
+// ══ REALTY OFFICE (personal homes, mortgage financed) ══
+function _homePrice(h){return Math.round(h.price*(G.location?G.location.re:1)/5000)*5000;}
+function _currentHomeEquity(){
+  const home=(G.assets||[]).find(a=>a.isPrimaryHome);
+  if(!home)return null;
+  const mort=(G.liabilities||[]).find(l=>l.name==='Home Mortgage');
+  return{home,owed:mort?mort.amt:0,value:home.cost,equity:Math.max(0,home.cost-(mort?mort.amt:0))};
+}
+function openRealtyOffice(){
+  const tier=creditTier(G.creditScore||650);
+  const tierIdx=CAR_TIER_IDX[tier.label];
+  const cur=_currentHomeEquity();
+  const hs=G.housingSituation||'renter';
+  const curDesc=cur?`${cur.home.name} (equity $${fmt(cur.equity)})`:hs==='family'?'living with family':'renting';
+  const actions=HOMES.map(h=>{
+    const price=_homePrice(h);
+    const gated=tierIdx<h.minTier;
+    const down=Math.round(price*HOME_DOWN_PCT[tier.label]/1000)*1000;
+    const affordable=G.cash+(cur?cur.equity:0)>=down;
+    return{
+      label:`${h.emoji} ${h.name} — $${fmt(price)}${gated?' 🔒':''}`,
+      cls:'btn-tan',locked:gated||!affordable,
+      fn:()=>showHomeDetail(h),
+    };
+  });
+  actions.push({label:'Close',cls:'btn-gold',fn:()=>{}});
+  openModal({band:'green',title:'🏡 Realty Office — '+(G.location?G.location.name:''),
+    desc:`Currently: ${curDesc}. Your credit (${G.creditScore} ${tier.label}) gets a ${(loanRate()*100).toFixed(0)}% mortgage with ${Math.round(HOME_DOWN_PCT[tier.label]*100)}% down. ${cur?'Buying a new home SELLS your current one — equity rolls into the deal.':'Buying kills your rent payment forever.'} Prices reflect ${G.location?G.location.name+' ('+G.location.re+'×)':'your market'}.`,
+    rows:[['Your Cash','$'+fmt(G.cash),'gold'],...(cur?[['Current Home Equity','+$'+fmt(cur.equity),'green']]:[]),['Mortgage Rate',(loanRate()*100).toFixed(0)+'%','']],
+    actions});
+}
+function showHomeDetail(h){
+  const tier=creditTier(G.creditScore||650);
+  const price=_homePrice(h);
+  const cur=_currentHomeEquity();
+  const equity=cur?cur.equity:0;
+  const down=Math.round(price*HOME_DOWN_PCT[tier.label]/1000)*1000;
+  const cashNeeded=Math.max(0,down-equity);
+  const principal=price-down;
+  const pmt=carMonthlyPmt(principal,loanRate(),360); // 30-year amortization
+  const totalMo=pmt+h.upkeep;
+  const curHousingCost=expenses().mortgage;
+  const canBuy=G.cash>=cashNeeded;
+  openModal({band:'green',title:`${h.emoji} ${h.name}`,
+    desc:`${h.blurb} ${cur?`Your ${cur.home.name} sells first — $${fmt(equity)} equity applies to the down payment.`:''} Monthly housing goes from $${fmt(curHousingCost)} to $${fmt(totalMo)}.`,
+    rows:[
+      ['Price','$'+fmt(price),''],
+      ['Down ('+Math.round(HOME_DOWN_PCT[tier.label]*100)+'%)','$'+fmt(down),'red'],
+      ...(equity>0?[['Equity Applied','-$'+fmt(equity),'green']]:[]),
+      ['Cash Needed','$'+fmt(cashNeeded),'red'],
+      ['Mortgage ('+(loanRate()*100).toFixed(0)+'% · 30yr)','$'+fmt(pmt)+'/mo','red'],
+      ['HOA/Tax/Upkeep','$'+fmt(h.upkeep)+'/mo','red'],
+      ['New Housing Cost','$'+fmt(totalMo)+'/mo',totalMo<=curHousingCost?'green':'red'],
+    ],
+    actions:[
+      {label:`Buy — $${fmt(cashNeeded)} cash to close`,cls:'btn-gold',locked:!canBuy,fn:()=>buyHome(h,price,down,equity,cashNeeded,principal,pmt)},
+      {label:'← Listings',cls:'btn-tan',fn:openRealtyOffice},
+    ]});
+}
+function buyHome(h,price,down,equity,cashNeeded,principal,pmt){
+  // Sell current home if owner: remove asset + old mortgage, equity already applied to down
+  const cur=_currentHomeEquity();
+  if(cur){
+    G.assets=G.assets.filter(a=>!a.isPrimaryHome);
+    G.liabilities=G.liabilities.filter(l=>l.name!=='Home Mortgage');
+    addLog('🏠',`Sold ${cur.home.name} — $${fmt(cur.equity)} equity rolled into the new home`,'g');
+  }
+  G.cash-=cashNeeded;
+  G.housingSituation='owner';G.isRenting=false;
+  G.liabilities.push({name:'Home Mortgage',amt:principal});
+  G.assets.push({
+    id:'primary_home',uid:'primary_home_'+Date.now(),
+    type:'re',name:h.emoji+' '+h.name,
+    cost:price,down,cf:0,liability:0,
+    story:h.blurb+' Your primary residence.',
+    cashPurchase:false,mortgageRate:loanRate(),
+    mortgagePmt:pmt,purchaseTurn:G.turn,isPrimaryHome:true,
+  });
+  // Housing expense = mortgage pmt + upkeep (bundled; payday principal calc reads this line)
+  G.expenseOverrides=G.expenseOverrides||{};
+  G.expenseOverrides.mortgage=pmt+h.upkeep;
+  G.homeOwned={id:h.id,name:h.name,emoji:h.emoji};
+  boostCredit(5);
+  saveGame();
+  addLog('🏡',`Bought ${h.name} for $${fmt(price)} — $${fmt(pmt+h.upkeep)}/mo housing`,'gold');
+  showEventCard('life',`${h.emoji} Welcome Home!`,
+    `The keys to your ${h.name} are in your hand. $${fmt(cashNeeded)} cash to close, $${fmt(pmt)}/mo mortgage + $${fmt(h.upkeep)}/mo upkeep. ${G.expenseOverrides.mortgage<expenses().total*0.3?'Comfortably within your means.':'Stretch purchase — keep the income growing.'}`,
+    'A primary home is shelter first, asset second. The win: fixed payment while your income climbs — and equity you can house-hack or borrow against later.',
+    [['Cash to Close','$'+fmt(cashNeeded),'red'],['Housing/mo','$'+fmt(pmt+h.upkeep),'red'],['Cash Left','$'+fmt(G.cash),'gold'],['Credit','+5 → '+G.creditScore,'green']],
+    [{label:'Home sweet home 🏡',cls:'btn-gold',fn:()=>{}}]);
   updateUI();
 }
 
@@ -6830,6 +6999,11 @@ function updateUI(){
     $('lh-sub').textContent=`Age ${id.age||id.ageStart||'?'} · Year ${G.gameYear||1} · ${id.ethnicityLabel||''} · ${G.location?G.location.icon+' '+G.location.name:''}`;
     const carChip=$('lh-car-chip');
     if(carChip)carChip.textContent=G.carOwned?`${G.carOwned.emoji} ${G.carOwned.name}`:'🚙 Beater (paid off)';
+    const homeChip=$('lh-home-chip');
+    if(homeChip){
+      const hs=G.housingSituation||'renter';
+      homeChip.textContent=G.homeOwned?`${G.homeOwned.emoji} ${G.homeOwned.name}`:hs==='owner'?'🏠 Homeowner':hs==='family'?'👨‍👩‍👦 With Family':'🔑 Renting';
+    }
     const tier=creditTier(G.creditScore||650);
     const crChip=$('lh-credit-chip');
     if(crChip){crChip.textContent=`💳 ${G.creditScore} · ${tier.label}`;crChip.style.color=tier.color;}
@@ -7174,10 +7348,12 @@ function updateUI(){
 }
 
 function addLog(ico,txt,cls){
-  const row=document.createElement('div');row.className='cl-row '+(cls||'');
-  row.innerHTML=`<span class="cl-i">${ico}</span><span class="cl-t">${txt}</span>`;
+  const row=document.createElement('div');row.className='cl-row cl-new '+(cls||'');
+  const turnTag=(G&&G.turn!==undefined)?`<span class="cl-turn">T${G.turn}</span>`:'';
+  row.innerHTML=`<span class="cl-i">${ico}</span><span class="cl-t">${txt}</span>${turnTag}`;
   const cont=$('cl-rows');cont.insertBefore(row,cont.firstChild);
-  while(cont.children.length>40)cont.removeChild(cont.lastChild);
+  setTimeout(()=>row.classList.remove('cl-new'),1700);
+  while(cont.children.length>60)cont.removeChild(cont.lastChild);
   // MP spectate: the active player's log lines stream to everyone's waiting screen
   if(PLAYERS.length>1&&!_bcLobbyPhase&&_bcRole&&ACTIVE_PLAYER_IDX===_bcMyIdx&&typeof netSend==='function'){
     try{netSend({type:'turn-event',icon:ico,txt:String(txt).slice(0,120),from:_bcMyIdx});}catch(e){}
@@ -7425,6 +7601,7 @@ function loadSave(){
     if(G.carInsurance===undefined)G.carInsurance=0;
     if(!G.delinq)G.delinq={};
     if(G.ccLateTier===undefined)G.ccLateTier=0;
+    if(G.homeOwned===undefined)G.homeOwned=null;
     // New fields (achievements, sparkline, doubles streak, market effects)
     if(!G._achievements)G._achievements=[];
     if(!G._netWorthHistory)G._netWorthHistory=[];
