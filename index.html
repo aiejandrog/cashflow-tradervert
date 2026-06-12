@@ -980,6 +980,9 @@ body{
     animation-duration:.01ms!important;animation-iteration-count:1!important;
     transition-duration:.01ms!important;scroll-behavior:auto!important;
   }
+  /* Core game-feel exemptions: panel glide + token movement stay smooth */
+  #fs-panel{transition-duration:.42s!important}
+  #player-token{transition-duration:.32s!important}
 }
 
 /* ── MYSTERY BOX ── */
@@ -2907,6 +2910,22 @@ function markPaydayNear(){
   }catch(e){}
 }
 
+// Dice rattle — quick shaken-cup noise bursts when a roll starts
+function sfxDiceRoll(){
+  const ctx=_ctx();if(!ctx)return;
+  try{
+    for(let i=0;i<4;i++){
+      const buf=ctx.createBuffer(1,ctx.sampleRate*.035,ctx.sampleRate),d=buf.getChannelData(0);
+      for(let k=0;k<d.length;k++)d[k]=(Math.random()*2-1)*Math.exp(-k/(ctx.sampleRate*.008));
+      const s=ctx.createBufferSource();s.buffer=buf;
+      const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2400+Math.random()*1200;bp.Q.value=3;
+      const g=ctx.createGain();g.gain.value=.18;
+      s.connect(bp);bp.connect(g);g.connect(ctx.destination);
+      s.start(ctx.currentTime+i*.09+Math.random()*.03);
+    }
+  }catch(e){}
+}
+
 // ── DICE + MOVEMENT ───────────────────────────────────
 // Pip grid positions [row,col] in 3×3 grid (1-indexed)
 const PIP_POS={
@@ -2968,6 +2987,11 @@ function rollDice(){
     return;
   }
   G.rolling=true;closeEvPopup();
+  // FS panel glides closed when the dice fly — clean board for the move.
+  // It comes back automatically with whatever card you land on (openFS in showEventCard/openModal).
+  $('fs-panel').classList.remove('open');
+  ['event-modal','event-modal-bg','modal','modal-bg'].forEach(id=>{const el=$(id);if(el)el.style.paddingLeft='';});
+  sfxDiceRoll();
   updateUI(); // refresh HUD/FS to the latest player state on every roll
   // Cancel any still-running gift animation from a previous doubles roll
   if(window._giftTimer){clearTimeout(window._giftTimer);window._giftTimer=null;}
