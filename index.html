@@ -4287,15 +4287,110 @@ const _PIX_TEMPLATES={
     '.....TTTT..............TTTT........',
   ],
 };
-function _pixTemplateFor(seg){
+_PIX_TEMPLATES.muscle=[ // long hood, fastback — Mustang/Camaro/M4 family
+  '....................................',
+  '..........HHHHHHHH.................',
+  '........BBWWWWWWWWBB...............',
+  '......BBBWWWWWWWWWWBBBBB...........',
+  '..BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..',
+  '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL.',
+  '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL.',
+  '..SSS.TTTT.SSSSSSSSSSSS.TTTT.SSS..',
+  '......TRRT..............TRRT......',
+  '......TTTT..............TTTT......',
+];
+_PIX_TEMPLATES.exotic=[ // cab-forward mid-engine wedge — Lambo/Ferrari/McLaren family
+  '....................................',
+  '..........HHHHHHHH.................',
+  '.......HHWWWWWWWWWHB...............',
+  '....BBBBWWWWWWWWWWWBBB.............',
+  '..BBBBBBBBBBBBBBBBBBBBBBBBBBBL....',
+  '.XBBBBBBBBBBBSSBBBBBBBBBBBBBBBLL..',
+  '.XSSSSSSSSSSSSSSSSSSSSSSSSSSSSSL..',
+  '..SS.TTTT.SSSSSSSSSSSS.TTTT.SS....',
+  '.....TRRT..............TRRT.......',
+  '.....TTTT..............TTTT.......',
+];
+_PIX_TEMPLATES.ev=[ // one-motion aero, flush nose — Tesla/Lucid family
+  '....................................',
+  '.........HHHHHHHHHHHH..............',
+  '.......HHWWWWWWWWWWWWHH............',
+  '.....BBBWWWWWWWWWWWWWWBBB..........',
+  '...BBBBBBBBBBBBBBBBBBBBBBBBBB.....',
+  '..BBBBBBBBBBBBBBBBBBBBBBBBBBBBL...',
+  '..SSSSSSSSSSSSSSSSSSSSSSSSSSSSL...',
+  '...SS.TTTT.SSSSSSSSSS.TTTT.SS.....',
+  '......TRRT............TRRT........',
+  '......TTTT............TTTT........',
+];
+_PIX_TEMPLATES.lux=[ // long formal three-box w/ chrome beltline — Rolls/Bentley/S-class family
+  '....................................',
+  '..........HHHHHHHHHHH..............',
+  '.........BWWWWSBWWWWWB.............',
+  '........BBWWWWSBWWWWWBB............',
+  '..BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB..',
+  '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBBLL.',
+  '.XHHHHHHHHHHHHHHHHHHHHHHHHHHHHHLL.',
+  '..SSS.TTTT.SSSSSSSSSSSS.TTTT.SSS..',
+  '......TRRT..............TRRT......',
+  '......TTTT..............TTTT......',
+];
+_PIX_TEMPLATES.cyber=[ // the triangle — you know the one
+  '....................................',
+  '..................HH...............',
+  '..............HHHHWWHH.............',
+  '..........HHHHWWWWWWWWBB...........',
+  '......BBBBBBBBBBBBBBBBBBBB.........',
+  '..BBBBBBBBBBBBBBBBBBBBBBBBBBBB....',
+  '.XBBBBBBBBBBBBBBBBBBBBBBBBBBBBL...',
+  '..SS.TTTT.SSSSSSSSSSSS.TTTT.SS....',
+  '.....TRRT..............TRRT.......',
+  '.....TTTT..............TTTT.......',
+];
+_PIX_TEMPLATES.hatch=[ // two-box hot hatch — Golf/Focus/Mazda3 family
+  '....................................',
+  '........HHHHHHHHHHH................',
+  '.......BWWWWSBWWWWWBB..............',
+  '.......BWWWWSBWWWWWWBB.............',
+  '......BBBBBBBBBBBBBBBBBB...........',
+  '...BBBBBBBBBBBBBBBBBBBBBBBBBB.....',
+  '..XBBBBBBBBBBBBBBBBBBBBBBBBBBLL...',
+  '...SS.TTTT.SSSSSSSSSS.TTTT.SS.....',
+  '......TRRT............TRRT........',
+  '......TTTT............TTTT........',
+];
+function _pixTemplateFor(car){
+  const seg=car.segment,n=(car.name||'').toLowerCase();
+  // model-aware first — the shape imitates the real car, the name stays honest
+  if(/cybertruck/.test(n))return _PIX_TEMPLATES.cyber;
+  if(/mustang|camaro|challenger|charger|brz|supra|nissan z|m4 |corvette/.test(n))return _PIX_TEMPLATES.muscle;
+  if(/huracan|revuelto|aventador|ferrari|mclaren|r8 |sf90|296|chiron|koenigsegg|vantage|emira|911|amg gt/.test(n))return _PIX_TEMPLATES.exotic;
+  if(/tesla|lucid|plaid|ioniq 6|model /.test(n))return _PIX_TEMPLATES.ev;
+  if(/rolls|phantom|ghost(?!buster)|bentley|maybach|ls 500|a6 |e 450|540i|g80|genesis/.test(n))return _PIX_TEMPLATES.lux;
+  if(/golf|focus|mazda 3|forte|ioniq 5|mach-e/.test(n))return _PIX_TEMPLATES.hatch;
   if(seg==='Sport'||seg==='Exotic'||seg==='Supercar'||seg==='Dream'||seg==='EV')return _PIX_TEMPLATES.wedge;
   if(seg==='SUV')return _PIX_TEMPLATES.boxy;
   if(seg==='Truck')return _PIX_TEMPLATES.truck;
   return _PIX_TEMPLATES.sedan;
 }
 function _pixPaint(car){
-  // deterministic hue from id; premium tiers get loud paint, used lots stay humble
+  // deterministic hue from id; brands get their signature paint first
   let h=0;for(let i=0;i<car.id.length;i++)h=(h*31+car.id.charCodeAt(i))>>>0;
+  const n=(car.name||'').toLowerCase();
+  const BRAND=[
+    [/ferrari/,['#d42a1f','#f0c020']],            // rosso corsa / giallo
+    [/lamborghini|huracan|revuelto|urus/,['#e8d712','#74c216','#ff7b00']],
+    [/mclaren/,['#ff7b00','#1f5ad4']],            // papaya
+    [/bugatti/,['#1f3ad4','#15151c']],
+    [/koenigsegg/,['#d8dade','#d42a1f']],
+    [/tesla|cybertruck/,['#c8ccd2','#15151c','#b51e2a']],
+    [/wrx|subaru brz/,['#1f5ad4']],               // world rally blue
+    [/porsche/,['#d8dade','#f0c020','#b51e2a']],
+    [/rolls|bentley|maybach/,['#15151c','#2a2a40','#3c2f1c']],
+    [/raptor|trd/,['#2e9e44','#ff7b00']],
+    [/mustang|camaro|corvette|challenger|charger/,['#d42a1f','#1f5ad4','#f0c020','#15151c']],
+  ];
+  for(const b of BRAND){if(b[0].test(n))return b[1][h%b[1].length];}
   const seg=car.segment;
   const vivid=['#d22b2b','#e8650f','#f0c020','#2e9e44','#1f7ad4','#8332c4','#d4317f','#10b3a6'];
   const humble=['#8a8d93','#7a6a55','#5f7287','#6e7d62','#9c8f7a','#74675e'];
@@ -4310,7 +4405,7 @@ function _shade(hex,f){
   return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
 }
 function pixelCarSVG(car){
-  const tpl=_pixTemplateFor(car.segment);
+  const tpl=_pixTemplateFor(car);
   const body=_pixPaint(car);
   const gold=['Sport','Exotic','Supercar','Dream','Luxury'].indexOf(car.segment)>=0;
   const C={B:body,H:_shade(body,1.45),S:_shade(body,0.62),D:_shade(body,0.40),W:'#9fd9f0',T:'#17171c',R:gold?'#f0c020':'#b9bdc4',r:gold?'#8a6a08':'#6a6e75',L:'#ffe27a',X:'#e23b3b'};
