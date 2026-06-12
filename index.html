@@ -1404,6 +1404,11 @@ body{
         <button id="btn-join-room" onclick="mpOpenJoinModal()">🚪 Join Room</button>
       </div>
     </div>
+    <!-- Trophy Wall + lifetime credits -->
+    <div style="display:flex;gap:10px;max-width:420px;margin:10px auto 0">
+      <button onclick="openTrophyWall()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:linear-gradient(135deg,rgba(200,145,12,.12),rgba(240,192,32,.08));border:1.5px solid rgba(240,192,32,.4);border-radius:12px;color:#f0dc90;font-size:.82rem;font-weight:900;font-family:Georgia,serif;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='rgba(240,192,32,.8)'" onmouseleave="this.style.borderColor='rgba(240,192,32,.4)'">🏆 Trophy Wall <span id="menu-trophy-count" style="font-size:.66rem;opacity:.7"></span></button>
+      <div style="display:flex;align-items:center;gap:6px;padding:10px 16px;background:rgba(200,145,12,.1);border:1.5px solid rgba(200,145,12,.35);border-radius:12px;color:#ffe9a8;font-size:.82rem;font-weight:900;font-family:Georgia,serif" title="Lifetime Credits"><span id="menu-credits">✦ 0</span></div>
+    </div>
     <!-- Daily Challenge — its own explained card, not a mystery button -->
     <div id="daily-card" onclick="startDailyRun()" style="display:flex;align-items:center;gap:12px;max-width:420px;margin:10px auto 0;padding:10px 14px;background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(107,63,168,.12));border:1.5px solid rgba(34,211,238,.3);border-radius:12px;cursor:pointer;transition:all .15s;text-align:left"
       onmouseenter="this.style.borderColor='rgba(34,211,238,.6)';this.style.transform='translateY(-1px)'" onmouseleave="this.style.borderColor='rgba(34,211,238,.3)';this.style.transform=''">
@@ -1530,6 +1535,7 @@ body{
       </div>
     </div>
     <div id="year-age-chip" title="Year · Age" style="display:flex;align-items:center;background:#2a3d5e;border:2px solid #4a6a96;border-radius:18px;padding:5px 12px;flex-shrink:0;font-size:.68rem;font-weight:900;font-family:Georgia,serif;color:#c8ddf0">Yr 1 · Age 25</div>
+    <div id="credits-chip" title="Lifetime Credits — earned from goals, trophies & wins" style="display:flex;align-items:center;background:linear-gradient(135deg,#5e4708,#8a6508);border:2px solid #c8910c;border-radius:18px;padding:5px 12px;flex-shrink:0;font-size:.68rem;font-weight:900;font-family:Georgia,serif;color:#ffe9a8">✦ 0</div>
     <div id="credit-chip" title="Credit Score" style="display:none;align-items:center;gap:6px;background:#3d2a5e;border:2px solid #6a4a96;border-radius:18px;padding:5px 12px;flex-shrink:0">
       <span style="font-size:.85rem;line-height:1">💳</span>
       <span style="display:flex;flex-direction:column;line-height:1.15">
@@ -1546,7 +1552,7 @@ body{
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
   <!-- Rotating goals (objectives system) -->
-  <div id="goals-box" style="display:none;position:fixed;top:58px;left:8px;width:208px;z-index:30;background:linear-gradient(160deg,rgba(8,3,20,.92),rgba(25,8,53,.88));border:1px solid rgba(240,192,32,.35);border-left:3px solid rgba(240,192,32,.6);border-radius:10px;padding:7px 11px;backdrop-filter:blur(6px);box-shadow:0 4px 16px rgba(0,0,0,.45)"></div>
+  <div id="goals-box" style="display:none;position:fixed;bottom:14px;right:8px;width:212px;z-index:30;background:linear-gradient(160deg,rgba(8,3,20,.92),rgba(25,8,53,.88));border:1px solid rgba(240,192,32,.35);border-left:3px solid rgba(240,192,32,.6);border-radius:10px;padding:7px 11px;backdrop-filter:blur(6px);box-shadow:0 4px 16px rgba(0,0,0,.45)"></div>
 
   <!-- Multiplayer player strip (hidden in solo mode) -->
   <div id="mp-strip"></div>
@@ -2436,6 +2442,11 @@ function recordWin(){
   (G._achievements||[]).forEach(a=>{if(!p.trophies.includes(a))p.trophies.push(a);});
   if(G._dailyDate){p.daily[G._dailyDate]={turns:t,grade:getWinGrade(t).rank};}
   saveProfile(p);
+  // ✦ for the win, scaled by grade (+ daily bonus)
+  const _g=getWinGrade(t).rank;
+  awardCredits({S:500,A:300,B:200,C:120,D:80}[_g]||80,'WIN — grade '+_g);
+  if(G._dailyDate)awardCredits(150,'Daily Challenge');
+  checkTrophies('win');
   return{newPB,best:p.bestOverall,wins:p.wins};
 }
 function populateProfileStrip(){
@@ -2460,6 +2471,142 @@ function populateProfileStrip(){
   el.style.display='';
   el.innerHTML=`🏆 Best: ${p.bestOverall?p.bestOverall+' turns':'—'} · 🎖 ${p.wins} win${p.wins!==1?'s':''} · 🎮 ${p.games} game${p.games!==1?'s':''} · 🏅 ${p.trophies.length} trophies`+
     (d?` · 📅 Daily done: ${d.turns}t (${d.grade})`:'');
+}
+
+// ══ ✦ CREDITS — lifetime meta-currency (objectives, trophies, wins, dailies) ══
+function awardCredits(n,reason){
+  if(!n)return;
+  const p=loadProfile();p.credits=(p.credits||0)+n;saveProfile(p);
+  _renderCreditChips();
+  try{
+    const chip=$('credits-chip')||$('year-age-chip');
+    if(chip&&typeof _gameScreenActive==='function'&&_gameScreenActive()){
+      const r=chip.getBoundingClientRect();
+      const t=document.createElement('div');
+      t.textContent='✦ +'+n+(reason?' · '+reason:'');
+      t.style.cssText='position:fixed;left:'+Math.max(90,r.left+r.width/2)+'px;top:'+(r.bottom+6)+'px;transform:translateX(-50%);z-index:9500;pointer-events:none;font-family:Arial,sans-serif;font-size:.72rem;font-weight:900;padding:3px 11px;border-radius:12px;white-space:nowrap;background:linear-gradient(135deg,#8a6508,#c8910c);color:#fff8e0;box-shadow:0 3px 12px rgba(200,145,12,.5)';
+      document.body.appendChild(t);
+      t.animate([{opacity:0,transform:'translateX(-50%) translateY(-8px) scale(.8)'},{opacity:1,transform:'translateX(-50%) translateY(0) scale(1.05)',offset:.15},{opacity:1,offset:.8},{opacity:0,transform:'translateX(-50%) translateY(10px)'}],{duration:2300,easing:'ease-out'}).onfinish=()=>t.remove();
+    }
+  }catch(e){}
+}
+function _renderCreditChips(){
+  const c=loadProfile().credits||0;
+  const tb=$('credits-chip');if(tb)tb.textContent='✦ '+fmt(c);
+  const mm=$('menu-credits');if(mm)mm.textContent='✦ '+fmt(c);
+}
+
+// ══ 🏆 TROPHIES — tiered, persistent, with how-to-earn ══
+const TROPHY_TIERS={C:{label:'Common',color:'#7aa86a',credits:25},R:{label:'Rare',color:'#4a8ad0',credits:50},E:{label:'Epic',color:'#a060e0',credits:100},L:{label:'Legendary',color:'#f0c020',credits:250}};
+const TROPHIES=[
+  {id:'first_roll', icon:'🎲', name:'First Steps',      tier:'C', how:'Roll the dice for the first time.'},
+  {id:'first_deal', icon:'🤝', name:'Deal Maker',       tier:'C', how:'Buy your first income-producing asset.'},
+  {id:'biz_owner',  icon:'🏪', name:'Open for Business',tier:'C', how:'Own a business.'},
+  {id:'cash_10k',   icon:'💵', name:'First Stack',      tier:'C', how:'Hold $10,000 cash at once.'},
+  {id:'goal_1',     icon:'🎯', name:'Goal Getter',      tier:'C', how:'Complete your first goal.'},
+  {id:'new_ride',   icon:'🚗', name:'New Ride',         tier:'C', how:'Buy any car from the dealership.'},
+  {id:'rock_bottom',icon:'🪦', name:'Rock Bottom',      tier:'C', how:'Go bankrupt. (Hey, at least you get a trophy.)'},
+  {id:'first_win',  icon:'🏁', name:'Escape Artist',    tier:'C', how:'Win your first game.'},
+  {id:'cr_720',     icon:'💳', name:'The 720 Club',     tier:'R', how:'Reach a 720 credit score.'},
+  {id:'landlord_3', icon:'🏘', name:'Landlord',         tier:'R', how:'Own 3 rental properties in one run.'},
+  {id:'cash_50k',   icon:'💰', name:'Half-Stack Club',  tier:'R', how:'Hold $50,000 cash at once.'},
+  {id:'debtfree',   icon:'✂️', name:'Scissors',         tier:'R', how:'Clear every personal debt in one run.'},
+  {id:'supercar',   icon:'🟡', name:'Poster Car',       tier:'R', how:'Own a Supercar-class vehicle.'},
+  {id:'homeowner',  icon:'🏡', name:'Keys In Hand',     tier:'R', how:'Buy a home from the Realty Office.'},
+  {id:'goal_streak',icon:'🔥', name:'Hot Streak',       tier:'R', how:'Complete 4 goals in a single run.'},
+  {id:'married',    icon:'💍', name:'Ride or Die',      tier:'R', how:'Get married.'},
+  {id:'win_20',     icon:'⚡', name:'Speedrunner',      tier:'E', how:'Escape the Rat Race in 20 turns or fewer.'},
+  {id:'janitor_win',icon:'🧹', name:'Legend Mode',      tier:'E', how:'Win a game as the Janitor.'},
+  {id:'millionaire',icon:'💎', name:'Millionaire',      tier:'E', how:'Reach $1,000,000 net worth.'},
+  {id:'daily_5',    icon:'📅', name:'Regular',          tier:'E', how:'Complete 5 Daily Challenges.'},
+  {id:'divorce_win',icon:'🕊', name:'Fresh Start',      tier:'E', how:'Win a game after surviving a divorce.'},
+  {id:'s_grade',    icon:'🏆', name:'Flawless',         tier:'L', how:'Win with an S grade.'},
+  {id:'family_win', icon:'👨‍👩‍👧‍👦', name:'Dynasty',     tier:'L', how:'Win while married with 3+ kids.'},
+  {id:'no_borrow',  icon:'👻', name:'Phantom',          tier:'L', how:'Win without ever taking a bank loan.'},
+];
+function unlockTrophy(id){
+  const t=TROPHIES.find(x=>x.id===id);if(!t)return;
+  const p=loadProfile();
+  if(p.trophies.includes(id))return;
+  p.trophies.push(id);saveProfile(p);
+  const tier=TROPHY_TIERS[t.tier];
+  awardCredits(tier.credits,t.name);
+  showMilestone(t.icon,'TROPHY: '+t.name+' ('+tier.label+')',t.how+' — ✦'+tier.credits+' earned.');
+  sfxWinSting();
+}
+// Lightweight stateful checks — call sites pass a hook name
+function checkTrophies(hook){
+  try{
+    if(!G)return;
+    if(hook==='roll')unlockTrophy('first_roll');
+    if(hook==='payday'||hook==='ui'){
+      if(G.cash>=10000)unlockTrophy('cash_10k');
+      if(G.cash>=50000)unlockTrophy('cash_50k');
+      if((G.creditScore||0)>=720)unlockTrophy('cr_720');
+      if(G.assets.filter(a=>a.type==='re'&&!a.isPrimaryHome).length>=3)unlockTrophy('landlord_3');
+      if(G.assets.some(a=>a.type==='biz'))unlockTrophy('biz_owner');
+      if(G.assets.some(a=>(a.cf||0)>0))unlockTrophy('first_deal');
+      if(G.liabilities.length===0&&(G.bankLoan||0)===0&&G.turn>3)unlockTrophy('debtfree');
+      if((G._objectivesDone||[]).length>=1)unlockTrophy('goal_1');
+      if((G._objectivesDone||[]).length>=4)unlockTrophy('goal_streak');
+      const assetVal=G.assets.reduce((s,a)=>s+(a.totalCost||a.cost||0),0);
+      if(G.cash+assetVal-totalLiabilities()>=1000000)unlockTrophy('millionaire');
+      if(G.relationship&&G.relationship.status==='married')unlockTrophy('married');
+    }
+    if(hook==='win'){
+      unlockTrophy('first_win');
+      if(G.turn<=20)unlockTrophy('win_20');
+      if(G.prof&&G.prof.id==='janitor')unlockTrophy('janitor_win');
+      if(getWinGrade(G.turn).rank==='S')unlockTrophy('s_grade');
+      if(!G._everBorrowed)unlockTrophy('no_borrow');
+      if(G.relationship&&G.relationship.status==='married'&&(G.childBirths||[]).length>=3)unlockTrophy('family_win');
+      if(G._divorced)unlockTrophy('divorce_win');
+      const p=loadProfile();
+      if(Object.keys(p.daily||{}).length>=5)unlockTrophy('daily_5');
+    }
+    if(hook==='bankrupt')unlockTrophy('rock_bottom');
+    if(hook==='car')unlockTrophy('new_ride');
+    if(hook==='supercar')unlockTrophy('supercar');
+    if(hook==='home')unlockTrophy('homeowner');
+  }catch(e){}
+}
+
+// ══ 🏆 TROPHY WALL overlay (main menu) ══
+function openTrophyWall(){
+  const p=loadProfile();
+  let el=document.getElementById('trophy-wall');
+  if(el)el.remove();
+  el=document.createElement('div');
+  el.id='trophy-wall';
+  el.style.cssText='position:fixed;inset:0;z-index:9600;overflow-y:auto;padding:30px 20px 50px;background:radial-gradient(ellipse 90% 55% at 50% -5%,rgba(107,63,168,.5) 0%,transparent 65%),linear-gradient(160deg,#0e0520 0%,#190835 40%,#0a0312 100%)';
+  const unlocked=p.trophies.filter(id=>TROPHIES.some(t=>t.id===id)).length;
+  const cards=TROPHIES.map(t=>{
+    const has=p.trophies.includes(t.id);
+    const tier=TROPHY_TIERS[t.tier];
+    return `<div class="tw-card${has?' tw-has':''}" data-tier="${t.tier}" style="border-color:${has?tier.color:'rgba(255,255,255,.1)'};${has?'box-shadow:0 0 18px '+tier.color+'44':''}">
+      <div style="font-size:2.2rem;line-height:1;${has?'':'filter:grayscale(1) brightness(.4)'}">${t.icon}</div>
+      <div style="font-size:.78rem;font-weight:900;font-family:Georgia,serif;color:${has?tier.color:'rgba(255,255,255,.35)'}">${t.name}</div>
+      <div style="font-size:.56rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:${tier.color}${has?'':'66'}">${tier.label} · ✦${tier.credits}</div>
+      <div style="font-size:.6rem;color:rgba(255,255,255,${has?'.6':'.35'});line-height:1.4">${has?'Unlocked!':'How: '+t.how}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML=`
+    <div style="max-width:900px;margin:0 auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+        <div>
+          <div style="font-size:1.5rem;font-weight:900;color:#f0dc90;font-family:'Arial Black',Arial,sans-serif">🏆 TROPHY WALL</div>
+          <div style="font-size:.72rem;color:rgba(200,175,120,.7);font-style:italic">${unlocked} / ${TROPHIES.length} unlocked · ✦ ${fmt(p.credits||0)} lifetime credits</div>
+        </div>
+        <button onclick="document.getElementById('trophy-wall').remove()" style="background:rgba(255,255,255,.08);border:1.5px solid rgba(240,192,32,.4);border-radius:10px;color:#f0dc90;font-size:.85rem;font-weight:800;padding:9px 22px;cursor:pointer;font-family:Georgia,serif">✕ Close</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">${cards}</div>
+      <div style="margin-top:18px;text-align:center;font-size:.62rem;color:rgba(255,255,255,.3);font-style:italic">✦ Credits unlock cosmetics in a future update — stack them now.</div>
+    </div>`;
+  document.body.appendChild(el);
+  // Legendary shimmer (WAAPI — reduced-motion immune)
+  el.querySelectorAll('.tw-card.tw-has[data-tier="L"]').forEach(c=>{
+    c.animate([{boxShadow:'0 0 14px #f0c02044'},{boxShadow:'0 0 26px #f0c020aa'},{boxShadow:'0 0 14px #f0c02044'}],{duration:2000,iterations:Infinity});
+  });
 }
 
 // ══ OBJECTIVES — rotating goals with real rewards (kills the mid-game grind) ══
@@ -2495,7 +2642,14 @@ function checkObjectives(){
       G._objectivesDone=G._objectivesDone||[];G._objectivesDone.push(id);
       if(o.rType==='cash'){G.cash+=o.rVal;addLog('🎯',`GOAL HIT: ${o.desc} — +$${fmt(o.rVal)}!`,'gold');}
       else{boostCredit(o.rVal,'goal: '+o.desc);addLog('🎯',`GOAL HIT: ${o.desc} — +${o.rVal} credit!`,'gold');}
-      sfxWinSting();
+      // ✦ credits bank to the PROFILE only once per objective id — quit-retry farming does nothing
+      try{
+        const p=loadProfile();
+        if(!p.objCredited.includes(id)){p.objCredited.push(id);saveProfile(p);awardCredits(o.fc||20,'goal');}
+      }catch(e){}
+      const gbEl=document.getElementById('goals-box');
+      if(gbEl)_emojiPopAtEl(gbEl,['✦','✨','🎯']);
+      sfxWinSting();checkTrophies('ui');
       const gb=document.getElementById('goals-box');
       if(gb)gb.animate([{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],{duration:400});
       changed=true;
@@ -2518,7 +2672,8 @@ function renderGoals(){
     G.objectives.map(id=>{
       const o=OBJECTIVE_POOL.find(x=>x.id===id);if(!o)return'';
       const reward=o.rType==='cash'?'+$'+fmt(o.rVal):'+'+o.rVal+' CR';
-      return `<div style="display:flex;align-items:center;gap:5px;font-size:.6rem;color:rgba(255,255,255,.85);font-family:Arial,sans-serif;padding:2px 0"><span>${o.icon}</span><span style="flex:1">${o.desc}</span><span style="color:#f0c020;font-weight:800">${reward}</span></div>`;
+      const credited=loadProfile().objCredited.includes(id);
+      return `<div style="display:flex;align-items:center;gap:5px;font-size:.6rem;color:rgba(255,255,255,.85);font-family:Arial,sans-serif;padding:2px 0"><span>${o.icon}</span><span style="flex:1">${o.desc}</span><span style="color:#f0c020;font-weight:800">${reward}${credited?'':' · ✦'+(o.fc||20)}</span></div>`;
     }).join('');
 }
 
@@ -3287,6 +3442,7 @@ function rollDice(){
     return;
   }
   G.rolling=true;closeEvPopup();
+  checkTrophies('roll');
   // FS panel glides closed when the dice fly — clean board for the move.
   // It comes back automatically with whatever card you land on (openFS in showEventCard/openModal).
   $('fs-panel').classList.remove('open');
@@ -3554,6 +3710,7 @@ function buyCarFinance(car,down,principal,pmt,apr,fromBoard){
   G.carOwned={id:car.id,name:car.name,emoji:car.emoji,price:car.price};
   boostCredit(3); // new installment line, on-time so far
   saveGame();
+  checkTrophies('car');if(car.segment==='Supercar'||car.segment==='Dream')checkTrophies('supercar');
   addLog('🚗',`Financed ${car.name} — $${fmt(down)} down, $${fmt(pmt)}/mo (due day ${dueDay})`,'b');
   showEventCard('life',`${car.emoji} Keys in Hand!`,
     `You drive off in a ${car.name}. $${fmt(down)} down, $${fmt(pmt)}/mo for 60 months, due on day ${dueDay}. Insurance adds $${fmt(car.ins)}/mo. Miss a payday and this loan goes delinquent.`,
@@ -3574,6 +3731,7 @@ function buyCarCash(car,fromBoard){
   G.carOwned={id:car.id,name:car.name,emoji:car.emoji,price:car.price};
   boostCredit(2);
   saveGame();
+  checkTrophies('car');if(car.segment==='Supercar'||car.segment==='Dream')checkTrophies('supercar');
   addLog('🚗',`Bought ${car.name} CASH — $${fmt(car.price)}. No car payment.`,'g');
   showEventCard('life',`${car.emoji} Paid in Full`,
     `${car.name}, no lender, no payment — just $${fmt(car.ins)}/mo insurance. The title sits in YOUR drawer.`,
@@ -3667,6 +3825,7 @@ function buyHome(h,price,down,equity,cashNeeded,principal,pmt){
   G.homeOwned={id:h.id,name:h.name,emoji:h.emoji};
   boostCredit(5);
   saveGame();
+  checkTrophies('home');
   addLog('🏡',`Bought ${h.name} for $${fmt(price)} — $${fmt(pmt+h.upkeep)}/mo housing`,'gold');
   showEventCard('life',`${h.emoji} Welcome Home!`,
     `The keys to your ${h.name} are in your hand. $${fmt(cashNeeded)} cash to close, $${fmt(pmt)}/mo mortgage + $${fmt(h.upkeep)}/mo upkeep. ${G.expenseOverrides.mortgage<expenses().total*0.3?'Comfortably within your means.':'Stretch purchase — keep the income growing.'}`,
@@ -4073,6 +4232,7 @@ function onPayday(){
   }
   // Passive credit score seasoning (+1 every payday for on-time payment history)
   boostCredit(1,'on-time payments');
+  checkTrophies('payday');
   const expTot=expenses().total;
   const freePct=expTot>0?Math.min(100,Math.round(pass/expTot*100)):0;
   const freeBar='█'.repeat(Math.round(freePct/10))+'░'.repeat(10-Math.round(freePct/10));
@@ -4215,6 +4375,7 @@ function ensureCash(needed,label){
   if(actualBorrow>0){
     G.cash+=actualBorrow;G.bankLoan=(G.bankLoan||0)+actualBorrow;
     G.extraBankPmt=Math.round(G.bankLoan*rate);
+    G._everBorrowed=true; // Phantom trophy tracker
     boostCredit(-3,'emergency borrowing');
     addLog('🏦',`Auto-borrowed $${fmt(actualBorrow)} for ${label||'payment'} — bank loan $${fmt(G.bankLoan)}`,'b');
   }
@@ -4239,6 +4400,7 @@ function checkBankruptcy(){
 function triggerBankruptcy(cause){
   if(!G||G._bankrupt)return;
   G._bankrupt=true;saveGame();
+  checkTrophies('bankrupt');
   const reasons={
     cash:`You ran out of money with nowhere left to borrow. Cash hit $${fmt(G.cash)} and the bank stopped lending.`,
     debt:`Your bank loan hit $${fmt(G.bankLoan||0)} and monthly expenses still exceed income by $${fmt(Math.abs(monthlyCF()))}/mo. The spiral became unrecoverable.`,
@@ -6581,6 +6743,33 @@ function confirmFsPay(liabKey,cur){
 }
 
 function celebrateDebtFree(debtName){
+  // Chain-break celebration: burst + green flash + sting (WAAPI — reduced-motion immune)
+  try{
+    spawnCoinBurst&&(function(){
+      const area=$('board-area')||document.body;
+      const r=area.getBoundingClientRect();
+      const cx=r.left+r.width/2,cy=r.top+r.height/2;
+      const flash=document.createElement('div');
+      flash.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:8000;background:radial-gradient(circle at '+cx+'px '+cy+'px,rgba(60,200,90,.30),transparent 55%)';
+      document.body.appendChild(flash);
+      flash.animate([{opacity:0},{opacity:1,offset:.2},{opacity:0}],{duration:800,easing:'ease-out'}).onfinish=()=>flash.remove();
+      const emo=['⛓️','💥','✂️','✨','🔓'];
+      for(let i=0;i<12;i++){
+        const p=document.createElement('div');
+        p.textContent=emo[Math.floor(Math.random()*emo.length)];
+        p.style.cssText='position:fixed;left:'+cx+'px;top:'+cy+'px;font-size:'+(1.2+Math.random()*.9)+'rem;pointer-events:none;z-index:8001;will-change:transform,opacity';
+        document.body.appendChild(p);
+        const ang=Math.random()*Math.PI*2,dist=110+Math.random()*120;
+        const dx=Math.cos(ang)*dist,dy=Math.sin(ang)*dist*.8-40;
+        p.animate([
+          {transform:'translate(-50%,-50%) scale(.4) rotate(0deg)',opacity:1},
+          {transform:'translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px)) scale(1.05) rotate('+(Math.random()*540-270)+'deg)',opacity:1,offset:.6},
+          {transform:'translate(calc(-50% + '+(dx*1.2)+'px),calc(-50% + '+(dy+80)+'px)) scale(.8)',opacity:0}
+        ],{duration:950+Math.random()*250,easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=()=>p.remove();
+      }
+      sfxWinSting();
+    })();
+  }catch(e){}
   const allClear=G.liabilities.length===0&&G.bankLoan===0;
   if(allClear){
     showMilestone('🎉','ALL DEBT CLEARED!','Every dollar of salary now stays with you. No creditors. This is where real wealth building begins.');
@@ -7752,6 +7941,7 @@ function updateUI(){
   $('pc-name').textContent=((G.identity&&G.identity.name)||G.prof.name)+' · '+G.prof.icon+' T'+G.turn;
   const yaChip=$('year-age-chip');
   if(yaChip&&G.identity)yaChip.textContent=`Yr ${G.gameYear||1} · Age ${G.identity.age||G.identity.ageStart}`;
+  _renderCreditChips();
   // ── Life Hub profile header ─────────────────────────
   (function(){
     if(!$('lh-profile'))return;
@@ -9603,6 +9793,8 @@ if(loadSave()){
 showScreen('splash');
 initSpinner();
 populateProfileStrip(); // lifetime stats under the spinner — the comeback hook
+_renderCreditChips();
+try{const _p=loadProfile();const tc=document.getElementById('menu-trophy-count');if(tc)tc.textContent=_p.trophies.filter(id=>TROPHIES.some(t=>t.id===id)).length+'/'+TROPHIES.length;}catch(e){}
 // Separate MP save slot: offer its own resume button if a room save exists
 try{
   const rawMP=localStorage.getItem(SAVE_KEY_MP);
