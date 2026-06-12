@@ -1400,6 +1400,7 @@ body{
       </div>
       <div class="sp-join-row">
         <button id="btn-join-room" onclick="mpOpenJoinModal()">🚪 Join Room</button>
+        <button id="btn-daily" onclick="startDailyRun()" title="Same run for everyone today — compare results!" style="margin-left:6px">📅 Daily Run</button>
       </div>
     </div>
     <!-- Live public room directory — hidden until at least one room is active -->
@@ -1408,6 +1409,7 @@ body{
       <div id="room-browser-list"></div>
     </div>
   </div>
+  <div id="profile-strip" style="display:none;max-width:460px;margin:10px auto 0;text-align:center;font-size:.68rem;color:rgba(240,220,144,.85);font-family:Arial,sans-serif;font-weight:700;background:rgba(255,255,255,.04);border:1px solid rgba(240,192,32,.25);border-radius:10px;padding:7px 12px"></div>
   <div id="mp-setup-hdr"></div>
   <div class="rev-card" id="rev-card">
     <div class="rev-hdr" id="rev-hdr">You Picked Your Path</div>
@@ -1531,6 +1533,8 @@ body{
     <button class="btn-og btn-gold" onclick="toggleFS()" style="padding:6px 14px;font-size:.75rem;letter-spacing:.5px">🪪 Life Hub</button>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
+  <!-- Rotating goals (objectives system) -->
+  <div id="goals-box" style="display:none;position:fixed;top:56px;right:8px;width:215px;z-index:30;background:rgba(8,3,20,.88);border:1px solid rgba(240,192,32,.3);border-radius:10px;padding:6px 10px;backdrop-filter:blur(6px);box-shadow:0 4px 16px rgba(0,0,0,.4)"></div>
 
   <!-- Multiplayer player strip (hidden in solo mode) -->
   <div id="mp-strip"></div>
@@ -2414,6 +2418,117 @@ const DREAMS = [
   {id:'legacy',name:'Leave a Legacy',icon:'👑',cost:1000000,desc:'Build something your grandchildren inherit. Generational wealth is the ultimate flex.'},
 ];
 
+// ══ PERSISTENT PROFILE (survives every run — the reason to come back) ══
+const PROFILE_KEY='cf_profile';
+function loadProfile(){
+  try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'{}');
+    return{games:p.games||0,wins:p.wins||0,bestOverall:p.bestOverall||null,bestByProf:p.bestByProf||{},daily:p.daily||{},trophies:p.trophies||[]};
+  }catch(e){return{games:0,wins:0,bestOverall:null,bestByProf:{},daily:{},trophies:[]};}
+}
+function saveProfile(p){try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p));}catch(e){}}
+function recordWin(){
+  const p=loadProfile();
+  p.wins++;
+  const t=G.turn,prof=G.prof&&G.prof.id;
+  const newPB=!p.bestOverall||t<p.bestOverall;
+  if(newPB)p.bestOverall=t;
+  if(prof&&(!p.bestByProf[prof]||t<p.bestByProf[prof]))p.bestByProf[prof]=t;
+  (G._achievements||[]).forEach(a=>{if(!p.trophies.includes(a))p.trophies.push(a);});
+  if(G._dailyDate){p.daily[G._dailyDate]={turns:t,grade:getWinGrade(t).rank};}
+  saveProfile(p);
+  return{newPB,best:p.bestOverall,wins:p.wins};
+}
+function populateProfileStrip(){
+  const el=document.getElementById('profile-strip');if(!el)return;
+  const p=loadProfile();
+  if(!p.games){el.style.display='none';return;}
+  const today=new Date().toISOString().slice(0,10);
+  const d=p.daily[today];
+  el.style.display='';
+  el.innerHTML=`🏆 Best: ${p.bestOverall?p.bestOverall+' turns':'—'} · 🎖 ${p.wins} win${p.wins!==1?'s':''} · 🎮 ${p.games} game${p.games!==1?'s':''} · 🏅 ${p.trophies.length} trophies`+
+    (d?` · 📅 Daily done: ${d.turns}t (${d.grade})`:'');
+}
+
+// ══ OBJECTIVES — rotating goals with real rewards (kills the mid-game grind) ══
+const OBJECTIVE_POOL=[
+  {id:'own3',   icon:'🏠', desc:'Own 3 income streams',            check:()=>G.assets.filter(a=>(a.cf||0)>0).length>=3,           rType:'cash',rVal:2000},
+  {id:'cr680',  icon:'💳', desc:'Reach 680 credit',                check:()=>(G.creditScore||0)>=680,                              rType:'cash',rVal:1500},
+  {id:'pass25', icon:'🗝',  desc:'Passive covers 25% of expenses', check:()=>passiveIncome()>=expenses().total*0.25,               rType:'cash',rVal:1500},
+  {id:'pass50', icon:'🔓', desc:'Passive covers 50% of expenses',  check:()=>passiveIncome()>=expenses().total*0.5,                rType:'cash',rVal:3000},
+  {id:'cash10', icon:'💵', desc:'Hold $10,000 cash',               check:()=>G.cash>=10000,                                        rType:'credit',rVal:10},
+  {id:'debt0',  icon:'✂️', desc:'Clear all personal debts',        check:()=>G.liabilities.length===0&&(G.bankLoan||0)===0,        rType:'cash',rVal:5000},
+  {id:'prop2',  icon:'🏘',  desc:'Own 2 rental properties',        check:()=>G.assets.filter(a=>a.type==='re'&&!a.isPrimaryHome).length>=2, rType:'cash',rVal:2500},
+  {id:'biz1',   icon:'🏪', desc:'Own a business',                  check:()=>G.assets.some(a=>a.type==='biz'),                     rType:'cash',rVal:1500},
+  {id:'cr720',  icon:'🌟', desc:'Reach 720 credit (Excellent)',    check:()=>(G.creditScore||0)>=720,                              rType:'cash',rVal:3000},
+  {id:'div1',   icon:'📜', desc:'Own a dividend-paying paper asset',check:()=>G.assets.some(a=>(a.type==='stock'||a.type==='note')&&(a.cf||0)>0), rType:'credit',rVal:8},
+];
+function _drawObjectives(n){
+  const doneIds=(G._objectivesDone||[]);
+  const avail=OBJECTIVE_POOL.filter(o=>!doneIds.includes(o.id)&&!o.check());
+  const picked=[];
+  while(picked.length<n&&avail.length){
+    const i=Math.floor(Math.random()*avail.length);
+    picked.push(avail.splice(i,1)[0].id);
+  }
+  return picked;
+}
+function checkObjectives(){
+  if(!G||!G.objectives||G._outerBoard)return;
+  let changed=false;
+  G.objectives=G.objectives.filter(id=>{
+    const o=OBJECTIVE_POOL.find(x=>x.id===id);
+    if(!o)return false;
+    if(o.check()){
+      G._objectivesDone=G._objectivesDone||[];G._objectivesDone.push(id);
+      if(o.rType==='cash'){G.cash+=o.rVal;addLog('🎯',`GOAL HIT: ${o.desc} — +$${fmt(o.rVal)}!`,'gold');}
+      else{boostCredit(o.rVal,'goal: '+o.desc);addLog('🎯',`GOAL HIT: ${o.desc} — +${o.rVal} credit!`,'gold');}
+      sfxWinSting();
+      const gb=document.getElementById('goals-box');
+      if(gb)gb.animate([{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],{duration:400});
+      changed=true;
+      return false;
+    }
+    return true;
+  });
+  if(changed){
+    const refill=_drawObjectives(2-G.objectives.length);
+    G.objectives.push(...refill);
+    saveGame();
+  }
+  renderGoals();
+}
+function renderGoals(){
+  const box=document.getElementById('goals-box');if(!box)return;
+  if(!G||!G.objectives||!G.objectives.length||G._outerBoard){box.style.display='none';return;}
+  box.style.display='';
+  box.innerHTML='<div style="font-size:.52rem;letter-spacing:1.5px;color:rgba(240,192,32,.85);font-weight:900;font-family:Arial,sans-serif;margin-bottom:3px">🎯 GOALS</div>'+
+    G.objectives.map(id=>{
+      const o=OBJECTIVE_POOL.find(x=>x.id===id);if(!o)return'';
+      const reward=o.rType==='cash'?'+$'+fmt(o.rVal):'+'+o.rVal+' CR';
+      return `<div style="display:flex;align-items:center;gap:5px;font-size:.6rem;color:rgba(255,255,255,.85);font-family:Arial,sans-serif;padding:2px 0"><span>${o.icon}</span><span style="flex:1">${o.desc}</span><span style="color:#f0c020;font-weight:800">${reward}</span></div>`;
+    }).join('');
+}
+
+// ══ DAILY CHALLENGE — same run for everyone, every day ══
+function _dailyHash(str){let h=0;for(let i=0;i<str.length;i++){h=((h<<5)-h+str.charCodeAt(i))|0;}return Math.abs(h);}
+function startDailyRun(){
+  const date=new Date().toISOString().slice(0,10);
+  const p=loadProfile();
+  if(p.daily[date]){
+    alert('📅 Daily already done: '+p.daily[date].turns+' turns ('+p.daily[date].grade+'). New daily at midnight!');
+    return;
+  }
+  const h=_dailyHash(date);
+  selectedProf=PROFS[h%PROFS.length];
+  selectedLocation=LOCATIONS[(h>>3)%LOCATIONS.length];
+  selectedDream=DREAMS[(h>>6)%DREAMS.length];
+  selectedIdentity=selectedIdentity&&selectedIdentity.name?selectedIdentity:{name:'Daily Runner',avatar:'🧑🏽',ethnicityLabel:'',toneLabel:'Medium',ageStart:Math.min(40,Math.max(18,selectedProf.age||25))};
+  clearSave();
+  startGame(selectedProf,selectedLocation);
+  G._dailyDate=date;saveGame();
+  addLog('📅',`DAILY RUN ${date}: ${selectedProf.icon} ${selectedProf.name} in ${selectedLocation.name}, dream: ${selectedDream.name}`,'gold');
+}
+
 // ── STATE ────────────────────────────────────────────
 let G=null, selectedProf=null, selectedLocation=null, selectedDream=null;
 let _resumeFn=null; // last overlay fn — called by ROLL button to restore dismissed screens
@@ -2472,6 +2587,7 @@ function initGame(prof, location) {
       const id=selectedIdentity||{name:'You',avatar:'\u{1F9D1}\u{1F3FD}',ethnicityLabel:'Medium',ageStart:Math.min(40,Math.max(18,prof.age||25))};
       return{name:id.name||'You',avatar:id.avatar,ethnicityLabel:id.ethnicityLabel,ageStart:id.ageStart,age:id.ageStart};
     })(),
+    objectives:[], _objectivesDone:[],
     gameYear:1, // 1 year passes per full board lap (turns are too granular — a lap ≈ a life chapter)
     carOwned:(()=>{const b=BEATERS[Math.floor(Math.random()*BEATERS.length)];return{id:'beater',name:b.name,emoji:b.emoji,beater:true};})(),
     carInsurance:0, delinq:{}, ccLateTier:0,
@@ -2485,6 +2601,8 @@ function initGame(prof, location) {
       return housingSituation==='family'?Math.min(780,score+20):score;
     })(),
   };
+  G.objectives=_drawObjectives(2); // two live goals from turn 1
+  try{const p=loadProfile();p.games++;saveProfile(p);}catch(e){}
   // Owner: add primary home as manageable RE asset
   if(isOwner){
     const homeVal=scaledProf.mortgage_d;
@@ -6491,8 +6609,14 @@ function checkOuterWin(){
   const grade=getWinGrade(G.turn);
   const gbadge=$('win-grade-badge');if(gbadge){gbadge.textContent=grade.rank;gbadge.style.color=grade.color;}
   const glbl=$('win-grade-label');if(glbl){glbl.textContent=grade.label;glbl.style.color=grade.color;}
+  const winRec=recordWin(); // persistent profile: wins, PBs, trophies, daily results
   const gchal=$('win-grade-challenge');
-  if(gchal){const diff=G.turn-32;gchal.textContent=G.turn<=32?`You did it in ${G.turn} turns — ${32-G.turn} faster than the 32-turn average!`:`You did it in ${G.turn} turns. Average is 32 — close the gap next run.`;}
+  if(gchal){
+    if(winRec.newPB&&winRec.wins>1)gchal.textContent=`🏆 NEW PERSONAL BEST — ${G.turn} turns! (previous best beaten)`;
+    else if(winRec.wins>1)gchal.textContent=`${G.turn} turns. Your best is ${winRec.best} — ${G.turn<=winRec.best?'tied!':'beat it next run.'}`;
+    else gchal.textContent=`First win: ${G.turn} turns sets your personal best. The real game starts now.`;
+    if(G._dailyDate)gchal.textContent+=` · 📅 Daily ${G._dailyDate} complete!`;
+  }
   // ── Net worth sparkline ─────────────────────────────
   const hist=G._netWorthHistory||[];
   const cv=$('win-sparkline');
@@ -7618,6 +7742,7 @@ function updateUI(){
     const insRow=$('fs-ins-row'),insVal=$('fs-insurance');
     if(insRow){const ins=G.carInsurance||0;insRow.style.display=ins>0?'':'none';if(insVal)insVal.textContent='$'+fmt(ins);}
   })();
+  checkObjectives(); // rotating goals — checked on every UI refresh, rewarded once
   $('pc-status').textContent=G.location?(G.location.icon+' '+G.location.name):'Taking Turn';
   // Credit score chip (separate pill in top bar)
   const creditChip=$('credit-chip');
@@ -8196,6 +8321,8 @@ function loadSave(){
     if(!G.delinq)G.delinq={};
     if(G.ccLateTier===undefined)G.ccLateTier=0;
     if(G.homeOwned===undefined)G.homeOwned=null;
+    if(!G.objectives)G.objectives=_drawObjectives(2);
+    if(!G._objectivesDone)G._objectivesDone=[];
     // New fields (achievements, sparkline, doubles streak, market effects)
     if(!G._achievements)G._achievements=[];
     if(!G._netWorthHistory)G._netWorthHistory=[];
@@ -9393,6 +9520,7 @@ if(loadSave()){
 }
 showScreen('splash');
 initSpinner();
+populateProfileStrip(); // lifetime stats under the spinner — the comeback hook
 $('btn-spin').addEventListener('click',doSpin);
 $('btn-again').addEventListener('click',()=>{resetToSpin();setTimeout(doSpin,310);});
 $('btn-begin').addEventListener('click',()=>{
