@@ -1329,13 +1329,18 @@ body{
    through the transparent tint but cannot click the board, FS panel, or the
    Financial Statement button (all sit far below z-index 8900). Only the HUD
    card below (its own info + Leave Game) is interactive. */
-#mp-wait{position:fixed;inset:0;background:rgba(10,6,22,.12);z-index:8900;display:none;align-items:center;justify-content:flex-start;flex-direction:column;pointer-events:auto;box-shadow:inset 0 0 0 3px rgba(34,211,238,.35)}
+#mp-wait{position:fixed;top:0;left:0;right:0;bottom:auto;background:transparent;z-index:8900;display:none;align-items:center;justify-content:flex-start;flex-direction:column;pointer-events:none}
 .mp-wait-inner{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:10px 18px 12px;max-width:440px;width:auto;margin:10px auto 0;pointer-events:auto;background:linear-gradient(180deg,rgba(18,11,34,.96),rgba(18,11,34,.88));border:1px solid rgba(34,211,238,.3);border-radius:0 0 16px 16px;box-shadow:0 8px 28px rgba(0,0,0,.5);backdrop-filter:blur(4px)}
 .mp-wait-spinner{width:26px;height:26px;border:3px solid rgba(34,211,238,.2);border-top-color:rgba(34,211,238,.85);border-radius:50%;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 4px 14px rgba(240,192,32,.45)}50%{transform:scale(1.05);box-shadow:0 6px 20px rgba(240,192,32,.7)}}
 .mp-wait-name{font-size:1.05rem;font-weight:900;color:#fff;font-family:Georgia,serif}
 .mp-wait-sub{font-size:.7rem;color:rgba(200,175,120,.65)}
+.mp-react-btn{
+  background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);border-radius:9px;
+  font-size:1rem;padding:4px 9px;cursor:pointer;transition:transform .12s,border-color .12s;line-height:1;
+}
+.mp-react-btn:hover{transform:scale(1.2);border-color:rgba(34,211,238,.6)}
 .mp-wait-scores{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:2px;width:100%}
 /* Live token of whoever is currently taking their turn (spectator view) */
 #spectate-token{position:absolute;width:26px;height:26px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:14px;z-index:60;border:2px solid #fff;box-shadow:0 0 12px rgba(34,211,238,.9);transition:left .32s cubic-bezier(.4,0,.2,1),top .32s cubic-bezier(.4,0,.2,1);pointer-events:none}
@@ -3504,7 +3509,17 @@ function syncDie2Lock(){
     :`<button onclick="toggleDie2()" style="background:rgba(134,239,172,.12);border:1px solid rgba(134,239,172,.35);color:#86efac;border-radius:6px;padding:2px 8px;font-size:.52rem;cursor:pointer;font-family:Arial,sans-serif;font-weight:700">◉ Dice 2 ON — tap to disable</button>`;
 }
 
+// True when in a NETWORK multiplayer game and it's not my turn — spectators may
+// look at everything but mutate nothing (out-of-turn changes desync + get
+// overwritten by the host's next turn-start snapshot anyway).
+function _mpLocked(){
+  return PLAYERS.length>1&&_bcRole&&ACTIVE_PLAYER_IDX!==_bcMyIdx;
+}
+function _mpLockToast(){
+  addLog('⏳','Not your turn — you can look, not touch.','');
+}
 function rollDice(){
+  if(_mpLocked()){_mpLockToast();return;}
   if(!G||G.rolling){
     // Die-1 always works: resume regardless of what overlay is currently visible
     if(G&&G.rolling&&_resumeFn){_resumeFn();return;}
@@ -3842,6 +3857,7 @@ function showCarDetail(car,fromBoard){
     ]});
 }
 function sellCurrentCar(saleVal,loanBal,fromBoard){
+  if(_mpLocked()){_mpLockToast();return;}
   const sold=G.carOwned;
   const net=saleVal-loanBal;
   G.cash+=net;
@@ -3869,6 +3885,7 @@ function _clearOldCarLoans(){
   G.liabilities=(G.liabilities||[]).filter(l=>!(l.type==='carfin'||l.name==='Car Loan'));
 }
 function buyCarFinance(car,down,principal,pmt,apr,fromBoard){
+  if(_mpLocked()){_mpLockToast();return;}
   G.cash-=down;
   _clearOldCarLoans();
   const dueDay=1+Math.floor(Math.random()*28);
@@ -3889,6 +3906,7 @@ function buyCarFinance(car,down,principal,pmt,apr,fromBoard){
   updateUI();
 }
 function buyCarCash(car,fromBoard){
+  if(_mpLocked()){_mpLockToast();return;}
   // Old car loan doesn't vanish — it gets paid off from cash at purchase
   const oldBal=(G.liabilities||[]).filter(l=>l.type==='carfin'||l.name==='Car Loan').reduce((s,l)=>s+l.amt,0);
   G.cash-=(car.price+oldBal);
@@ -3970,6 +3988,7 @@ function showHomeDetail(h){
     ]});
 }
 function buyHome(h,price,down,equity,cashNeeded,principal,pmt){
+  if(_mpLocked()){_mpLockToast();return;}
   // Sell current home if owner: remove asset + old mortgage, equity already applied to down
   const cur=_currentHomeEquity();
   if(cur){
@@ -6711,6 +6730,7 @@ function sellPrimaryResidence(){
 
 // ── BORROW / PAY ──────────────────────────────────────
 function openBorrow(){
+  if(_mpLocked()){_mpLockToast();return;}
   const priorResume=_resumeFn;
   const tier=creditTier(G.creditScore||650);
   const rate=tier.rate;
@@ -6847,6 +6867,7 @@ function payDebt(req){
 }
 
 function partialPayLiab(liabKey,amt){
+  if(_mpLocked()){_mpLockToast();return;}
   if(amt<=0||G.cash<amt)return;
   if(liabKey==='Bank Loan'){
     const p=Math.min(amt,G.bankLoan);G.cash-=p;G.bankLoan-=p;
@@ -6876,6 +6897,7 @@ function partialPayLiab(liabKey,amt){
 }
 
 function fsPayModal(liabKey){
+  if(_mpLocked()){_mpLockToast();return;}
   let cur;
   if(liabKey==='Bank Loan'){cur=G.bankLoan;}
   else{const l=G.liabilities.find(x=>x.name===liabKey);if(!l||l.amt<=0)return;cur=l.amt;}
@@ -7539,6 +7561,7 @@ function obShake(){
 }
 
 function obRoll(){
+  if(_mpLocked()){_mpLockToast();return;}
   if(G._outerRolling)return;
   const btn=$('ob-roll-btn');if(btn)btn.disabled=true;
   G._outerRolling=true;
@@ -8685,6 +8708,35 @@ function sendChatMsg(){
     try{netSend({type:'chat',from:_bcMyIdx,name:myName,txt:txt.slice(0,120)});}catch(e){}
   }
 }
+let _lastReactTs=0;
+function sendReaction(emo){
+  const now=Date.now();
+  if(now-_lastReactTs<1500)return; // spam guard
+  _lastReactTs=now;
+  const myName=(PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].name)||'You';
+  _renderReaction(myName,emo);
+  if(PLAYERS.length>1&&_bcRole&&typeof netSend==='function'){
+    try{netSend({type:'react',from:_bcMyIdx,name:myName,emo});}catch(e){}
+  }
+}
+function _renderReaction(name,emo){
+  try{
+    const x=window.innerWidth*0.5+(Math.random()*160-80);
+    const el=document.createElement('div');
+    el.style.cssText='position:fixed;left:'+x+'px;bottom:120px;z-index:9400;pointer-events:none;text-align:center;will-change:transform,opacity';
+    el.innerHTML='<div style="font-size:2.6rem;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))">'+emo+'</div>'+
+      '<div style="font-size:.6rem;font-weight:800;color:rgba(255,255,255,.85);font-family:Arial,sans-serif;text-shadow:0 1px 3px #000">'+String(name).replace(/</g,'&lt;')+'</div>';
+    document.body.appendChild(el);
+    el.animate([
+      {transform:'translateY(0) scale(.6)',opacity:0},
+      {transform:'translateY(-60px) scale(1.15)',opacity:1,offset:.2},
+      {transform:'translateY(-200px) scale(1)',opacity:1,offset:.75},
+      {transform:'translateY(-280px) scale(.9)',opacity:0}
+    ],{duration:2200,easing:'ease-out'}).onfinish=()=>el.remove();
+    addLog(emo,name+' reacted','');
+    if(!window._muted)try{_tone(880+Math.random()*220,.1,'sine',.08,0);}catch(e){}
+  }catch(e){}
+}
 function _renderChatRow(name,txt,isMe){
   const row=document.createElement('div');row.className='cl-row chat-msg';
   row.innerHTML=`<span class="cl-i">🗨</span><span class="cl-t"><b>${String(name).replace(/</g,'&lt;')}:</b> ${String(txt).replace(/</g,'&lt;')}</span>`;
@@ -9566,12 +9618,37 @@ function bcHostBroadcastLobby(){
   });
 }
 
+const MP_TURN_LIMIT_MS=120000;
 function bcHostBroadcastTurnStart(idx){
   if(!_bc||_bcRole!=='host')return;
   const p=PLAYERS[idx];
+  window._turnStartTs=Date.now();window._turnStartIdx=idx; // AFK watchdog reference
   netSend({type:'turn-start',activeIdx:idx,playerName:p.name,
-    playerColor:p.color,G:JSON.parse(JSON.stringify(p.G))});
+    playerColor:p.color,G:JSON.parse(JSON.stringify(p.G)),ts:Date.now()});
 }
+// HOST: skip a joiner whose turn exceeds the limit — uses the same advance path
+// as a normal turn-done, so all clients sync via the regular turn-start broadcast.
+setInterval(()=>{
+  try{
+    if(_bcRole!=='host'||PLAYERS.length<2)return;
+    if(typeof window._turnStartTs!=='number')return;
+    const idx=window._turnStartIdx;
+    if(idx===undefined||idx===_bcMyIdx)return;          // never skip the host's own turn
+    if(ACTIVE_PLAYER_IDX!==idx)return;                  // turn already advanced
+    const elapsed=Date.now()-window._turnStartTs;
+    if(elapsed>MP_TURN_LIMIT_MS-30000&&elapsed<MP_TURN_LIMIT_MS-20000&&!window._afkWarned){
+      window._afkWarned=true;
+      try{netSend({type:'turn-event',icon:'⏱',txt:(PLAYERS[idx]?.name||'Player')+' has 30 seconds left…',from:_bcMyIdx});}catch(e){}
+    }
+    if(elapsed>MP_TURN_LIMIT_MS){
+      window._afkWarned=false;
+      addLog('⏱',(PLAYERS[idx]?.name||'Player')+' ran out of time — turn skipped','r');
+      try{netSend({type:'turn-event',icon:'⏱',txt:(PLAYERS[idx]?.name||'Player')+' ran out of time — turn skipped',from:_bcMyIdx});}catch(e){}
+      window._turnStartTs=null;
+      mpAdvanceTurn();
+    }
+  }catch(e){}
+},10000);
 
 // ── HOST LOBBY UI ───────────────────────────────────────
 function bcShowHostLobby(){
@@ -9808,6 +9885,12 @@ function _bcJoinStatus(msg,color){
 // ── MESSAGE ROUTER ──────────────────────────────────────
 function bcHandleMessage(msg){
   if(!msg||!msg.type)return;
+  // Both roles: emoji reactions — float on every screen
+  if(msg.type==='react'){
+    if(msg.from!==_bcMyIdx)_renderReaction(msg.name||('Player '+((msg.from|0)+1)),msg.emo||'👏');
+    if(_bcRole==='host')netRelay(msg);
+    return;
+  }
   // Both roles: room chat — render + host relays to the other joiners
   if(msg.type==='chat'){
     if(msg.from!==_bcMyIdx)_renderChatRow(msg.name||('Player '+((msg.from|0)+1)),msg.txt||'');
@@ -10017,6 +10100,7 @@ function bcJoinerHandleGameStart(msg){
 function bcJoinerHandleTurnStart(msg){
   if(!_bc||_bcRole!=='joiner')return;
   window._lastHostBeat=Date.now();
+  window._turnTs=msg.ts||Date.now(); // drives the waiting-banner countdown
   if(typeof msg.activeIdx!=='number'||msg.activeIdx<0||msg.activeIdx>=PLAYERS.length)return;
   // Already won — stay on the win screen; just track whose turn it is for the strip
   if(PLAYERS[_bcMyIdx]?.won){ACTIVE_PLAYER_IDX=msg.activeIdx;mpUpdateStrip();return;}
@@ -10088,6 +10172,15 @@ function bcShowWaiting(playerName){
     placeSpectateToken(act.G.position||0,act.G.prof?.icon||'•',act.color);
   }
   $('mp-wait').style.display='flex';
+  // live countdown for the waiting banner
+  clearInterval(window._mpTimerIv);
+  window._mpTimerIv=setInterval(()=>{
+    const el=$('mp-turn-timer');
+    if(!el||$('mp-wait').style.display==='none'){clearInterval(window._mpTimerIv);return;}
+    const left=Math.max(0,Math.round((( window._turnTs||Date.now())+120000-Date.now())/1000));
+    el.textContent=left+'s';
+    el.style.color=left<=20?'#fb7185':left<=45?'#fbbf24':'#7ee0f0';
+  },1000);
 }
 
 function bcRefreshWaitScores(){
@@ -10700,6 +10793,15 @@ function endTutorial(){
         <div class="mp-wait-name" id="mp-wait-name">Waiting...</div>
         <div class="mp-wait-sub" id="mp-wait-sub">It's not your turn yet</div>
       </div>
+      <div id="mp-turn-timer" style="font-size:1rem;font-weight:900;font-family:Georgia,serif;color:#7ee0f0;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);border-radius:10px;padding:4px 10px;min-width:46px;text-align:center">—</div>
+    </div>
+    <div id="mp-reactions" style="display:flex;gap:6px;justify-content:center">
+      <span style="font-size:.55rem;color:rgba(255,255,255,.4);align-self:center;font-family:Arial,sans-serif">React:</span>
+      <button class="mp-react-btn" onclick="sendReaction('😂')">😂</button>
+      <button class="mp-react-btn" onclick="sendReaction('🔥')">🔥</button>
+      <button class="mp-react-btn" onclick="sendReaction('👏')">👏</button>
+      <button class="mp-react-btn" onclick="sendReaction('😱')">😱</button>
+      <button class="mp-react-btn" onclick="sendReaction('🤡')">🤡</button>
     </div>
     <div class="mp-wait-scores" id="mp-wait-scores"></div>
     <div style="font-size:.6rem;color:rgba(34,211,238,.6);margin-top:2px">👀 Watching the board live — your turn starts automatically</div>
