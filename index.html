@@ -412,7 +412,7 @@ body{
 
 /* Inner board (felt) */
 #board-inner{
-  background:radial-gradient(ellipse at 50% 50%,#1a4d2e 0%,#0e2d1a 70%,#081a0e 100%);
+  background:radial-gradient(ellipse at 50% 50%,var(--felt1,#1a4d2e) 0%,var(--felt2,#0e2d1a) 70%,var(--felt3,#081a0e) 100%);
   position:relative;overflow:hidden;flex-shrink:0;
 }
 #board-inner::before{
@@ -485,8 +485,8 @@ body{
 #dice-row{display:flex;gap:14px;justify-content:center;margin-bottom:8px}
 .die{
   width:60px;height:60px;border-radius:13px;
-  background:linear-gradient(145deg,#2c1a6a 0%,#180e40 100%);
-  border:2.5px solid #6040b0;
+  background:linear-gradient(145deg,var(--die1,#2c1a6a) 0%,var(--die2,#180e40) 100%);
+  border:2.5px solid var(--dieb,#6040b0);
   display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
   padding:7px;gap:0;
   box-shadow:0 5px 18px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.14),0 0 0 1px rgba(0,0,0,.4);
@@ -1451,6 +1451,7 @@ body{
     <!-- Trophy Wall + lifetime credits -->
     <div style="display:flex;gap:10px;max-width:420px;margin:10px auto 0">
       <button onclick="openTrophyWall()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:linear-gradient(135deg,rgba(200,145,12,.12),rgba(240,192,32,.08));border:1.5px solid rgba(240,192,32,.4);border-radius:12px;color:#f0dc90;font-size:.82rem;font-weight:900;font-family:Georgia,serif;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='rgba(240,192,32,.8)'" onmouseleave="this.style.borderColor='rgba(240,192,32,.4)'">🏆 Trophy Wall <span id="menu-trophy-count" style="font-size:.66rem;opacity:.7"></span></button>
+      <button onclick="openShop()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;background:linear-gradient(135deg,rgba(34,180,140,.12),rgba(34,211,170,.08));border:1.5px solid rgba(34,211,170,.4);border-radius:12px;color:#7ef0d0;font-size:.82rem;font-weight:900;font-family:Georgia,serif;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='rgba(34,211,170,.8)'" onmouseleave="this.style.borderColor='rgba(34,211,170,.4)'">🛍 Shop</button>
       <div style="display:flex;align-items:center;gap:6px;padding:10px 16px;background:rgba(200,145,12,.1);border:1.5px solid rgba(200,145,12,.35);border-radius:12px;color:#ffe9a8;font-size:.82rem;font-weight:900;font-family:Georgia,serif" title="Lifetime Credits"><span id="menu-credits">✦ 0</span></div>
     </div>
     <!-- Daily Challenge — its own explained card, not a mystery button -->
@@ -1507,6 +1508,8 @@ body{
           </div>
         </div>
       </div>
+      <div class="char-sec-hdr" id="char-premium-hdr" style="display:none">✦ Premium</div>
+      <div id="char-premium-grid" style="display:none;grid-template-columns:repeat(10,1fr);gap:6px"></div>
       <div class="char-sec-hdr"><span class="char-step-num">3</span>Your Ethnicity</div>
       <div id="char-eth-grid" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       <div class="char-sec-hdr"><span class="char-step-num">4</span>Your Look <span id="char-style-label" style="opacity:.55;text-transform:none;letter-spacing:0;font-style:italic"></span></div>
@@ -2469,8 +2472,9 @@ const PROFILE_KEY='cf_profile';
 function loadProfile(){
   try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'{}');
     return{games:p.games||0,wins:p.wins||0,bestOverall:p.bestOverall||null,bestByProf:p.bestByProf||{},daily:p.daily||{},trophies:p.trophies||[],
-      credits:p.credits||0,objCredited:p.objCredited||[],lastIdentity:p.lastIdentity||null};
-  }catch(e){return{games:0,wins:0,bestOverall:null,bestByProf:{},daily:{},trophies:[],credits:0,objCredited:[],lastIdentity:null};}
+      credits:p.credits||0,objCredited:p.objCredited||[],lastIdentity:p.lastIdentity||null,
+      owned:p.owned||[],equipped:p.equipped||{}};
+  }catch(e){return{games:0,wins:0,bestOverall:null,bestByProf:{},daily:{},trophies:[],credits:0,objCredited:[],lastIdentity:null,owned:[],equipped:{}};}
 }
 function saveProfile(p){try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p));}catch(e){}}
 function recordWin(){
@@ -2569,6 +2573,98 @@ function _renderCreditChips(){
   const c=loadProfile().credits||0;
   const tb=$('credits-chip');if(tb)tb.textContent='✦ '+fmt(c);
   const mm=$('menu-credits');if(mm)mm.textContent='✦ '+fmt(c);
+}
+
+// ══ 🛍 CREDITS SHOP — spend ✦ on cosmetics ══
+const SHOP_ITEMS=[
+  // Board felt themes
+  {id:'th_midnight',cat:'Board Themes',icon:'🌌',name:'Midnight Felt', cost:500, type:'theme',vals:{f1:'#1a2550',f2:'#0e1530',f3:'#070a18'}},
+  {id:'th_crimson', cat:'Board Themes',icon:'🟥',name:'Crimson Felt',  cost:750, type:'theme',vals:{f1:'#4d1a22',f2:'#2d0e14',f3:'#1a0808'}},
+  {id:'th_ocean',   cat:'Board Themes',icon:'🌊',name:'Ocean Felt',    cost:750, type:'theme',vals:{f1:'#0e3d4d',f2:'#082530',f3:'#04141a'}},
+  {id:'th_royal',   cat:'Board Themes',icon:'👑',name:'Royal Felt',    cost:1000,type:'theme',vals:{f1:'#3a1a5e',f2:'#220e3a',f3:'#120620'}},
+  // Dice skins
+  {id:'di_gold',    cat:'Dice Skins',  icon:'🎲',name:'Gold Dice',     cost:600, type:'dice', vals:{d1:'#7a5a08',d2:'#4a3404',db:'#f0c020'}},
+  {id:'di_neon',    cat:'Dice Skins',  icon:'🎲',name:'Neon Dice',     cost:800, type:'dice', vals:{d1:'#0a4d44',d2:'#06281f',db:'#22eecc'}},
+  {id:'di_stealth', cat:'Dice Skins',  icon:'🎲',name:'Stealth Dice',  cost:600, type:'dice', vals:{d1:'#222',d2:'#0c0c0c',db:'#555'}},
+  // Premium avatars (selectable in the character creator once owned)
+  {id:'av_ninja',   cat:'Premium Avatars',icon:'🥷',name:'The Ninja',    cost:400,type:'avatar'},
+  {id:'av_robot',   cat:'Premium Avatars',icon:'🤖',name:'The Machine',  cost:400,type:'avatar'},
+  {id:'av_alien',   cat:'Premium Avatars',icon:'👽',name:'The Visitor',  cost:400,type:'avatar'},
+  {id:'av_king',    cat:'Premium Avatars',icon:'🤴',name:'The Prince',   cost:400,type:'avatar'},
+  {id:'av_queen',   cat:'Premium Avatars',icon:'👸',name:'The Princess', cost:400,type:'avatar'},
+  {id:'av_vamp',    cat:'Premium Avatars',icon:'🧛',name:'The Count',    cost:400,type:'avatar'},
+];
+function applyCosmetics(){
+  try{
+    const eq=loadProfile().equipped||{};
+    const rs=document.documentElement.style;
+    const th=SHOP_ITEMS.find(i=>i.id===eq.theme&&i.type==='theme');
+    if(th){rs.setProperty('--felt1',th.vals.f1);rs.setProperty('--felt2',th.vals.f2);rs.setProperty('--felt3',th.vals.f3);}
+    else{rs.removeProperty('--felt1');rs.removeProperty('--felt2');rs.removeProperty('--felt3');}
+    const di=SHOP_ITEMS.find(i=>i.id===eq.dice&&i.type==='dice');
+    if(di){rs.setProperty('--die1',di.vals.d1);rs.setProperty('--die2',di.vals.d2);rs.setProperty('--dieb',di.vals.db);}
+    else{rs.removeProperty('--die1');rs.removeProperty('--die2');rs.removeProperty('--dieb');}
+  }catch(e){}
+}
+function buyShopItem(id){
+  const item=SHOP_ITEMS.find(i=>i.id===id);if(!item)return;
+  const p=loadProfile();
+  if(p.owned.includes(id))return;
+  if((p.credits||0)<item.cost){
+    alert('Not enough ✦ — you have '+fmt(p.credits||0)+', need '+fmt(item.cost)+'. Earn credits from goals, trophies and wins.');
+    return;
+  }
+  // atomic: deduct + own + save in one synchronous block
+  p.credits-=item.cost;p.owned.push(id);saveProfile(p);
+  sfxWinSting();_renderCreditChips();
+  equipShopItem(id);
+}
+function equipShopItem(id){
+  const item=SHOP_ITEMS.find(i=>i.id===id);if(!item)return;
+  const p=loadProfile();
+  if(!p.owned.includes(id))return;
+  if(item.type==='theme')p.equipped.theme=p.equipped.theme===id?null:id;
+  else if(item.type==='dice')p.equipped.dice=p.equipped.dice===id?null:id;
+  // avatars are equipped by selecting them in the character creator
+  saveProfile(p);applyCosmetics();openShop();
+}
+function openShop(){
+  const p=loadProfile();
+  let el=document.getElementById('credits-shop');if(el)el.remove();
+  el=document.createElement('div');el.id='credits-shop';
+  el.style.cssText='position:fixed;inset:0;z-index:9600;overflow-y:auto;padding:30px 20px 50px;background:radial-gradient(ellipse 90% 55% at 50% -5%,rgba(107,63,168,.5) 0%,transparent 65%),linear-gradient(160deg,#0e0520 0%,#190835 40%,#0a0312 100%)';
+  const cats=[...new Set(SHOP_ITEMS.map(i=>i.cat))];
+  const sections=cats.map(cat=>{
+    const items=SHOP_ITEMS.filter(i=>i.cat===cat).map(i=>{
+      const owned=p.owned.includes(i.id);
+      const equipped=p.equipped.theme===i.id||p.equipped.dice===i.id;
+      const swatch=i.type==='theme'
+        ?'<div style="width:100%;height:34px;border-radius:8px;background:radial-gradient(ellipse,'+i.vals.f1+','+i.vals.f3+')"></div>'
+        :i.type==='dice'
+        ?'<div style="width:34px;height:34px;margin:0 auto;border-radius:8px;background:linear-gradient(145deg,'+i.vals.d1+','+i.vals.d2+');border:2px solid '+i.vals.db+'"></div>'
+        :'<div style="font-size:2rem;line-height:34px">'+i.icon+'</div>';
+      const btn=equipped
+        ?'<div style="font-size:.6rem;font-weight:900;color:#4caf50">✓ EQUIPPED</div>'
+        :owned
+        ?(i.type==='avatar'
+          ?'<div style="font-size:.58rem;color:rgba(255,255,255,.5)">pick in Character Creator</div>'
+          :'<button onclick="equipShopItem(\''+i.id+'\')" style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.4);border-radius:8px;color:#86efac;font-size:.62rem;font-weight:800;padding:4px 12px;cursor:pointer">Equip</button>')
+        :'<button onclick="buyShopItem(\''+i.id+'\')" style="background:rgba(200,145,12,.15);border:1px solid rgba(240,192,32,.45);border-radius:8px;color:#f0dc90;font-size:.62rem;font-weight:800;padding:4px 12px;cursor:pointer">✦ '+fmt(i.cost)+'</button>';
+      return '<div style="background:linear-gradient(155deg,rgba(26,8,54,.85),rgba(14,4,32,.9));border:1px solid rgba(240,192,32,'+(owned?'.5':'.18')+');border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:7px;text-align:center">'
+        +swatch
+        +'<div style="font-size:.72rem;font-weight:900;color:'+(owned?'#f0dc90':'rgba(255,255,255,.7)')+';font-family:Georgia,serif">'+i.name+'</div>'
+        +btn+'</div>';
+    }).join('');
+    return '<div style="font-size:.66rem;letter-spacing:2px;text-transform:uppercase;color:rgba(240,192,32,.85);font-weight:800;font-family:Arial,sans-serif;margin:18px 0 8px">'+cat+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">'+items+'</div>';
+  }).join('');
+  el.innerHTML='<div style="max-width:760px;margin:0 auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'
+    +'<div><div style="font-size:1.5rem;font-weight:900;color:#f0dc90;font-family:\'Arial Black\',Arial,sans-serif">🛍 CREDITS SHOP</div>'
+    +'<div style="font-size:.72rem;color:rgba(200,175,120,.7);font-style:italic">Balance: ✦ '+fmt(p.credits||0)+' — earned from goals, trophies, wins & dailies</div></div>'
+    +'<button onclick="document.getElementById(\'credits-shop\').remove()" style="background:rgba(255,255,255,.08);border:1.5px solid rgba(240,192,32,.4);border-radius:10px;color:#f0dc90;font-size:.85rem;font-weight:800;padding:9px 22px;cursor:pointer;font-family:Georgia,serif">✕ Close</button></div>'
+    +sections+'</div>';
+  document.body.appendChild(el);
 }
 
 // ══ 🏆 TROPHIES — tiered, persistent, with how-to-earn ══
@@ -2675,7 +2771,7 @@ function openTrophyWall(){
         <button onclick="document.getElementById('trophy-wall').remove()" style="background:rgba(255,255,255,.08);border:1.5px solid rgba(240,192,32,.4);border-radius:10px;color:#f0dc90;font-size:.85rem;font-weight:800;padding:9px 22px;cursor:pointer;font-family:Georgia,serif">✕ Close</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">${cards}</div>
-      <div style="margin-top:18px;text-align:center;font-size:.62rem;color:rgba(255,255,255,.3);font-style:italic">✦ Credits unlock cosmetics in a future update — stack them now.</div>
+      <div style="margin-top:18px;text-align:center"><button onclick="document.getElementById('trophy-wall').remove();openShop()" style="background:rgba(34,211,170,.12);border:1.5px solid rgba(34,211,170,.45);border-radius:10px;color:#7ef0d0;font-size:.75rem;font-weight:800;padding:8px 20px;cursor:pointer;font-family:Georgia,serif">🛍 Spend your ✦ in the Shop →</button></div>
     </div>`;
   document.body.appendChild(el);
   // Legendary shimmer (WAAPI — reduced-motion immune)
@@ -8829,6 +8925,8 @@ document.addEventListener('keydown',function(e){
   if(sr){e.preventDefault();closeShowroom();return;}
   const tw=document.getElementById('trophy-wall');
   if(tw){e.preventDefault();tw.remove();return;}
+  const cs=document.getElementById('credits-shop');
+  if(cs){e.preventDefault();cs.remove();return;}
   const m=$('modal');
   // No modal open? ESC closes the Life Hub panel
   if((!m||!m.classList.contains('vis'))&&!($('event-modal')&&$('event-modal').classList.contains('vis'))){
@@ -10240,6 +10338,7 @@ showScreen('splash');
 initSpinner();
 populateProfileStrip(); // lifetime stats under the spinner — the comeback hook
 _renderCreditChips();
+applyCosmetics(); // equipped felt/dice colors apply from boot
 try{const _p=loadProfile();const tc=document.getElementById('menu-trophy-count');if(tc)tc.textContent=_p.trophies.filter(id=>TROPHIES.some(t=>t.id===id)).length+'/'+TROPHIES.length;}catch(e){}
 // Separate MP save slot: offer its own resume button if a room save exists
 try{
@@ -10339,6 +10438,30 @@ function buildCharacterScreen(){
       grid.appendChild(cell);
     });
   });
+  // ✦ Premium avatars — owned ones selectable, unowned show lock + price
+  const pg=$('char-premium-grid'),ph=$('char-premium-hdr');
+  if(pg&&ph){
+    const prof_=loadProfile();
+    const avatars=SHOP_ITEMS.filter(i=>i.type==='avatar');
+    pg.innerHTML='';pg.style.display='grid';ph.style.display='';
+    avatars.forEach(a=>{
+      const owned=prof_.owned.includes(a.id);
+      const cell=document.createElement('div');
+      cell.className='char-cell'+(selectedIdentity.avatar===a.icon?' sel':'');
+      cell.textContent=a.icon;
+      cell.title=owned?a.name+' (Premium)':a.name+' — ✦'+a.cost+' in the Shop';
+      if(!owned)cell.style.cssText+='filter:grayscale(.8) brightness(.5)';
+      cell.onclick=()=>{
+        if(!owned){alert('🛍 '+a.name+' costs ✦'+a.cost+' — buy it in the Shop on the main menu.');return;}
+        selectedIdentity.avatar=a.icon;selectedIdentity.toneLabel='Premium';
+        document.querySelectorAll('.char-cell').forEach(d=>d.classList.remove('sel'));
+        cell.classList.add('sel');
+        const sl=$('char-style-label');if(sl)sl.textContent='— '+a.name+' ✦';
+        _charSyncPreview();playClick&&playClick();
+      };
+      pg.appendChild(cell);
+    });
+  }
   const ethGrid=$('char-eth-grid');
   if(ethGrid){
     ethGrid.innerHTML='';
