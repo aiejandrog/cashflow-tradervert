@@ -8959,16 +8959,16 @@ const CHAR_TONES=[
 // Avatar styles: base emoji + optional ZWJ hair component. Each style renders in all 5 tones.
 const ZWJ='‍'; // zero-width joiner for compound emoji (explicit escape so invisible literals can't get mangled)
 const CHAR_STYLES=[
-  {label:'Classic',      build:t=>'\u{1F9D1}'+t},                       // 🧑
-  {label:'Short Hair',   build:t=>'\u{1F468}'+t},                       // 👨
-  {label:'Long Hair',    build:t=>'\u{1F469}'+t},                       // 👩
-  {label:'Curly',        build:t=>'\u{1F9D1}'+t+ZWJ+'\u{1F9B1}'},       // 🧑‍🦱
-  {label:'Curly Long',   build:t=>'\u{1F469}'+t+ZWJ+'\u{1F9B1}'},       // 👩‍🦱
-  {label:'Red Hair',     build:t=>'\u{1F469}'+t+ZWJ+'\u{1F9B0}'},       // 👩‍🦰
-  {label:'Beard',        build:t=>'\u{1F9D4}'+t},                       // 🧔
-  {label:'Bald',         build:t=>'\u{1F468}'+t+ZWJ+'\u{1F9B2}'},       // 👨‍🦲
-  {label:'Silver',       build:t=>'\u{1F9D1}'+t+ZWJ+'\u{1F9B3}'},       // 🧑‍🦳
-  {label:'Headscarf',    build:t=>'\u{1F9D5}'+t},                       // 🧕
+  {label:'Classic',      g:'n', build:t=>'\u{1F9D1}'+t},                       // 🧑
+  {label:'Short Hair',   g:'m', build:t=>'\u{1F468}'+t},                       // 👨
+  {label:'Long Hair',    g:'f', build:t=>'\u{1F469}'+t},                       // 👩
+  {label:'Curly',        g:'n', build:t=>'\u{1F9D1}'+t+ZWJ+'\u{1F9B1}'},       // 🧑‍🦱
+  {label:'Curly Long',   g:'f', build:t=>'\u{1F469}'+t+ZWJ+'\u{1F9B1}'},       // 👩‍🦱
+  {label:'Red Hair',     g:'f', build:t=>'\u{1F469}'+t+ZWJ+'\u{1F9B0}'},       // 👩‍🦰
+  {label:'Beard',        g:'m', build:t=>'\u{1F9D4}'+t},                       // 🧔
+  {label:'Bald',         g:'m', build:t=>'\u{1F468}'+t+ZWJ+'\u{1F9B2}'},       // 👨‍🦲
+  {label:'Silver',       g:'n', build:t=>'\u{1F9D1}'+t+ZWJ+'\u{1F9B3}'},       // 🧑‍🦳
+  {label:'Headscarf',    g:'f', build:t=>'\u{1F9D5}'+t},                       // 🧕
 ];
 const ETHNICITIES=[
   {label:'Latino / Hispanic',icon:'🌎'},
@@ -8982,7 +8982,10 @@ const ETHNICITIES=[
   {label:'Pacific Islander',icon:'🌴'},
   {label:'Mixed / Multiracial',icon:'🌈'},
 ];
-const CHAR_NAMES=['Alex','Jordan','Sam','Maya','Leo','Nina','Marcus','Sofia','Andre','Keisha','Diego','Amara','Chen','Priya','Omar','Luna','Zoe','Malik','Isabella','Kai','Aaliyah','Mateo','Yuki','Fatima','Ezra','Naomi','Dante','Selena','Ravi','Skye'];
+const NAMES_M=['Leo','Marcus','Andre','Diego','Omar','Malik','Kai','Mateo','Ezra','Dante','Ravi','Carlos','Jamal','Kenji','Luca','Trey','Hassan','Victor','Andy','Moses'];
+const NAMES_F=['Maya','Nina','Sofia','Keisha','Amara','Priya','Luna','Zoe','Isabella','Aaliyah','Yuki','Fatima','Naomi','Selena','Skye','Carmen','Imani','Mei','Valentina','Aisha'];
+const NAMES_N=['Alex','Jordan','Sam','Chen','Riley','Casey','Quinn','Devon','Angel','Sage'];
+function namePoolFor(gender){return gender==='m'?NAMES_M.concat(NAMES_N):gender==='f'?NAMES_F.concat(NAMES_N):NAMES_N.concat(NAMES_M,NAMES_F);}
 let selectedIdentity=null;
 function _charDefaultIdentity(){
   const seedAge=Math.min(40,Math.max(18,(selectedProf&&selectedProf.age)||25));
@@ -8999,7 +9002,7 @@ function buildCharacterScreen(){
       cell.textContent=av;
       cell.title=style.label+' · '+tone.label;
       cell.onclick=()=>{
-        selectedIdentity.avatar=av;selectedIdentity.toneLabel=tone.label;
+        selectedIdentity.avatar=av;selectedIdentity.toneLabel=tone.label;selectedIdentity.gender=style.g;
         grid.querySelectorAll('.char-cell').forEach(d=>d.classList.remove('sel'));
         cell.classList.add('sel');
         const sl=$('char-style-label');if(sl)sl.textContent='— '+style.label+' · '+tone.label;
@@ -9028,12 +9031,13 @@ function buildCharacterScreen(){
   ageEl.oninput=()=>{selectedIdentity.ageStart=+ageEl.value;$('char-age-val').textContent=ageEl.value;_charSyncPreview();};
   const nameEl=$('char-name');
   nameEl.value=selectedIdentity.name||'';
-  nameEl.oninput=()=>{selectedIdentity.name=nameEl.value.trim();_charSyncPreview();};
+  nameEl.oninput=()=>{selectedIdentity.name=nameEl.value.trim();selectedIdentity._typedName=!!selectedIdentity.name;_charSyncPreview();};
   _charSyncPreview();
 }
 function charRandomName(){
   selectedIdentity=selectedIdentity||_charDefaultIdentity();
-  selectedIdentity.name=CHAR_NAMES[Math.floor(Math.random()*CHAR_NAMES.length)];
+  const pool=namePoolFor(selectedIdentity.gender||'n');
+  selectedIdentity.name=pool[Math.floor(Math.random()*pool.length)];
   $('char-name').value=selectedIdentity.name;
   _charSyncPreview();playClick&&playClick();
 }
@@ -9043,9 +9047,14 @@ function charRandomize(){
   selectedIdentity=selectedIdentity||_charDefaultIdentity();
   selectedIdentity.avatar=style.build(tone.mod);
   selectedIdentity.toneLabel=tone.label;
+  selectedIdentity.gender=style.g;
   selectedIdentity.ethnicityLabel=ETHNICITIES[Math.floor(Math.random()*ETHNICITIES.length)].label;
   selectedIdentity.ageStart=18+Math.floor(Math.random()*23);
-  if(!$('char-name').value.trim())selectedIdentity.name=CHAR_NAMES[Math.floor(Math.random()*CHAR_NAMES.length)];
+  // Name always re-rolls to MATCH the avatar's gender — unless the player typed their own
+  if(!selectedIdentity._typedName){
+    const pool=namePoolFor(style.g);
+    selectedIdentity.name=pool[Math.floor(Math.random()*pool.length)];
+  }
   buildCharacterScreen();playClick&&playClick();
 }
 function _charSyncPreview(){
