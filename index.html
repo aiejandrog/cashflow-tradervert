@@ -552,6 +552,7 @@ body{
 .fd-pip{width:70%;height:70%;border-radius:50%;background:var(--fdpip,#16161a)}
 /* static board dice retired — the 3D throw IS the dice now */
 #dice-row{display:none}
+#m-roll{display:none}
 /* ── turn info lives in the board center now — the parchment box is retired ── */
 #bc-turn-info{display:flex;flex-direction:column;align-items:center;gap:5px;max-width:270px;margin:2px auto 0}
 #bti-title{font-size:.78rem;font-weight:900;font-family:Georgia,serif;font-style:italic;color:#f0dc90;text-shadow:0 2px 6px rgba(0,0,0,.6)}
@@ -1096,6 +1097,12 @@ body{
   #dream-detail{max-height:90px;overflow-y:auto}
   #board-area{padding:4px;overflow:auto}
   /* board scaling handled dynamically by fitBoard() — no override needed */
+  /* Big thumb-friendly ROLL at the bottom — the center pill shrinks with the
+     scaled board, so on phones we surface a fixed full-size roll button. */
+  #m-roll.on{display:block;position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:200;
+    background:linear-gradient(135deg,#c8910c,#f0c020 55%,#c8910c);border:2px solid #f8e070;border-radius:16px;
+    color:#1a0800;font-family:Georgia,serif;font-weight:900;font-size:1.1rem;letter-spacing:1.5px;
+    padding:16px 48px;min-height:56px;box-shadow:0 8px 26px rgba(240,192,32,.55);cursor:pointer;animation:lhbGlow 2s infinite}
   #board-area{height:calc(100vh - 50px - 48px);align-items:flex-start;padding-top:0}
   .mbox{max-width:96vw;width:96vw;font-size:.85rem}
   .mb-row{font-size:.78rem}
@@ -3650,6 +3657,27 @@ function forceFitBoard(maxMs){
   })();
 }
 window.addEventListener('resize',fitBoard);
+// ── 📱 MOBILE ROLL BUTTON — big fixed thumb target; the center pill is too small
+// once the board is scaled down on phones. Visible only <=620px on your own
+// rollable turn; routes to obRoll on the Fast Track. rollDice/obRoll are fully
+// guarded, so a tap is always safe even if state shifts mid-frame.
+setInterval(()=>{
+  try{
+    var b=document.getElementById('m-roll');
+    if(innerWidth>620){if(b)b.classList.remove('on');return;}
+    if(!b){b=document.createElement('button');b.id='m-roll';b.textContent='🎲 ROLL';
+      b.onclick=function(){var ob=document.getElementById('game')&&document.getElementById('game').classList.contains('ob-mode');if(ob){if(typeof obRoll==='function')obRoll();}else{rollDice();}};
+      document.body.appendChild(b);}
+    var ok = typeof _gameScreenActive==='function' && _gameScreenActive()
+      && !window._mpPaused && typeof G!=='undefined' && G && !G.rolling
+      && !(typeof _mpLocked==='function' && _mpLocked())
+      && !($('event-modal')&&$('event-modal').classList.contains('vis'))
+      && !($('modal')&&$('modal').classList.contains('vis'))
+      && !($('mp-wait')&&$('mp-wait').style.display==='flex')
+      && !($('mp-handoff')&&$('mp-handoff').style.display==='flex');
+    b.classList.toggle('on',!!ok);
+  }catch(e){}
+},400);
 // ── 🛟 GHOST-ROLL WATCHDOG — universal recovery for any stuck turn ──────────
 // If G.rolling stays true with NOTHING on screen to act on (no card, no modal,
 // no flying dice, no doubles gift, not MP-paused) for ~7.5s, the move/card flow
