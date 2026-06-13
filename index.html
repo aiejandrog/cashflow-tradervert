@@ -3031,15 +3031,18 @@ function _mbReveal(ov,item,isDupe,refund){
   try{if(typeof _haptic==='function')_haptic(item.rarity==='mythic'?[60,40,60,40,120]:item.rarity==='legendary'?[40,30,40,30,80]:[25,40,25]);}catch(e){}
 }
 
-function openShop(){
+function openInventory(){openShop('inv');}
+function openShop(mode){
   if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   const p=loadProfile();
+  const inv=(mode==='inv'); // Inventory view = only the cosmetics you own
   let el=document.getElementById('credits-shop');if(el)el.remove();
   el=document.createElement('div');el.id='credits-shop';
   el.style.cssText='position:fixed;inset:0;z-index:9600;overflow-y:auto;padding:30px 20px 50px;background:radial-gradient(ellipse 90% 55% at 50% -5%,rgba(107,63,168,.5) 0%,transparent 65%),linear-gradient(160deg,#0e0520 0%,#190835 40%,#0a0312 100%)';
-  const cats=[...new Set(SHOP_ITEMS.map(i=>i.cat))];
+  const pool=inv?SHOP_ITEMS.filter(i=>p.owned.includes(i.id)):SHOP_ITEMS;
+  const cats=[...new Set(pool.map(i=>i.cat))];
   const sections=cats.map(cat=>{
-    const items=SHOP_ITEMS.filter(i=>i.cat===cat).map(i=>{
+    const items=pool.filter(i=>i.cat===cat).map(i=>{
       const owned=p.owned.includes(i.id);
       const rar=RARITY[i.rarity]||RARITY.common;
       const equipped=p.equipped.theme===i.id||p.equipped.dice===i.id;
@@ -3064,22 +3067,30 @@ function openShop(){
     return '<div style="font-size:.66rem;letter-spacing:2px;text-transform:uppercase;color:rgba(240,192,32,.85);font-weight:800;font-family:Arial,sans-serif;margin:18px 0 8px">'+cat+'</div>'
       +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">'+items+'</div>';
   }).join('');
-  el.innerHTML='<div style="max-width:760px;margin:0 auto">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'
-    +'<div><div style="font-size:1.5rem;font-weight:900;color:#f0dc90;font-family:\'Arial Black\',Arial,sans-serif">🛍 CREDITS SHOP</div>'
-    +'<div style="font-size:.72rem;color:rgba(200,175,120,.7);font-style:italic">Balance: ✦ '+fmt(p.credits||0)+' — earned from goals, trophies, wins & dailies</div></div>'
-    +'<button onclick="document.getElementById(\'credits-shop\').remove()" style="background:rgba(255,255,255,.08);border:1.5px solid rgba(240,192,32,.4);border-radius:10px;color:#f0dc90;font-size:.85rem;font-weight:800;padding:9px 22px;cursor:pointer;font-family:Georgia,serif">✕ Close</button></div>'
-    // 🎁 Mystery Box
-    +'<div style="margin:16px 0 6px;background:linear-gradient(135deg,rgba(70,32,125,.6),rgba(20,8,45,.8));border:2px solid rgba(176,96,224,.55);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 0 24px rgba(176,96,224,.22) inset">'
+  const ownedCount=(p.owned||[]).filter(function(id){return SHOP_ITEMS.find(function(s){return s.id===id;});}).length;
+  const toggle='<div style="display:flex;gap:7px;flex-wrap:wrap">'
+    +'<button onclick="openShop()" style="background:'+(inv?'rgba(255,255,255,.06)':'rgba(240,192,32,.2)')+';border:1.5px solid rgba(240,192,32,.45);border-radius:10px;color:#f0dc90;font-size:.74rem;font-weight:800;padding:8px 15px;cursor:pointer;font-family:Georgia,serif">🛍 Shop</button>'
+    +'<button onclick="openInventory()" style="background:'+(inv?'rgba(34,211,170,.2)':'rgba(255,255,255,.06)')+';border:1.5px solid rgba(34,211,170,.45);border-radius:10px;color:#7ef0d0;font-size:.74rem;font-weight:800;padding:8px 15px;cursor:pointer;font-family:Georgia,serif">📦 Inventory</button>'
+    +'<button onclick="document.getElementById(\'credits-shop\').remove()" style="background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.25);border-radius:10px;color:#fff;font-size:.85rem;font-weight:800;padding:8px 14px;cursor:pointer;font-family:Georgia,serif">✕</button>'
+  +'</div>';
+  const mysteryHTML='<div style="margin:16px 0 6px;background:linear-gradient(135deg,rgba(70,32,125,.6),rgba(20,8,45,.8));border:2px solid rgba(176,96,224,.55);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 0 24px rgba(176,96,224,.22) inset">'
       +'<div style="font-size:2.6rem;animation:giftPulse .9s ease-in-out infinite alternate">🎁</div>'
       +'<div style="flex:1;min-width:150px;text-align:left">'
         +'<div style="font-size:1rem;font-weight:900;color:#e8d0ff;font-family:Georgia,serif">Mystery Box</div>'
         +'<div style="font-size:.64rem;color:rgba(220,200,255,.72);line-height:1.4">Spin for a random dice skin, avatar or theme — rarer pulls are flashier. Duplicates refund 40% ✦.</div>'
       +'</div>'
       +'<button onclick="mysteryBoxSpin()" style="background:linear-gradient(135deg,#7a30c0,#b060e0);border:none;border-radius:12px;color:#fff;font-size:.9rem;font-weight:900;padding:12px 22px;cursor:pointer;font-family:Georgia,serif;box-shadow:0 4px 18px rgba(176,96,224,.5);white-space:nowrap">🎲 SPIN — ✦ '+fmt(MYSTERY_COST)+'</button>'
-    +'</div>'
-    +'<div style="font-size:.62rem;color:rgba(200,175,120,.65);font-style:italic;margin:2px 0 0">📦 Inventory: '+(p.owned||[]).filter(function(id){return SHOP_ITEMS.find(function(s){return s.id===id;});}).length+' / '+SHOP_ITEMS.length+' collected · rarity colors show what you own</div>'
-    +sections+'</div>';
+    +'</div>';
+  const emptyInv='<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,.55)"><div style="font-size:3rem;margin-bottom:10px">📦</div><div style="font-size:1rem;font-weight:800;font-family:Georgia,serif;color:#f0dc90">Your inventory is empty</div><div style="font-size:.72rem;margin-top:6px">Buy cosmetics in the Shop or spin the Mystery Box to start your collection.</div><button onclick="openShop()" style="margin-top:16px;background:rgba(240,192,32,.18);border:1.5px solid rgba(240,192,32,.5);border-radius:10px;color:#f0dc90;font-size:.78rem;font-weight:800;padding:10px 22px;cursor:pointer;font-family:Georgia,serif">🛍 Go to Shop →</button></div>';
+  el.innerHTML='<div style="max-width:760px;margin:0 auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'
+    +'<div><div style="font-size:1.5rem;font-weight:900;color:'+(inv?'#7ef0d0':'#f0dc90')+';font-family:\'Arial Black\',Arial,sans-serif">'+(inv?'📦 MY INVENTORY':'🛍 CREDITS SHOP')+'</div>'
+    +'<div style="font-size:.72rem;color:rgba(200,175,120,.7);font-style:italic">'+(inv?(ownedCount+' / '+SHOP_ITEMS.length+' cosmetics collected · tap a card to equip'):('Balance: ✦ '+fmt(p.credits||0)+' — earned from goals, trophies, wins & dailies'))+'</div></div>'
+    +toggle+'</div>'
+    +(inv?'':mysteryHTML)
+    +(inv?'':'<div style="font-size:.62rem;color:rgba(200,175,120,.65);font-style:italic;margin:2px 0 0">📦 '+ownedCount+' / '+SHOP_ITEMS.length+' collected · rarity colors show what you own</div>')
+    +(inv&&!pool.length?emptyInv:sections)
+    +'</div>';
   document.body.appendChild(el);
 }
 
@@ -3205,6 +3216,8 @@ function _trophyTipShow(tid,anchor){
   const tier=TROPHY_TIERS[t.tier];
   const has=loadProfile().trophies.includes(t.id);
   const el=_trophyTipEl();
+  try{el.getAnimations().forEach(a=>a.cancel());}catch(e){} // clear any stuck fill:forwards hide (was leaving opacity:0)
+  el.style.opacity='1';
   el.style.borderColor=has?tier.color:'rgba(255,255,255,.25)';
   el.innerHTML=`<div class="tt-top">
       <div class="tt-ico" style="${has?'':'filter:grayscale(1) brightness(.45)'}">${t.icon}</div>
@@ -3231,8 +3244,12 @@ function _trophyTipShow(tid,anchor){
 function _trophyTipHide(){
   const el=document.getElementById('trophy-tip');
   if(!el||el.style.display==='none')return;
-  el.animate([{opacity:1},{opacity:0}],{duration:120,fill:'forwards'}).onfinish=()=>{el.style.display='none';};
+  try{el.getAnimations().forEach(a=>a.cancel());}catch(e){}
+  const a=el.animate([{opacity:1},{opacity:0}],{duration:120}); // NO fill:forwards (was sticking opacity:0)
+  a.onfinish=()=>{el.style.display='none';el.style.opacity='';};
 }
+// soft chime when a trophy tooltip pops
+function _trophyTipSound(){try{if(!window._muted){_tone(620,.05,'triangle',.05,0,860);_tone(920,.04,'sine',.035,.05);}}catch(e){}}
 let _curTipTid=null;
 document.addEventListener('mouseover',e=>{
   const item=e.target.closest&&e.target.closest('[data-tid]');
@@ -3240,7 +3257,7 @@ document.addEventListener('mouseover',e=>{
   const tid=item.getAttribute('data-tid');
   if(tid===_curTipTid)return; // same trophy — don't re-animate (was the flicker)
   _curTipTid=tid;
-  _trophyTipShow(tid,item);
+  _trophyTipShow(tid,item);_trophyTipSound();
 });
 document.addEventListener('mouseout',e=>{
   const item=e.target.closest&&e.target.closest('[data-tid]');
@@ -3248,6 +3265,15 @@ document.addEventListener('mouseout',e=>{
   const to=e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('[data-tid]');
   if(to===item)return; // moving within the same trophy — keep it shown
   _curTipTid=null;_trophyTipHide();
+});
+// Touch / click support — phones have no hover, so TAP a trophy box to see its details.
+document.addEventListener('click',e=>{
+  const item=e.target.closest&&e.target.closest('.tw-card[data-tid]'); // wall cards (splash rack already opens the wall on tap)
+  if(!item){if(_curTipTid){_curTipTid=null;_trophyTipHide();}return;}
+  const tid=item.getAttribute('data-tid');
+  if(tid===_curTipTid){_curTipTid=null;_trophyTipHide();return;} // tap again to dismiss
+  _curTipTid=tid;_trophyTipShow(tid,item);_trophyTipSound();
+  clearTimeout(window._tipTapTimer);window._tipTapTimer=setTimeout(()=>{_curTipTid=null;_trophyTipHide();},4500);
 });
 document.addEventListener('scroll',()=>{_curTipTid=null;_trophyTipHide();},true);
 function openTrophyWall(){
