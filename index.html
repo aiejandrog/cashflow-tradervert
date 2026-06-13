@@ -1857,6 +1857,7 @@ body{
               <div class="die" id="ob-die-2" style="width:46px;height:46px">⚀</div>
             </div>
             <button class="ob-roll-btn" id="ob-roll-btn" onclick="obRoll()" style="max-width:270px;margin-top:2px;padding:10px">🎲 ROLL — FAST TRACK</button>
+            <button class="ob-roll-btn" id="ob-endturn-btn" onclick="obEndFastTrackTurn()" style="display:none;max-width:270px;margin-top:2px;padding:10px;background:linear-gradient(135deg,#3a6ea5,#5b9bd5)">✅ End Turn — Pass Device →</button>
             <div style="display:flex;gap:5px;width:100%;max-width:270px">
               <button onclick="openFS()" style="flex:1;padding:5px 4px;font-size:.6rem;font-weight:700;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:7px;color:rgba(255,255,255,.75);cursor:pointer;font-family:Georgia,serif">📊 View FS</button>
               <button onclick="openBorrow()" style="flex:1;padding:5px 4px;font-size:.6rem;font-weight:700;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:7px;color:rgba(255,255,255,.75);cursor:pointer;font-family:Georgia,serif">🏦 Loan</button>
@@ -8798,11 +8799,16 @@ function closeModal(){
 function checkWin(){
   const pass=passiveIncome(),exp=expenses().total;
   const threshold=1.0;
-  if(exp>0&&pass>=exp*threshold&&!G._winning){
+  if(exp>0&&pass>=exp*threshold&&!G._winning&&!G._outerBoard){
+    // Multiplayer Fast Track (EXPERIMENTAL, flag window._mpFastTrack, default OFF):
+    // escaping moves YOU to the outer-ring Fast Track but the game CONTINUES — first
+    // to buy their dream wins. Default MP behavior (escape = win) is unchanged.
+    if(PLAYERS.length>1){
+      if(window._mpFastTrack){mpEnterFastTrack(pass,exp);return;}
+      G._winning=true;mpEscapeWin(pass,exp);return;
+    }
+    // Solo: escaping the rat race IS the win — enter the Fast Track.
     G._winning=true;
-    // Multiplayer: escaping the rat race IS the win — the solo Fast Track would
-    // stall every other player's turn forever. Race ends for this player here.
-    if(PLAYERS.length>1){mpEscapeWin(pass,exp);return;}
     if(document.hidden){enterOuterBoard(pass,exp);}else{setTimeout(()=>enterOuterBoard(pass,exp),800);}
   }
 }
@@ -9017,6 +9023,33 @@ const OUTER_BUSINESSES=[
   {name:'Apartment Complex',   icon:'🏘️', cost:1800000,down:360000,cf:22000,desc:'48-unit value-add. Force equity through NOI.'},
   {name:'Strip Center NNN',    icon:'🏪', cost:950000, down:190000,cf:13500,desc:'Tenants pay all expenses. You collect checks.'},
 ];
+
+// MP Fast Track (EXPERIMENTAL, flag window._mpFastTrack): escaping moves this player
+// to the outer-ring Fast Track WITHOUT ending the game. Board mode is applied per-turn
+// by mpAdvanceTurn from each player's G._outerBoard, so we only set state here and let
+// the turn end normally (endTurn -> mpAdvanceTurn passes the device). HOTSEAT-verifiable;
+// the networked cross-device render of an opponent on the ring is a separate follow-up.
+function mpEnterFastTrack(pass,exp){
+  G._outerPos=0;G._outerRolling=false;G._outerBoard=true;G._mpFtRollUsed=false;
+  // Same cleanup as enterOuterBoard — inner-board timers don't tick on the ring.
+  if((G._recessionTurns||0)>0){
+    if(G._recessionSalCut){G.salaryBoost=(G.salaryBoost||0)+G._recessionSalCut;delete G._recessionSalCut;}
+    G.assets.forEach(a=>{if(a._preRecessionCF!==undefined){a.cf=Math.max(0,a._preRecessionCF-(a._crashCutCF||0));delete a._preRecessionCF;}});
+    G._recessionTurns=0;G._recessionExpSpike=0;
+  }
+  if(G._layoffSalCut){G.salaryBoost=(G.salaryBoost||0)+G._layoffSalCut;delete G._layoffSalCut;}
+  if(G._disabilitySalCut){G.salaryBoost=(G.salaryBoost||0)+G._disabilitySalCut;delete G._disabilitySalCut;}
+  G.skipTurns=0;
+  if((G._auditPlanMonths||0)>0){
+    if(G._auditPlanAmt){G.expenseOverrides=G.expenseOverrides||{};G.expenseOverrides.other=Math.max(0,(G.expenseOverrides.other||G.prof.other)-G._auditPlanAmt);delete G._auditPlanAmt;}
+    G._auditPlanMonths=0;
+  }
+  G.rolling=false;
+  addLog('🏁','ESCAPED THE RAT RACE → Fast Track! Land on your ⭐ dream and buy it to win.','gold');
+  try{if(typeof _haptic==='function')_haptic([40,30,40,30,90]);}catch(e){}
+  // No cutscene/launch here — endTurn will pass the device, and this player's NEXT
+  // turn renders the Fast Track via mpAdvanceTurn -> _syncBoardModeForActive.
+}
 
 function enterOuterBoard(pass,exp){
   G._outerPos=0;
@@ -9236,9 +9269,32 @@ function positionObToken(animate){
 }
 function hideObToken(){const t=document.getElementById('ob-token');if(t)t.style.display='none';}
 
+// Re-arm the Fast Track ROLL after a move: solo rolls again freely; in MP only ONE
+// roll per turn, then the End-Turn button surfaces to pass the device.
+function _obRollBtnReady(){
+  const btn=$('ob-roll-btn'),et=$('ob-endturn-btn');
+  if(PLAYERS.length>1&&window._mpFastTrack&&G&&G._mpFtRollUsed){
+    if(btn)btn.disabled=true;
+    if(et)et.style.display='block';
+  } else {
+    if(btn)btn.disabled=false;
+    if(et)et.style.display='none';
+  }
+}
+function obEndFastTrackTurn(){
+  if(G._outerRolling)return;
+  G._mpFtRollUsed=false;
+  const et=$('ob-endturn-btn');if(et)et.style.display='none';
+  if(PLAYERS.length>1)PLAYERS[ACTIVE_PLAYER_IDX].G=JSON.parse(JSON.stringify(G));
+  if(typeof mpAdvanceTurn==='function')mpAdvanceTurn();
+}
 function obRoll(){
   if(_mpLocked()){_mpLockToast();return;}
   if(G._outerRolling)return;
+  if(PLAYERS.length>1&&window._mpFastTrack){
+    if(G._mpFtRollUsed)return; // one roll per turn in MP — use End Turn to pass
+    G._mpFtRollUsed=true;
+  }
   const btn=$('ob-roll-btn');if(btn)btn.disabled=true;
   G._outerRolling=true;
   driftStocks(); // keep stock prices drifting on outer board too
@@ -9271,7 +9327,7 @@ function obMove(steps){
   if(document.hidden){
     for(let i=0;i<steps;i++) G._outerPos=(G._outerPos+1)%total;
     G._outerRolling=false;
-    const btn=$('ob-roll-btn');if(btn)btn.disabled=false;
+    _obRollBtnReady();
     buildOuterBoard(); // sync marker even in background/instant path
     positionObToken(false);
     obLand();return;
@@ -9280,7 +9336,7 @@ function obMove(steps){
   function step(){
     if(moved>=steps){
       G._outerRolling=false;
-      const btn=$('ob-roll-btn');if(btn)btn.disabled=false;
+      _obRollBtnReady();
       buildOuterBoard(); // final rebuild so marker is always correct
       obLand();return;
     }
@@ -11107,6 +11163,30 @@ function mpLaunchGame(){
   }
 }
 
+// Render the board for whoever is now active: a Fast-Track (escaped) player sees the
+// outer ring + ob-panel + their token; everyone else sees the normal inner board.
+// Flag-OFF / no-escaped-players => identical to a plain buildBoard() (ob-mode never on).
+function _syncBoardModeForActive(){
+  const gEl=$('game');if(!gEl)return;
+  if(G&&G._outerBoard){
+    gEl.classList.add('ob-mode');
+    buildBoard();          // inner board stays visible (decorative); buildOuterTrack self-skips in ob-mode
+    if(typeof buildOuterBoard==='function')buildOuterBoard();
+    const p=$('ob-game-panel');if(p)p.style.display='flex';
+    const dream=G.dream||DREAMS[0];const badge=$('ob-dream-badge');if(badge)badge.textContent=`🎯 Dream: ${dream.icon} ${dream.name}`;
+    if(typeof obUpdateStats==='function')obUpdateStats();
+    if(typeof ensureObToken==='function'){ensureObToken();positionObToken(false);setTimeout(()=>positionObToken(false),650);}
+    G._mpFtRollUsed=false; // fresh Fast-Track turn — one roll allowed
+    const et=$('ob-endturn-btn');if(et)et.style.display='none';
+    const rb=$('ob-roll-btn');if(rb)rb.disabled=false;
+  } else {
+    gEl.classList.remove('ob-mode');
+    if(typeof hideObToken==='function')hideObToken();
+    const p=$('ob-game-panel');if(p)p.style.display='none';
+    buildBoard();
+  }
+}
+
 function mpAdvanceTurn(){
   // Snapshot current G back into PLAYERS
   PLAYERS[ACTIVE_PLAYER_IDX].G=JSON.parse(JSON.stringify(G));
@@ -11127,7 +11207,8 @@ function mpAdvanceTurn(){
   G=JSON.parse(JSON.stringify(_remoteSpectate?PLAYERS[_bcMyIdx].G:PLAYERS[nextIdx].G));
   _prevCash=null;
   saveGame(); // save AFTER advancing — resume will land on the right player
-  buildBoard();updateUI();forceFitBoard(3000);
+  _syncBoardModeForActive(); // render inner board OR Fast Track ring for the active player
+  updateUI();forceFitBoard(3000);
   syncDie2Lock();
   mpUpdateStrip();
   scheduleCloseFS();
