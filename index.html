@@ -1147,9 +1147,12 @@ body{
   #chat-log{top:auto!important;bottom:100px!important;left:6px!important;right:6px!important;width:auto!important;max-height:32vh;border-radius:12px;position:fixed;transform:none!important}
   #chat-log #cl-rows{max-height:22vh}
   .cl-row{font-size:.72rem}
-  /* Fast Track panel stays centered in the board (absolute) at all sizes; just
-     give it a bit more width on small screens so the controls stay tappable. */
-  #ob-game-panel{width:92%!important;max-width:none!important}
+  /* Fast Track panel: on mobile the board is small, so make the panel a scrollable
+     rounded card (not a clipped circle) that uses most of the board height and
+     top-aligns its content — ROLL stays visible, the log scrolls instead of being
+     cut off (was overflow:hidden -> bottom controls unreachable at 375px). */
+  #ob-game-panel{width:94%!important;max-width:none!important;max-height:96%!important;border-radius:16px!important;overflow-y:auto!important;justify-content:flex-start!important;padding:12px!important}
+  #ob-game-panel .ob-log{max-height:54px!important}
   #win-view{padding:16px 10px}
   .win-grid{grid-template-columns:1fr 1fr;gap:8px}
   .win-box{padding:10px 8px}
