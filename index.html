@@ -1826,6 +1826,7 @@ body{
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openLeisure()" title="Leisure — dining, nightlife, travel" style="padding:6px 10px;font-size:.72rem">🍸<span class="tb-lbl"> Leisure</span></button>
     <button class="btn-og btn-tan" onclick="openShop()" title="Shop — spend your ✦ on cosmetics, Plays & the Mystery Box" style="padding:6px 10px;font-size:.72rem">🛍<span class="tb-lbl"> Shop</span></button>
     <button class="btn-og btn-tan" onclick="openSettings()" title="Settings" style="padding:6px 10px;font-size:.72rem">⚙️</button>
+    <div class="tb-btn" id="btn-music" onclick="toggleMusicMenu()" title="Background music — tap to choose" style="opacity:.5">🎵</div>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
   <!-- Rotating goals (objectives system) -->
@@ -4251,6 +4252,7 @@ function _ctx(){
 // and on every gesture after tab switches (context can re-suspend).
 ['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{
   try{if(_audioCtx&&_audioCtx.state==='suspended')_audioCtx.resume();}catch(e){}
+  try{_musKickoff();}catch(e){} // start background music on the first gesture (autoplay policy)
 },{passive:true,capture:true}));
 function toggleMute(){
   window._muted=!window._muted;
@@ -4264,7 +4266,92 @@ function toggleMute(){
 document.addEventListener('DOMContentLoaded',()=>{
   const b=$('btn-sound');
   if(b&&window._muted){b.textContent='🔇';b.style.opacity='.55';}
+  try{_updateMusicBtn();}catch(e){}
 });
+
+// ══ BACKGROUND MUSIC ENGINE ══════════════════════════════════════════════
+// Synthesized looping tracks (no audio files, no licensing). Routed through a
+// dedicated low gain node so it sits UNDER the SFX — you always hear the game.
+const MUSIC_TRACKS=[
+  {id:'synthwave',name:'🌆 Synthwave Drive',bpm:104,div:4,lead:'sawtooth',bassW:'square',pad:'sawtooth',drums:true,swing:0,
+    prog:[[57,60,64,67],[53,57,60,64],[55,59,62,65],[57,60,64,67]]},
+  {id:'lofi',name:'🎧 Lo-Fi Hustle',bpm:80,div:4,lead:'sine',bassW:'sine',pad:'triangle',drums:true,swing:.16,
+    prog:[[60,64,67,71],[57,60,64,67],[62,65,69,72],[55,59,62,67]]},
+  {id:'jazz',name:'🎷 Jazzy Cashflow',bpm:122,div:4,lead:'triangle',bassW:'sine',pad:'triangle',drums:true,swing:.22,
+    prog:[[62,65,69,72],[55,59,62,65],[60,64,67,71],[60,64,67,71]]},
+  {id:'chip',name:'🕹️ 8-Bit Grind',bpm:130,div:4,lead:'square',bassW:'square',pad:'square',drums:true,swing:0,
+    prog:[[57,60,64],[60,64,67],[53,57,60],[55,59,62]]},
+  {id:'ambient',name:'🧘 Ambient Focus',bpm:66,div:2,lead:'sine',bassW:'sine',pad:'sine',drums:false,swing:0,
+    prog:[[57,64,67],[53,60,64],[55,62,65],[52,59,64]]},
+  {id:'ragtime',name:'🎩 Money Ragtime',bpm:126,div:4,lead:'triangle',bassW:'triangle',pad:'triangle',drums:true,swing:.3,
+    prog:[[60,64,67],[55,59,62,65],[60,64,67],[57,60,64,67]]},
+];
+let _musIdx=-1,_musTimer=null,_musBeat=0,_musNextT=0,_musGainNode=null;
+function _musGetSel(){const s=localStorage.getItem('cf_music');return s===null?MUSIC_TRACKS[0].id:s;}
+function _mf(m){return 440*Math.pow(2,(m-69)/12);}
+function _musNote(ctx,m,when,dur,type,vol){
+  try{const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=_mf(m);
+   g.gain.setValueAtTime(.0001,when);g.gain.linearRampToValueAtTime(vol,when+.02);
+   g.gain.exponentialRampToValueAtTime(.0006,when+dur);
+   o.connect(g);g.connect(_musGainNode);o.start(when);o.stop(when+dur+.04);}catch(e){}
+}
+function _musKick(ctx,when){try{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';
+   o.frequency.setValueAtTime(155,when);o.frequency.exponentialRampToValueAtTime(46,when+.12);
+   g.gain.setValueAtTime(.9,when);g.gain.exponentialRampToValueAtTime(.001,when+.17);
+   o.connect(g);g.connect(_musGainNode);o.start(when);o.stop(when+.2);}catch(e){}}
+function _musHat(ctx,when){try{const n=ctx.createBuffer(1,ctx.sampleRate*.05,ctx.sampleRate),d=n.getChannelData(0);
+   for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(ctx.sampleRate*.008));
+   const s=ctx.createBufferSource();s.buffer=n;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=7200;
+   const g=ctx.createGain();g.gain.value=.14;s.connect(hp);hp.connect(g);g.connect(_musGainNode);s.start(when);}catch(e){}}
+function _musSchedule(){
+  const ctx=_ctx(); // null when muted — pause; timing re-syncs on resume
+  if(!ctx||window._muted||_musIdx<0)return;
+  if(!_musGainNode){_musGainNode=ctx.createGain();_musGainNode.gain.value=.13;_musGainNode.connect(ctx.destination);}
+  const tr=MUSIC_TRACKS[_musIdx];if(!tr)return;
+  const spb=60/tr.bpm, subDur=spb/tr.div, subsPerBar=tr.div*4, arpEvery=Math.max(1,Math.floor(tr.div/2));
+  if(_musNextT<ctx.currentTime)_musNextT=ctx.currentTime+.06;
+  while(_musNextT<ctx.currentTime+0.2){
+    const sub=_musBeat%subsPerBar, bar=Math.floor(_musBeat/subsPerBar)%tr.prog.length, chord=tr.prog[bar];
+    const when=_musNextT+((tr.swing&&sub%2===1)?subDur*tr.swing:0);
+    if(sub%tr.div===0)_musNote(ctx,chord[0]-12,when,spb*0.92,tr.bassW,.30);        // bass (quarter)
+    if(sub===0)chord.forEach(m=>_musNote(ctx,m,when,spb*3.4,tr.pad,.075));          // pad chord (bar)
+    if(sub%arpEvery===0)_musNote(ctx,chord[Math.floor(_musBeat/arpEvery)%chord.length]+12,when,subDur*arpEvery*0.9,tr.lead,.10); // arp
+    if(tr.drums){if(sub===0||sub===subsPerBar/2)_musKick(ctx,when); if(sub%tr.div===2)_musHat(ctx,when);}
+    _musNextT+=subDur;_musBeat++;
+  }
+}
+function _musSetTrack(idOrIdx){
+  let idx;
+  if(idOrIdx==='off')idx=-1;
+  else if(typeof idOrIdx==='number')idx=idOrIdx;
+  else idx=MUSIC_TRACKS.findIndex(t=>t.id===idOrIdx);
+  _musIdx=idx;_musBeat=0;_musNextT=0;
+  localStorage.setItem('cf_music',idx<0?'off':MUSIC_TRACKS[idx].id);
+  if(idx>=0){if(!_musTimer)_musTimer=setInterval(_musSchedule,40);try{const c=_ctx();if(c&&c.state==='suspended')c.resume();}catch(e){}}
+  _updateMusicBtn();
+}
+function _musKickoff(){ // start saved track on first user gesture (autoplay policy)
+  if(_musTimer||_musIdx>=0)return; const sel=_musGetSel(); if(sel==='off')return;
+  let idx=MUSIC_TRACKS.findIndex(t=>t.id===sel); if(idx<0)idx=0;
+  _musIdx=idx;_musBeat=0;_musNextT=0;_musTimer=setInterval(_musSchedule,40);_updateMusicBtn();
+}
+function _updateMusicBtn(){const b=$('btn-music');if(!b)return;const on=_musIdx>=0;b.style.opacity=on?'1':'.5';b.title=on?('Music: '+MUSIC_TRACKS[_musIdx].name+' — tap to change'):'Background music (off) — tap to choose';}
+function _musMenuHTML(){
+  const rows=MUSIC_TRACKS.map((t,i)=>{const on=(i===_musIdx);return '<div onclick="_musSetTrack('+i+');_refreshMusicMenu()" style="cursor:pointer;display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:8px;margin:2px 0;background:'+(on?'rgba(160,120,255,.22)':'transparent')+';border:1px solid '+(on?'rgba(160,120,255,.5)':'transparent')+';color:'+(on?'#fff':'rgba(255,255,255,.8)')+';font-size:.78rem;font-weight:'+(on?'800':'600')+'">'+(on?'▶ ':'<span style=\'opacity:.4\'>♪ </span>')+t.name+'</div>';}).join('');
+  const off='<div onclick="_musSetTrack(\'off\');_refreshMusicMenu()" style="cursor:pointer;padding:7px 10px;border-radius:8px;margin:5px 0 2px;background:'+(_musIdx<0?'rgba(200,60,60,.2)':'transparent')+';border:1px solid '+(_musIdx<0?'rgba(220,80,80,.45)':'rgba(255,255,255,.08)')+';color:rgba(255,200,200,.85);font-size:.74rem;font-weight:700">🔇 Music Off</div>';
+  return '<div style="font-size:.64rem;letter-spacing:1px;text-transform:uppercase;color:rgba(200,170,255,.7);font-weight:800;padding:4px 8px 6px">🎵 Background Music</div>'+rows+off+'<div style="font-size:.57rem;color:rgba(255,255,255,.4);padding:6px 8px 2px;line-height:1.4">Mixed under the game sounds. 🔊 mutes everything.</div>';
+}
+function _refreshMusicMenu(){const m=document.getElementById('music-menu');if(m)m.innerHTML=_musMenuHTML();}
+function _closeMusicMenuOnce(e){const m=document.getElementById('music-menu');if(m&&!m.contains(e.target)&&!(e.target.closest&&e.target.closest('#btn-music'))){m.remove();document.removeEventListener('pointerdown',_closeMusicMenuOnce,true);}}
+function toggleMusicMenu(){
+  const ex=document.getElementById('music-menu');if(ex){ex.remove();document.removeEventListener('pointerdown',_closeMusicMenuOnce,true);return;}
+  try{const c=_ctx();if(c&&c.state==='suspended')c.resume();}catch(e){}
+  _musKickoff(); // ensure something is playing when they open the menu
+  const m=document.createElement('div');m.id='music-menu';
+  m.style.cssText='position:fixed;z-index:9500;top:50px;right:6px;background:linear-gradient(160deg,rgba(20,8,40,.98),rgba(10,4,22,.99));border:1.5px solid rgba(160,120,255,.45);border-radius:12px;padding:8px;box-shadow:0 12px 40px rgba(0,0,0,.6);font-family:Georgia,serif;min-width:210px;max-width:92vw;animation:cPop .16s ease';
+  m.innerHTML=_musMenuHTML();document.body.appendChild(m);
+  setTimeout(()=>document.addEventListener('pointerdown',_closeMusicMenuOnce,true),0);
+}
 
 function playClick(){
   const ctx=_ctx();if(!ctx)return;
