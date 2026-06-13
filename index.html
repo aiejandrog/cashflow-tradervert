@@ -1113,6 +1113,18 @@ body{
   /* FS button shrinks to icon-ish size */
   #top-bar .btn-og{padding:5px 8px!important;font-size:.62rem!important;letter-spacing:0!important}
   #goals-box{display:none!important}
+  /* Action buttons become icon-only on phones so the whole top bar fits */
+  #top-bar .tb-lbl{display:none}
+  #top-bar .btn-og{padding:7px 9px!important;font-size:.95rem!important;min-height:38px}
+  #top-bar{gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* Real thumb-sized tap targets for the core controls */
+  #center-roll-btn{min-height:46px!important;font-size:1rem!important;padding:12px 32px!important}
+  .cl-send-btn,.cl-gif-btn{min-height:36px!important;min-width:40px!important}
+  #cl-text-inp{min-height:36px}
+  /* Compress the HUD so the whole top bar fits a phone without scrolling */
+  #year-age-chip{font-size:.6rem!important;padding:3px 7px!important}
+  #credits-chip,#cf-credit-pill{font-size:.6rem!important;padding:3px 7px!important}
+  .pc-pill,#player-chip{padding:2px 6px!important}
   /* FS panel: full-width slide-over on phones (was hard-broken at 660px fixed) */
   #fs-panel{max-height:none;width:100vw;transform:translateX(calc(-100vw - 8px))}
   #fs-panel.open{transform:translateX(0)}
@@ -1729,9 +1741,9 @@ body{
     </div>
     <div class="tb-space"></div>
     <div id="express-badge" style="display:none;background:#6040b0;border:1px solid #9060e0;border-radius:10px;padding:2px 9px;font-size:.62rem;font-weight:900;color:#e0c8ff;letter-spacing:1px;font-family:Arial,sans-serif">⚡ EXPRESS</div>
-    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗 Dealer</button>
-    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡 Realty</button>
-    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openLeisure()" title="Leisure — dining, nightlife, travel" style="padding:6px 10px;font-size:.72rem">🍸 Leisure</button>
+    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗<span class="tb-lbl"> Dealer</span></button>
+    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡<span class="tb-lbl"> Realty</span></button>
+    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openLeisure()" title="Leisure — dining, nightlife, travel" style="padding:6px 10px;font-size:.72rem">🍸<span class="tb-lbl"> Leisure</span></button>
     <button class="btn-og btn-tan" onclick="openSettings()" title="Settings" style="padding:6px 10px;font-size:.72rem">⚙️</button>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
