@@ -5578,6 +5578,9 @@ function _maybeShowSpaceTip(sp){
   }catch(e){return false;}
 }
 function dispatchSpace(sp){
+  // Fresh landing = fresh modal context. Clear any stale within-turn resume bookkeeping
+  // so a prior leaked _sideResumeSaved can't corrupt this space's Cash/Financing modals.
+  try{delete window._sideResumeSaved;}catch(e){window._sideResumeSaved=undefined;}
   switch(sp.type){
     case'payday':  onPayday();break;
     case'deal':    showDealChoice();break;
@@ -7644,6 +7647,10 @@ function endTurn(){
   if(window._chainAfterCard){const f=window._chainAfterCard;window._chainAfterCard=null;f();return;}
   G.rolling=false;
   _resumeFn=null;
+  // Self-heal: clear within-turn modal bookkeeping so a leaked _sideResumeSaved (from any
+  // modal flow that didn't close cleanly) can't corrupt the NEXT turn's openModal/closeModal
+  // resume chain — that leak was jamming deal buying + glitching the Financing button.
+  try{delete window._sideResumeSaved;}catch(e){window._sideResumeSaved=undefined;}
   try{G._escapeProg=Math.max(0,Math.min(1,passiveIncome()/Math.max(1,expenses().total)));}catch(e){} // race-to-freedom % for MP leaderboard
   driftStocks();
   // Track net worth history for sparkline
