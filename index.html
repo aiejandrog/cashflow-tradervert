@@ -4911,6 +4911,56 @@ function _srRender(dir){
 }
 
 // ══ CAR DEALERSHIP (segment showroom → car detail) ════
+// ── CAR VALUE METRIC — daily cars depreciate; exotics/supercars/dreams appreciate ──
+// rate = per-year change; depreciating cars take an instant "drive-off" hit + a floor,
+// appreciating cars hold value immediately and climb (capped). ~4 turns ≈ 1 year held.
+const CAR_VALUE={
+  Used:    {rate:-0.08, floor:0.50, driveOff:0.05},
+  Entry:   {rate:-0.14, floor:0.42, driveOff:0.12},
+  SUV:     {rate:-0.12, floor:0.45, driveOff:0.11},
+  Truck:   {rate:-0.10, floor:0.50, driveOff:0.10},
+  EV:      {rate:-0.17, floor:0.35, driveOff:0.14},
+  Sport:   {rate:-0.05, floor:0.60, driveOff:0.08},
+  Luxury:  {rate:-0.14, floor:0.40, driveOff:0.13},
+  Exotic:  {rate:0.06,  cap:1.9},
+  Supercar:{rate:0.09,  cap:2.3},
+  Dream:   {rate:0.11,  cap:2.6},
+};
+function carResaleValue(car){
+  if(!car||!car.price)return 0;
+  const seg=CAR_VALUE[car.segment]||CAR_VALUE.Entry;
+  const yrs=Math.max(0,((G.turn||0)-(car.purchaseTurn!=null?car.purchaseTurn:(G.turn||0)))/4);
+  let factor;
+  if(seg.rate>=0){ factor=Math.min(seg.cap||2,Math.pow(1+seg.rate,yrs)); }            // appreciates
+  else { factor=Math.max(seg.floor,(1-(seg.driveOff||0))*Math.pow(1+seg.rate,yrs)); } // depreciates
+  return Math.round(car.price*factor/100)*100;
+}
+function carValueTrend(car){
+  const seg=CAR_VALUE[car&&car.segment]||CAR_VALUE.Entry;
+  return seg.rate>=0?{label:'Appreciating asset',icon:'📈',color:'green'}:{label:'Depreciating',icon:'📉',color:'red'};
+}
+// Sell confirmation showing the full value metric (held time, trend, profit/loss)
+function showSellCarDetail(saleVal,loanBal,fromBoard){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;}
+  const car=G.carOwned;if(!car)return;
+  const net=saleVal-loanBal, profit=saleVal-(car.price||0), tr=carValueTrend(car);
+  const yrsHeld=Math.max(0,((G.turn||0)-(car.purchaseTurn!=null?car.purchaseTurn:(G.turn||0)))/4);
+  openModal({band:profit>=0?'gold':'gray',title:`💰 Sell ${car.emoji||'🚗'} ${car.name}?`,
+    desc:profit>=0?`This ${car.segment} has held its value — a collector market loves it. Cash out the gain or keep cruising.`:`Cars are tools, not investments — daily drivers lose value the moment you drive off. Sell smart.`,
+    rows:[
+      ['Paid','$'+fmt(car.price||0),''],
+      ['Held',(yrsHeld<0.3?'just bought':yrsHeld.toFixed(1)+' yrs'),''],
+      ['Market Value','$'+fmt(saleVal),tr.color],
+      ['Trend',tr.icon+' '+tr.label,tr.color],
+      ...(loanBal>0?[['Loan Payoff','-$'+fmt(loanBal),'red']]:[]),
+      [profit>=0?'Profit':'Loss',(profit>=0?'+$':'-$')+fmt(Math.abs(profit)),profit>=0?'green':'red'],
+      ['You Get',(net>=0?'+$':'-$')+fmt(Math.abs(net)),net>=0?'green':'red'],
+    ],
+    actions:[
+      {label:net>=0?`💰 Sell — get $${fmt(net)}`:`Sell — pay $${fmt(-net)}`,cls:'btn-gold',locked:net<0&&G.cash<-net,fn:()=>sellCurrentCar(saleVal,loanBal,fromBoard)},
+      {label:'Keep it',cls:'btn-tan',fn:()=>{if(fromBoard)endTurn();}},
+    ]});
+}
 function openCarDealership(fromBoard){
   if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   window._modalFromBoard=!!fromBoard;
@@ -4928,14 +4978,17 @@ function openCarDealership(fromBoard){
     };
   });
   actions.unshift({label:'🎪 Walk the Showroom — see every car',cls:'btn-gold',fn:()=>openShowroom(fromBoard)});
-  // Sell the current ride (not the free beater — nobody's buying that)
+  // Sell the current ride (not the free beater — nobody's buying that). Value uses the
+  // logical depreciation/appreciation metric: daily cars lose value, exotics/supercars gain.
   if(G.carOwned&&!G.carOwned.beater&&G.carOwned.price){
-    const saleVal=Math.round(G.carOwned.price*0.62/100)*100; // ~38% depreciation — the lesson IS the haircut
+    const saleVal=carResaleValue(G.carOwned);
     const loanBal=(G.liabilities||[]).filter(l=>l.type==='carfin').reduce((s,l)=>s+l.amt,0);
     const net=saleVal-loanBal;
-    actions.push({label:`💰 Sell ${G.carOwned.name} — ${net>=0?'get $'+fmt(net):'PAY $'+fmt(-net)+' (underwater)'}`,
-      cls:'btn-tan',locked:net<0&&G.cash<-net,
-      fn:()=>sellCurrentCar(saleVal,loanBal,fromBoard)});
+    const tr=carValueTrend(G.carOwned);
+    const profit=saleVal-(G.carOwned.price||0);
+    actions.push({label:`💰 Sell ${G.carOwned.name} — ${net>=0?'get $'+fmt(net):'PAY $'+fmt(-net)+' (underwater)'} ${tr.icon}${profit>=0?' +$'+fmt(profit):' -$'+fmt(-profit)}`,
+      cls:profit>=0?'btn-gold':'btn-tan',locked:net<0&&G.cash<-net,
+      fn:()=>showSellCarDetail(saleVal,loanBal,fromBoard)});
   }
   actions.push({label:fromBoard?'Just browsing — leave':'Close',cls:'btn-gold',fn:()=>{if(fromBoard)endTurn();}});
   openModal({band:'gold',title:'🚗 Car Dealership — Showroom',
@@ -5097,7 +5150,7 @@ function buyCarFinance(car,down,principal,pmt,apr,fromBoard){
   G.expenseOverrides=G.expenseOverrides||{};
   G.expenseOverrides.car=pmt;           // replaces the old car payment line
   G.carInsurance=car.ins;
-  G.carOwned={id:car.id,name:car.name,emoji:car.emoji,price:car.price};
+  G.carOwned={id:car.id,name:car.name,emoji:car.emoji,price:car.price,segment:car.segment,purchaseTurn:G.turn};
   boostCredit(3); // new installment line, on-time so far
   saveGame();
   checkTrophies('car');if(car.segment==='Supercar'||car.segment==='Dream')checkTrophies('supercar');if(['Supercar','Dream','Exotic'].indexOf(car.segment)>=0)_dreamGarageCelebrate(car);
@@ -5119,7 +5172,7 @@ function buyCarCash(car,fromBoard){
   G.expenseOverrides=G.expenseOverrides||{};
   G.expenseOverrides.car=0;             // no payment — owned outright
   G.carInsurance=car.ins;
-  G.carOwned={id:car.id,name:car.name,emoji:car.emoji,price:car.price};
+  G.carOwned={id:car.id,name:car.name,emoji:car.emoji,price:car.price,segment:car.segment,purchaseTurn:G.turn};
   boostCredit(2);
   saveGame();
   checkTrophies('car');if(car.segment==='Supercar'||car.segment==='Dream')checkTrophies('supercar');if(['Supercar','Dream','Exotic'].indexOf(car.segment)>=0)_dreamGarageCelebrate(car);
@@ -5806,9 +5859,11 @@ function showLifeEvent(){
      gain:Math.round((1500+Math.random()*3500)/100)*100},
     {w:14,icon:'🤝',title:'Old Friend Pays You Back',story:'That loan from years ago you wrote off? They made it big. Venmo notification: paid in full, with interest.',
      gain:Math.round((600+Math.random()*1400)/100)*100},
+    {w:11,icon:'🎁',title:'A Gift From Family',gift:true},
   ];
   const total=events.reduce((s,e)=>s+e.w,0);let r=Math.random()*total;let ev=events[0];
   for(const e of events){r-=e.w;if(r<=0){ev=e;break;}}
+  if(ev.gift){showGiftCar();return;} // dad/family gifts a car — drive it free or flip for cash
   if(ev.gain){
     G.cash+=ev.gain;saveGame();
     addLog(ev.icon,`${ev.title}: +$${fmt(ev.gain)}`,'g');
@@ -5831,6 +5886,41 @@ function showLifeEvent(){
     'Life events are why emergency funds exist. Three months of expenses in cash turns disasters into inconveniences.',
     [['Cost','$'+fmt(ev.cost),'red'],...(ev.monthly?[['Monthly Add','+$'+fmt(ev.monthly)+'/mo','red']]:[]),...(ev.bonus?[['Upside',ev.bonus.label,'green']]:[]),['Cash','$'+fmt(G.cash),'gold']],
     acts);
+}
+
+// 🎁 A family member gifts you a car — usually used, sometimes brand-new, rarely sweet.
+// Drive it (free wheels, clears any old car loan) or flip it straight to cash.
+function showGiftCar(){
+  const roll=Math.random();
+  let pool,giver,vibe;
+  if(roll<0.62){pool=CARS.filter(c=>c.segment==='Used');giver='Your dad';vibe='He found a clean used ride and tossed you the keys — "just get to work safe."';}
+  else if(roll<0.90){pool=CARS.filter(c=>c.segment==='Entry');giver='Your parents';vibe='They surprised you with a brand-new entry car, fully paid off. No catch.';}
+  else{pool=CARS.filter(c=>c.segment==='SUV'||c.segment==='Sport');giver='A wealthy uncle';vibe='He upgraded his garage and handed you his old one. Lucky you.';}
+  if(!pool||!pool.length)pool=CARS.filter(c=>c.segment==='Used');
+  const car=pool[Math.floor(Math.random()*pool.length)];
+  const flip=carResaleValue({price:car.price,segment:car.segment,purchaseTurn:G.turn});
+  const hadReal=G.carOwned&&!G.carOwned.beater;
+  const drive=()=>{
+    if(typeof _clearOldCarLoans==='function')_clearOldCarLoans(); // swap rides — old car (and its loan) goes
+    G.carOwned={id:car.id,name:car.name,emoji:car.emoji,price:car.price,segment:car.segment,purchaseTurn:G.turn,gifted:true};
+    G.carInsurance=car.ins;
+    G.expenseOverrides=G.expenseOverrides||{};G.expenseOverrides.car=car.ins; // insurance only — it's a gift, no loan
+    addLog('🎁',`Gift: now driving the ${car.name} — free wheels! ($${fmt(car.ins)}/mo insurance)`,'g');
+    try{sfxWinSting&&sfxWinSting();spawnCoinBurst&&spawnCoinBurst(true);}catch(e){}
+    saveGame();endTurn();
+  };
+  const flipIt=()=>{
+    G.cash+=flip;
+    addLog('🎁',`Flipped the gifted ${car.name} → +$${fmt(flip)} cash`,'g');
+    try{sfxCash&&sfxCash();spawnCoinBurst&&spawnCoinBurst(true);}catch(e){}
+    saveGame();endTurn();
+  };
+  showEventCard('life','🎁 A Gift From Family',
+    `${giver} just gave you a ${car.emoji} ${car.name}! ${vibe}${hadReal?' You already have a ride, so this is pure bonus.':''}`,
+    'Free assets are rare. Drive it to kill a car payment, or flip it straight to cash for your next deal.',
+    [['The Gift',car.emoji+' '+car.name,'gold'],['Sticker Value','$'+fmt(car.price),''],['Cash if you flip it','+$'+fmt(flip),'green'],['Insurance to drive','$'+fmt(car.ins)+'/mo','']],
+    [{label:`🚗 Keep & drive it`,cls:'btn-gold',fn:drive},
+     {label:`💵 Flip for $${fmt(flip)} cash`,cls:'btn-tan',fn:flipIt}]);
 }
 
 function onPayday(){
