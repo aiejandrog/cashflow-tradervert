@@ -7271,6 +7271,7 @@ const MIN_HOLD_TURNS=8;
 const MIN_REFI_TURNS=5;
 
 function sellREAsset(uid){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);if(!a||a.type==='stock')return;
   // Primary home uses dedicated sell flow
   if(a.isPrimaryHome){sellPrimaryResidence();return;}
@@ -7354,6 +7355,7 @@ function sellREAsset(uid){
 
 // ── REFINANCE ────────────────────────────────────────────────────
 function refinanceAsset(uid){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);if(!a)return;
   // Primary home: liability is tracked in G.liabilities as 'Home Mortgage'.
   // Always sync from G.liabilities → a.liability so refi calculations use the current balance,
@@ -7507,6 +7509,7 @@ function refinanceAsset(uid){
 
 // ── RENOVATE ─────────────────────────────────────────────────────
 function renovateAsset(uid){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);if(!a||a.type!=='re')return;
   const units=getPropertyUnits(a);
   const lastRnv=a._lastRenovTurn||-999;
@@ -7572,6 +7575,7 @@ function renovateAsset(uid){
 
 // ── MOVE IN / MOVE OUT ────────────────────────────────────────────
 function moveIntoProperty(uid){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);if(!a)return;
   if(!G._propState)G._propState={};
   if(!G._propState[uid]){const u=getPropertyUnits(a);G._propState[uid]={units:u,strategy:'rental',tenants:Array(u).fill(null)};}
@@ -7595,6 +7599,7 @@ function moveIntoProperty(uid){
 }
 
 function moveOutOfProperty(uid){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);
   // Always base new market rent on the profession's ORIGINAL mortgage, not G._prevRent.
   // Using G._prevRent compounded each cycle: prevRent *= 1.15–1.50 per move-out, exponential inflation.
@@ -7712,6 +7717,7 @@ function checkTenantEvents(){
 }
 
 function manageTenant(uid){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);if(!a)return;
   const units=getPropertyUnits(a);
   if(!G._propState[uid]){G._propState[uid]={units,strategy:'rental',tenants:Array(units).fill(null)};}
@@ -7774,6 +7780,7 @@ function _propRecalcCF(a,state){
   delete a._crashCutCF;delete a._preRecessionCF;
 }
 function hirePropertyManager(uid){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);if(!a)return;
   const state=G._propState[uid];if(!state)return;
   const fee=_mgmtFeeFor(a);
@@ -7787,6 +7794,7 @@ function hirePropertyManager(uid){
   updateUI();checkWin();saveGame();manageTenant(uid);
 }
 function firePropertyManager(uid){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);if(!a)return;
   const state=G._propState[uid];if(!state)return;
   state.managed=false;state.mgmtFee=0;
@@ -7796,6 +7804,7 @@ function firePropertyManager(uid){
 }
 
 function evictTenant(uid,unitIdx){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);if(!a)return;
   const state=G._propState[uid];if(!state)return;
   const t=state.tenants[unitIdx];if(!t)return;
@@ -7823,6 +7832,7 @@ function evictTenant(uid,unitIdx){
 }
 
 function showTenantSearch(uid,unitIdx){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);if(!a)return;
   const state=G._propState[uid];
   // Use potential CF if property is vacant (cf=0 after purchase), else use current cf
@@ -7963,6 +7973,7 @@ function openRentalBrowser(){
     }})),_noFS:true});
 }
 function sellPrimaryResidence(){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const hs=G.housingSituation||(G.isRenting?'renter':'owner');
   if(hs==='family'){
     openModal({band:'gray',title:'Living with Family',desc:'You have no property to sell — you\'re living with family. Buying your first deal is your next move.',rows:[],actions:[{label:'Got it',cls:'btn-tan',fn:()=>{}}]});
@@ -8158,6 +8169,7 @@ function borrow(amt){
 }
 
 function openPayLoan(){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   // Preserve the ORIGINAL prior overlay across re-renders (each payment re-opens
   // this modal with fresh numbers — without this, Cancel would loop back here)
   const priorResume=window._payLoanPrior!==undefined?window._payLoanPrior:_resumeFn;
@@ -8223,6 +8235,7 @@ function payExactDebt(key,amt){
   setTimeout(()=>celebrateDebtFree(key),300);
 }
 function payDebt(req){
+  if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   let rem=Math.min(req,G.cash);if(rem<=0)return;
   let paid=0;const rate=loanRate();
   if(G.bankLoan>0&&rem>0){const p=Math.min(rem,G.bankLoan);G.cash-=p;G.bankLoan-=p;rem-=p;paid+=p;G.extraBankPmt=G.bankLoan>0?Math.round(G.bankLoan*rate):0;if(G.bankLoan===0){boostCredit(12);setTimeout(()=>celebrateDebtFree('Bank Loan'),300);}}
@@ -11102,7 +11115,7 @@ function bcHostBroadcastLobby(){
   netSend({type:'lobby-update',
     roomName:_mpRoomName,
     lobbyPhase:_bcLobbyPhase,
-    slots:PLAYERS.map((p,i)=>({name:p.name,color:p.color,idx:i,joined:_bcJoinedSlots.has(i)})),
+    slots:PLAYERS.map((p,i)=>({name:p.name,color:p.color,idx:i,joined:_bcJoinedSlots.has(i),ready:i===0||!!p._profileReady})),
     activeIdx:ACTIVE_PLAYER_IDX
   });
 }
@@ -11157,7 +11170,8 @@ function bcUpdateLobbySlots(){
   wrap.innerHTML=PLAYERS.map((p,i)=>{
     const joined=_bcJoinedSlots.has(i)||_bcRole==='joiner';
     const isMe=i===_bcMyIdx;
-    const statusTxt=i===0?'👑 Host':(joined?'✓ Joined':'Waiting to join...');
+    const ready=i===0||!!(PLAYERS[i]&&PLAYERS[i]._profileReady);
+    const statusTxt=i===0?'👑 Host':(joined?(ready?'✓ Ready':'🎨 Picking character, city & dream…'):'Waiting to join...');
     return`<div class="mp-lobby-slot${joined?' joined':''}"
       style="--slot-color:${p.color}">
       <div class="mp-lobby-slot-dot"></div>
@@ -11173,9 +11187,14 @@ function bcUpdateLobbyStartBtn(){
   const joinedCount=_bcJoinedSlots.size;
   const total=PLAYERS.length;
   const allIn=joinedCount>=total;
-  btn.disabled=joinedCount<2; // need at least host + 1 joiner
-  btn.textContent=allIn?'▶ All Players In — Start Game!':'▶ Start Game ('+joinedCount+'/'+total+' joined)';
-  if(msg)msg.textContent=allIn?'Everyone is ready!':'Waiting for '+( total-joinedCount)+' more player'+(total-joinedCount===1?'':'s')+'...';
+  const stillPicking=PLAYERS.filter((p,i)=>i>0&&_bcJoinedSlots.has(i)&&!p._profileReady).length;
+  btn.disabled=joinedCount<2||stillPicking>0; // everyone in the room must finish their character first
+  btn.textContent=stillPicking>0
+    ?'⏳ '+stillPicking+' player'+(stillPicking===1?'':'s')+' still picking…'
+    :allIn?'▶ All Players In — Start Game!':'▶ Start Game ('+joinedCount+'/'+total+' joined)';
+  if(msg)msg.textContent=stillPicking>0
+    ?'Players are choosing their character, city and dream — hang tight.'
+    :allIn?'Everyone is ready!':'Waiting for '+( total-joinedCount)+' more player'+(total-joinedCount===1?'':'s')+'...';
 }
 
 function mpLobbyStartGame(){
@@ -11203,7 +11222,7 @@ function bcStartGameHeartbeat(){
   window._gameHbTicker=makeTicker(()=>{
     roomsAnnounce(); // directory shows "in game" status while playing
     if(_bc&&_bcRole==='host')netSend({type:'room-alive',
-      slots:PLAYERS.map((p,i)=>({name:p.name,color:p.color,idx:i,joined:_bcJoinedSlots.has(i)})),
+      slots:PLAYERS.map((p,i)=>({name:p.name,color:p.color,idx:i,joined:_bcJoinedSlots.has(i),ready:i===0||!!p._profileReady})),
       scores:PLAYERS.map(p=>({cash:p.G?p.G.cash||0:0,
         pass:p.G?(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0):0,
         turn:p.G?p.G.turn||0:0,won:!!p.won})),
@@ -11270,6 +11289,7 @@ function bcHostHandleJoinRequest(msg){
     return;
   }
   _bcJoinedSlots.add(slot);
+  if(PLAYERS[slot])PLAYERS[slot]._profileReady=false; // joined the room, still building their life
   if(PLAYERS[slot])PLAYERS[slot]._left=false; // rejoining clears any "left the game" mark
   window._lastPing=window._lastPing||{};window._lastPing[slot]=Date.now();
   if(msg.playerName&&PLAYERS[slot])PLAYERS[slot].name=msg.playerName;
@@ -11305,6 +11325,7 @@ function bcHostHandlePlayerProfile(msg){
   if(typeof idx!=='number'||idx<=0||idx>=PLAYERS.length)return;
   if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
   if(msg.name)PLAYERS[idx].name=msg.name;
+  PLAYERS[idx]._profileReady=true; // character, city & dream locked in
   bcUpdateLobbySlots();bcUpdateLobbyStartBtn();bcHostBroadcastLobby();mpUpdateStrip();saveGame();
 }
 
@@ -11407,7 +11428,7 @@ function bcHandleMessage(msg){
       window._lastPing[msg.playerIdx]=Date.now();
       // A "left" player whose pings resume is back (e.g. tab was suspended, not closed)
       if(PLAYERS[msg.playerIdx]&&PLAYERS[msg.playerIdx]._left){
-        PLAYERS[msg.playerIdx]._left=false;_bcJoinedSlots.add(msg.playerIdx);
+        PLAYERS[msg.playerIdx]._left=false;PLAYERS[msg.playerIdx]._profileReady=true;_bcJoinedSlots.add(msg.playerIdx);
         addLog('🔄',PLAYERS[msg.playerIdx].name+' reconnected!','gold');mpUpdateStrip();
       }
     }
@@ -11561,7 +11582,7 @@ function bcJoinerHandleLobbyUpdate(msg){
       <div class="mp-lobby-slot${s.joined?' joined':''}" style="--slot-color:${s.color}">
         <div class="mp-lobby-slot-dot"></div>
         <div class="mp-lobby-slot-name">${s.name}${i===_bcMyIdx?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
-        <div class="mp-lobby-slot-status">${s.joined?(i===0?'👑 Host':'✓ Joined'):'Waiting...'}</div>
+        <div class="mp-lobby-slot-status">${s.joined?(i===0?'👑 Host':(s.ready?'✓ Ready':'🎨 Picking character, city & dream…')):'Waiting...'}</div>
       </div>`).join('');
   }
 }
