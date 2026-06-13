@@ -1739,6 +1739,13 @@ body{
     </div>
     <div id="year-age-chip" title="Year · Age" style="display:flex;align-items:center;background:#2a3d5e;border:2px solid #4a6a96;border-radius:18px;padding:5px 12px;flex-shrink:0;font-size:.68rem;font-weight:900;font-family:Georgia,serif;color:#c8ddf0">Yr 1 · Age 25</div>
     <div id="credits-chip" title="Lifetime Credits — earned from goals, trophies & wins" style="display:flex;align-items:center;background:linear-gradient(135deg,#5e4708,#8a6508);border:2px solid #c8910c;border-radius:18px;padding:5px 12px;flex-shrink:0;font-size:.68rem;font-weight:900;font-family:Georgia,serif;color:#ffe9a8">✦ 0</div>
+    <div id="freedom-chip" title="Passive income vs expenses — reach 100% to escape the Rat Race and hit the Fast Track" style="display:flex;align-items:center;gap:7px;background:#0c2a18;border:2px solid #1f7a45;border-radius:18px;padding:4px 11px;flex-shrink:0">
+      <span style="font-size:.74rem;line-height:1">🏁</span>
+      <div style="width:72px;height:9px;background:rgba(255,255,255,.13);border-radius:5px;overflow:hidden;position:relative;flex-shrink:0">
+        <div id="freedom-bar" style="position:absolute;left:0;top:0;height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#86efac);border-radius:5px;transition:width .5s ease"></div>
+      </div>
+      <span id="freedom-pct" style="font-size:.66rem;font-weight:900;font-family:Georgia,serif;color:#86efac;min-width:34px;letter-spacing:.3px">0%</span>
+    </div>
     <div id="credit-chip" title="Credit Score" style="display:none;align-items:center;gap:6px;background:#3d2a5e;border:2px solid #6a4a96;border-radius:18px;padding:5px 12px;flex-shrink:0">
       <span style="font-size:.85rem;line-height:1">💳</span>
       <span style="display:flex;flex-direction:column;line-height:1.15">
@@ -4089,8 +4096,8 @@ function syncDie2Lock(){
   d2.style.cursor='pointer';
   d2.onclick=()=>toggleDie2();
   if(hint)hint.innerHTML=off
-    ?`<button onclick="toggleDie2()" style="background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.45);color:#fca5a5;border-radius:6px;padding:2px 8px;font-size:.52rem;cursor:pointer;font-family:Arial,sans-serif;font-weight:700">⊘ Dice 2 OFF — tap to enable</button>`
-    :`<button onclick="toggleDie2()" style="background:rgba(134,239,172,.12);border:1px solid rgba(134,239,172,.35);color:#86efac;border-radius:6px;padding:2px 8px;font-size:.52rem;cursor:pointer;font-family:Arial,sans-serif;font-weight:700">◉ Dice 2 ON — tap to disable</button>`;
+    ?`<button onclick="toggleDie2()" style="background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.45);color:#fca5a5;border-radius:7px;padding:5px 12px;font-size:.6rem;line-height:1;cursor:pointer;font-family:Arial,sans-serif;font-weight:700;display:inline-flex;align-items:center">⊘ Dice 2 OFF — tap to enable</button>`
+    :`<button onclick="toggleDie2()" style="background:rgba(134,239,172,.12);border:1px solid rgba(134,239,172,.35);color:#86efac;border-radius:7px;padding:5px 12px;font-size:.6rem;line-height:1;cursor:pointer;font-family:Arial,sans-serif;font-weight:700;display:inline-flex;align-items:center">◉ Dice 2 ON — tap to disable</button>`;
 }
 
 // True when in a NETWORK multiplayer game and it's not my turn — spectators may
@@ -9848,6 +9855,33 @@ function updateUI(){
   const inc=income(),exp=expenses(),pass=passiveIncome();
   const cf=inc.total-exp.total;
   const pct=Math.min(100,exp.total>0?Math.round(pass/exp.total*100):0);
+
+  // ── Freedom Meter (always-visible board HUD) ─────────
+  // Surfaces the % to escaping the Rat Race every turn — previously buried in the
+  // hidden financial statement. Pulses when you cross a milestone tier (25/50/75/100).
+  (function(){
+    const fBar=$('freedom-bar'),fPct=$('freedom-pct'),fChip=$('freedom-chip');
+    if(!fBar||!fPct)return;
+    fBar.style.width=pct+'%';
+    fPct.textContent=pct>=100?'FREE!':pct+'%';
+    const col=pct>=100?'#fde68a':pct>=50?'#86efac':pct>=20?'#fde68a':'#fca5a5';
+    fPct.style.color=col;
+    fBar.style.background=pct>=100?'linear-gradient(90deg,#f0c020,#fde68a)'
+      :pct>=50?'linear-gradient(90deg,#22c55e,#86efac)'
+      :pct>=20?'linear-gradient(90deg,#ca8a04,#fde68a)'
+      :'linear-gradient(90deg,#b91c1c,#fca5a5)';
+    if(fChip)fChip.style.borderColor=pct>=100?'#f0c020':pct>=50?'#1f7a45':pct>=20?'#7a5a1f':'#7a1f1f';
+    // Milestone pulse — WAAPI so it survives prefers-reduced-motion
+    const tier=pct>=100?4:pct>=75?3:pct>=50?2:pct>=25?1:0;
+    if(G._lastFreedomTier===undefined)G._lastFreedomTier=tier;
+    if(tier>G._lastFreedomTier&&fChip&&fChip.animate){
+      try{fChip.animate([{transform:'scale(1)'},{transform:'scale(1.18)'},{transform:'scale(1)'}],{duration:560,easing:'ease-out'});
+        fChip.animate([{boxShadow:'0 0 0 0 rgba(134,239,172,0)'},{boxShadow:'0 0 14px 4px rgba(134,239,172,.7)'},{boxShadow:'0 0 0 0 rgba(134,239,172,0)'}],{duration:900,easing:'ease-out'});
+        try{_tone&&_tone(660,.06,'triangle',.05,0,990);}catch(e){}
+      }catch(e){}
+    }
+    G._lastFreedomTier=tier;
+  })();
 
   // Top bar
   $('pc-av').textContent=(G.identity&&G.identity.avatar)||G.prof.icon;
