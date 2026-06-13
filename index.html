@@ -5513,7 +5513,12 @@ function triggerSpace(sp){
   // as child milestones below). Seen-set is lifetime (localStorage), not per-run.
   if(G.skipTurns===0&&_maybeShowSpaceTip(sp))return;
   if(G.skipTurns===0&&checkChildMilestones()){window._chainAfterCard=()=>dispatchSpace(sp);updateUI();return;}
-  if(G.turn>0&&G.turn%8===0&&G.skipTurns===0){window._chainAfterCard=()=>dispatchSpace(sp);showQuarterlyTax();return;}
+  // Quarterly tax comes due every 8 turns, but it DEFERS off heavy "card" spaces so it
+  // never stacks on top of a Baby/Audit/Life/Crisis landing (that double-card felt like a
+  // bug). It waits and fires on the next light landing (payday/market/deal/charity) instead.
+  if(G.turn>0&&G.turn%8===0&&G.skipTurns===0)G._taxPending=true;
+  const TAX_HEAVY={baby:1,audit:1,life:1,crisis:1,recession:1,lawsuit:1,layoff:1,divorce:1,doodad:1,mystery:1,disability:1};
+  if(G._taxPending&&G.skipTurns===0&&!TAX_HEAVY[sp.type]){G._taxPending=false;window._chainAfterCard=()=>dispatchSpace(sp);showQuarterlyTax();return;}
   if(G.skipTurns>0){
     G.skipTurns--;
     const cf=monthlyCF();G.cash+=cf;
