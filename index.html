@@ -3638,6 +3638,27 @@ function forceFitBoard(maxMs){
   })();
 }
 window.addEventListener('resize',fitBoard);
+// ── 🛟 GHOST-ROLL WATCHDOG — universal recovery for any stuck turn ──────────
+// If G.rolling stays true with NOTHING on screen to act on (no card, no modal,
+// no flying dice, no doubles gift, not MP-paused) for ~7.5s, the move/card flow
+// silently broke (interrupted animation, lost callback, etc). Auto-resolve the
+// turn so the player is never hard-locked — the recurring 'stuck turn' class.
+setInterval(()=>{
+  try{
+    if(!G||!G.rolling||window._mpPaused){window._stuckTicks=0;return;}
+    if(typeof _gameScreenActive==='function'&&!_gameScreenActive()){window._stuckTicks=0;return;}
+    const cardUp=($('event-modal')&&$('event-modal').classList.contains('vis'))||($('modal')&&$('modal').classList.contains('vis'));
+    const diceUp=document.querySelector('.fly-die3d');
+    if(cardUp||diceUp||window._giftTimer){window._stuckTicks=0;return;}
+    window._stuckTicks=(window._stuckTicks||0)+1;
+    if(window._stuckTicks>=5){            // ~7.5s with no interactable UI = ghost state
+      window._stuckTicks=0;
+      try{addLog('🛟','Recovered a stuck roll — turn auto-resolved.','b');}catch(e){}
+      G.rolling=false;_resumeFn=null;window._chainAfterCard=null;
+      try{endTurn();}catch(e){}
+    }
+  }catch(e){}
+},1500);
 window.addEventListener('orientationchange',()=>setTimeout(fitBoard,150)); // phone rotation
 // ResizeObserver covers every path that reveals or reshapes the board area —
 // screen switches, FS panel open/close, mobile keyboard, split-screen drags
