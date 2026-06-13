@@ -1809,6 +1809,7 @@ body{
         <span id="rival-pct" style="font-size:.62rem;font-weight:900;font-family:Georgia,serif;color:#fca5a5;min-width:32px;letter-spacing:.3px">0%</span>
       </div>
     </div>
+    <div id="plays-tray" title="Power-up Plays — tap one to use it" style="display:none;align-items:center;gap:4px;flex-shrink:0"></div>
     <div id="credit-chip" title="Credit Score" style="display:none;align-items:center;gap:6px;background:#3d2a5e;border:2px solid #6a4a96;border-radius:18px;padding:5px 12px;flex-shrink:0">
       <span style="font-size:.85rem;line-height:1">💳</span>
       <span style="display:flex;flex-direction:column;line-height:1.15">
@@ -2991,6 +2992,55 @@ function applyBuild(){ // solo + MP: a chosen playstyle; reads G.prof so call af
   try{b.perks();}catch(e){}
 }
 document.addEventListener('DOMContentLoaded',()=>{try{_renderBuildPicker();}catch(e){}});
+
+// ══ POWER-UP "PLAYS" — a hand of consumable cards (agency) ══
+const PLAYS=[
+  {id:'double',name:'Double Payday', icon:'💰',rarity:'rare',  desc:'Your next payday pays DOUBLE.'},
+  {id:'lucky', name:'Lucky Dice',    icon:'🎲',rarity:'rare',  desc:'Force your next roll to the maximum.'},
+  {id:'deal',  name:'Force a Deal',  icon:'🤝',rarity:'rare',  desc:'Draw a fresh deal right now.'},
+  {id:'tip',   name:'Insider Tip',   icon:'🕵️',rarity:'epic',  desc:'Your next asset earns +25% cash flow.'},
+  {id:'skip',  name:'Dodge Doodad',  icon:'🛡️',rarity:'common',desc:'Cancel your next doodad / setback.'},
+  {id:'boom',  name:'Market Whisper',icon:'🚀',rarity:'epic',  desc:'Trigger a boom — cash flow +40% for 4 turns.'},
+];
+const MAX_HAND=4;
+function _playDef(id){return PLAYS.find(p=>p.id===id);}
+function addPlay(id){if(!_playDef(id)||!G)return false;G._plays=G._plays||[];if(G._plays.length>=MAX_HAND)return false;G._plays.push(id);renderPlaysTray();try{saveGame();}catch(e){}return true;}
+function renderPlaysTray(){
+  const tray=$('plays-tray');if(!tray)return;
+  const hand=(G&&G._plays)||[];
+  if(!hand.length){tray.style.display='none';tray.innerHTML='';return;}
+  tray.style.display='flex';
+  tray.innerHTML=hand.map((id,i)=>{const p=_playDef(id);if(!p)return'';const rc=(typeof RARITY!=='undefined'&&RARITY[p.rarity])?RARITY[p.rarity].color:'#f0c040';
+    return '<button onclick="usePlay('+i+')" title="'+p.name+' — '+p.desc+'" style="background:rgba(20,8,40,.92);border:1.5px solid '+rc+';border-radius:9px;font-size:1rem;padding:3px 7px;cursor:pointer;line-height:1;box-shadow:0 0 8px '+rc+'55;transition:transform .1s" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'\'">'+p.icon+'</button>';}).join('');
+}
+function usePlay(i){
+  if(typeof _mpLocked==='function'&&_mpLocked()){_mpLockToast&&_mpLockToast();return;}
+  const hand=(G&&G._plays)||[];const p=_playDef(hand[i]);if(!p)return;
+  openModal({band:'gold',title:p.icon+' '+p.name,desc:p.desc,rows:[['Power-up Play',p.name,'gold'],['In hand',hand.length+'/'+MAX_HAND,'']],
+    actions:[{label:'⚡ Use it',cls:'btn-gold',fn:()=>_applyPlay(i)},{label:'Keep it',cls:'btn-tan',fn:()=>{}}],_noFS:true});
+}
+function _applyPlay(i){
+  const hand=(G&&G._plays)||[];const id=hand[i];const p=_playDef(id);if(!p)return;
+  hand.splice(i,1);renderPlaysTray();
+  try{if(typeof _haptic==='function')_haptic([20,40,30]);if(typeof sfxMagic==='function')sfxMagic();}catch(e){}
+  switch(id){
+    case'double':G._doublePayday=true;addLog('💰','Double Payday armed — your next payday pays 2×!','gold');break;
+    case'lucky': G._luckyRoll=true;addLog('🎲','Lucky Dice armed — your next roll is maxed!','gold');break;
+    case'tip':   G._dealCfBonus=1.25;addLog('🕵️','Insider Tip armed — your next asset earns +25% CF!','gold');break;
+    case'skip':  G._skipDoodad=true;addLog('🛡️','Shield up — your next doodad/setback is cancelled.','gold');break;
+    case'boom':  G._boomMult=1.4;G._boomTurns=4;try{updateUI();}catch(e){}addLog('🚀','Market Whisper — boom! Cash flow +40% for 4 turns.','g');try{spawnCoinBurst&&spawnCoinBurst(true);}catch(e){}break;
+    case'deal':  addLog('🤝','Force a Deal — a fresh opportunity appears!','gold');try{if(typeof showDealEvent==='function'){G.rolling=true;showDealEvent('small');}}catch(e){}break;
+  }
+  try{saveGame();}catch(e){}
+}
+function _grantStarterPlays(){
+  const p=loadProfile();const stash=(p.plays||[]).slice();
+  G._plays=[];
+  while(G._plays.length<MAX_HAND&&stash.length)G._plays.push(stash.shift());
+  p.plays=stash;saveProfile(p);
+  if(!G._plays.length)G._plays.push(PLAYS[Math.floor(Math.random()*PLAYS.length)].id); // freebie so it's discoverable
+  renderPlaysTray();
+}
 function recordWin(){
   // Guard: checkOuterWin re-runs on resume-after-win and in MP flows —
   // without this, every reload of the win screen farms +1 win into the profile.
@@ -3139,8 +3189,23 @@ const SHOP_ITEMS=[
   {id:'av_demon',   cat:'Premium Avatars',icon:'👹',name:'The Oni',      cost:2000,rarity:'legendary',type:'avatar'},
   {id:'av_dragon',  cat:'Premium Avatars',icon:'🐉',name:'The Dragon',   cost:2200,rarity:'legendary',type:'avatar'},
   {id:'av_crown',   cat:'Premium Avatars',icon:'👑',name:'The Sovereign',cost:3500,rarity:'mythic',type:'avatar'},
+  // ── Power-Up Plays (consumable — buy into your stash; loaded into your hand next game) ──
+  {id:'play_skip',  cat:'Power-Up Plays',icon:'🛡️',name:'Dodge Doodad',  cost:300, rarity:'common',type:'play',play:'skip'},
+  {id:'play_double',cat:'Power-Up Plays',icon:'💰',name:'Double Payday',  cost:550, rarity:'rare',  type:'play',play:'double'},
+  {id:'play_lucky', cat:'Power-Up Plays',icon:'🎲',name:'Lucky Dice',     cost:550, rarity:'rare',  type:'play',play:'lucky'},
+  {id:'play_deal',  cat:'Power-Up Plays',icon:'🤝',name:'Force a Deal',   cost:600, rarity:'rare',  type:'play',play:'deal'},
+  {id:'play_tip',   cat:'Power-Up Plays',icon:'🕵️',name:'Insider Tip',    cost:900, rarity:'epic',  type:'play',play:'tip'},
+  {id:'play_boom',  cat:'Power-Up Plays',icon:'🚀',name:'Market Whisper', cost:900, rarity:'epic',  type:'play',play:'boom'},
 ];
 function rarityOf(id){const it=SHOP_ITEMS.find(i=>i.id===id);return (it&&it.rarity)||'common';}
+function _buyPlay(item){ // consumable — adds to the profile stash (re-buyable, no equip)
+  const p=loadProfile();
+  if((p.credits||0)<item.cost){alert('Not enough ✦ — need '+fmt(item.cost)+'.');return;}
+  p.credits-=item.cost;p.plays=(p.plays||[]);p.plays.push(item.play);saveProfile(p);
+  try{sfxWinSting&&sfxWinSting();_renderCreditChips&&_renderCreditChips();}catch(e){}
+  alert(item.icon+' '+item.name+' added to your stash — it loads into your hand next game (have '+(p.plays.filter(x=>x===item.play).length)+').');
+  try{openShop();}catch(e){}
+}
 function applyCosmetics(){
   try{
     const eq=loadProfile().equipped||{};
@@ -3166,6 +3231,7 @@ function _applyDiceSkinVars(skinId){
 function buyShopItem(id){
   if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   const item=SHOP_ITEMS.find(i=>i.id===id);if(!item)return;
+  if(item.type==='play'){_buyPlay(item);return;} // consumable plays go to the stash (re-buyable)
   const p=loadProfile();
   if(p.owned.includes(id))return;
   if((p.credits||0)<item.cost){
@@ -4550,6 +4616,7 @@ function rollDice(){
       if(!d2locked)v2=Math.ceil(Math.random()*dieFaces);
     }
   }
+  if(G._luckyRoll){v1=dieFaces;v2=dieFaces;if(useExpress){}G._luckyRoll=false;addLog('🎲','Lucky Dice — maxed roll!','gold');} // Power-up Play
   const total=d2locked?v1:(useExpress?v1+v2+v3:v1+v2);
   if(PAIN[_landType(total)])G._painStreak=(G._painStreak||0)+1;else G._painStreak=0;
   const finishRoll=()=>{
@@ -5586,6 +5653,7 @@ function collectPassByPayday(){
   if(G._waivedNextPayday){waiverBonus=expenses().total;G._waivedNextPayday=false;}
   if(G._charityBonus){charityBonus=Math.round(Math.max(0,cf)*0.5);G._charityBonus=false;}
   G.cash+=cf+waiverBonus+charityBonus;
+  if(G._doublePayday){const _ex=Math.max(0,cf+waiverBonus+charityBonus);if(_ex>0){G.cash+=_ex;addLog('💰','Double Payday! +$'+fmt(_ex)+' bonus.','gold');}G._doublePayday=false;} // Power-up Play
   if(waiverBonus>0)addLog('🎫',`Passed payday — expenses waived, +$${fmt(waiverBonus)} kept!`,'gold');
   if(charityBonus>0)addLog('🎁',`Passed payday — charity bonus +$${fmt(charityBonus)}`,'gold');
   // If negative CF pushed cash below zero, auto-borrow to cover (matches onPayday() behavior)
@@ -6152,6 +6220,7 @@ function onPayday(){
   if(G._waivedNextPayday){waiverBonus=expenses().total;G._waivedNextPayday=false;
     addLog('🎫','Waived payday — expenses free, full income kept!','gold');}
   G.cash+=cf+bonus+waiverBonus;
+  if(G._doublePayday){const _ex=Math.max(0,cf+bonus+waiverBonus);if(_ex>0){G.cash+=_ex;addLog('💰','Double Payday! +$'+fmt(_ex)+' bonus.','gold');}G._doublePayday=false;} // Power-up Play
   // If cash went negative after payday, try to auto-borrow (capped at MAX_BANK_LOAN)
   if(G.cash<0){ensureCash(0,'payday shortfall');}
   // Delinquent card balance compounds 3%/payday until caught up (interest on the unpaid)
@@ -6689,12 +6758,14 @@ function buyDeal(deal){
   const mortgagePmt=liability>0?Math.round(liability*mortgageRate/12):0;
   G.cash-=deal.down;
   const uid=deal.id+'_'+Date.now();
-  // Build-identity CF perks: Landlord boosts rent CF, Mogul boosts business CF.
-  const potCF=deal.type==='re'?Math.round((deal.cf||0)*(G._cfMultRE||1)):0;
+  // Build-identity CF perks (Landlord/Mogul) + Insider Tip play (next asset +25%).
+  const _tip=(G._dealCfBonus||1);
+  const potCF=deal.type==='re'?Math.round((deal.cf||0)*(G._cfMultRE||1)*_tip):0;
   // For leveraged biz/note deals: start CF = gross - loan payment (same NET-CF principle as RE recalcCF).
   // Without this, the loan payment never appears in expenses() or CF — player sees inflated income forever.
   // The loan payment is restored to CF when the loan is fully paid off (same as RE mortgage payoff).
-  const grossCF=deal.type==='re'?0:Math.round((deal.cf||0)*(deal.type==='biz'?(G._bizCfMult||1):1));
+  const grossCF=deal.type==='re'?0:Math.round((deal.cf||0)*(deal.type==='biz'?(G._bizCfMult||1):1)*_tip);
+  if(G._dealCfBonus)delete G._dealCfBonus; // Insider Tip is consumed by this purchase
   const startCF=deal.type==='re'?0:Math.max(0,grossCF-mortgagePmt);
   G.assets.push({...deal,cf:startCF,_grossCF:grossCF,_potentialCF:potCF,uid,liability,cashPurchase:isCash,mortgagePmt,mortgageRate,purchaseTurn:G.turn});
   // Register biz + note loans in G.liabilities so PAY button works in FS panel
@@ -6980,6 +7051,7 @@ function makeDraggable(el,handle){
 }
 
 function showDoodadEvent(){
+  if(G._skipDoodad){G._skipDoodad=false;addLog('🛡️','Dodged the doodad — your shield held. No expense this turn.','gold');try{if(typeof _haptic==='function')_haptic(20);}catch(e){}endTurn();return;} // Power-up Play
   const profDoodads=DOODADS.filter(x=>x.prof&&x.prof.includes(G.prof.id));
   const useProf=profDoodads.length>0&&Math.random()<0.45;
   const pool=useProf?profDoodads:DOODADS.filter(x=>!x.prof);
@@ -10737,6 +10809,7 @@ function updateUI(){
     G._lastFreedomTier=tier;G._freedomTierInit=true;
   })();
   try{renderRivalBar();}catch(e){} // keep the rival bar synced + restored on load
+  try{renderPlaysTray();}catch(e){} // keep the power-up tray synced + restored on load
 
   // Top bar
   $('pc-av').textContent=(G.identity&&G.identity.avatar)||G.prof.icon;
@@ -11471,6 +11544,7 @@ function startGame(prof,loc){
   initGame(prof,loc);_prevCash=null;
   applyBuild();    // playstyle perks layered on the profession
   applyScenario(); // SOLO: roll a run modifier (economy/start) — no-op in MP
+  _grantStarterPlays(); // load power-up hand from the profile stash (+ a freebie)
   // Hide bankruptcy overlay in case player is starting fresh after going bankrupt
   const bkOv=$('bankruptcy-overlay');if(bkOv)bkOv.style.display='none';
   showScreen('game');buildBoard();updateUI();forceFitBoard(3000);
