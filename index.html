@@ -4977,13 +4977,21 @@ function showDelinquencyCard(d,onClose){
 
 function collectPassByPayday(){
   const cf=monthlyCF();
-  G.cash+=cf;
+  // Honor 'next payday' tokens here too — most paydays are PASSED, not landed on,
+  // so without this the Mystery Box 'Expenses Waived' / charity bonus never fired.
+  let waiverBonus=0,charityBonus=0;
+  if(G._waivedNextPayday){waiverBonus=expenses().total;G._waivedNextPayday=false;}
+  if(G._charityBonus){charityBonus=Math.round(Math.max(0,cf)*0.5);G._charityBonus=false;}
+  G.cash+=cf+waiverBonus+charityBonus;
+  if(waiverBonus>0)addLog('🎫',`Passed payday — expenses waived, +$${fmt(waiverBonus)} kept!`,'gold');
+  if(charityBonus>0)addLog('🎁',`Passed payday — charity bonus +$${fmt(charityBonus)}`,'gold');
   // If negative CF pushed cash below zero, auto-borrow to cover (matches onPayday() behavior)
   if(G.cash<0)ensureCash(0,'pass-by payday shortfall');
   // Same delinquency engine as onPayday. No card here — a card mid-move would clobber
   // the landed-space card; the red toast + log carry the message instead.
-  if(cf>=0){sfxCash();spawnCoinBurst(false);}
-  const delinq=paydayDelinquencyCheck();
+  const _passTotal=cf+waiverBonus+charityBonus;
+  if(_passTotal>=0){sfxCash();spawnCoinBurst(false);}
+  const delinq=(waiverBonus>0)?null:paydayDelinquencyCheck(); // waived payday can't be delinquent
   if(delinq){
     const t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:130px;left:50%;transform:translateX(-50%);background:#8b1a1a;color:#fff;padding:8px 18px;border-radius:9px;font-family:Georgia,serif;font-size:.8rem;font-weight:900;z-index:9999;pointer-events:none;box-shadow:0 3px 14px rgba(0,0,0,.5)';
@@ -4992,11 +5000,11 @@ function collectPassByPayday(){
     setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},2600);
   }
   saveGame(); // persist cash change — crash after passing payday would otherwise lose the money
-  addLog('🌾',`Passed CASHFLOW DAY — collected ${cf>=0?'+':''}$${fmt(cf)}`,'g');
-  if(cf<0){checkBankruptcy();}
+  addLog('🌾',`Passed CASHFLOW DAY — collected ${_passTotal>=0?'+':''}$${fmt(_passTotal)}`,'g');
+  if(_passTotal<0){checkBankruptcy();}
   const toast=document.createElement('div');
-  toast.style.cssText=`position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:${cf>=0?'#2e7d32':'#8b1a1a'};color:#fff;padding:7px 16px;border-radius:9px;font-family:Georgia,serif;font-size:.8rem;font-weight:900;z-index:9999;pointer-events:none;box-shadow:0 3px 12px rgba(0,0,0,.4)`;
-  toast.textContent=cf>=0?`🌾 Passed Payday — +$${fmt(cf)} collected!`:`💸 Passed Payday — -$${fmt(Math.abs(cf))} owed (negative CF)`;
+  toast.style.cssText=`position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:${_passTotal>=0?'#2e7d32':'#8b1a1a'};color:#fff;padding:7px 16px;border-radius:9px;font-family:Georgia,serif;font-size:.8rem;font-weight:900;z-index:9999;pointer-events:none;box-shadow:0 3px 12px rgba(0,0,0,.4)`;
+  toast.textContent=_passTotal>=0?`🌾 Passed Payday — +$${fmt(_passTotal)} collected!${waiverBonus>0?' 🎫 waived':''}`:`💸 Passed Payday — -$${fmt(Math.abs(_passTotal))} owed (negative CF)`;
   document.body.appendChild(toast);
   setTimeout(()=>{toast.style.transition='opacity .4s';toast.style.opacity='0';setTimeout(()=>toast.remove(),400);},1800);
   updateUI();
@@ -10282,6 +10290,9 @@ document.addEventListener('keydown',function(e){
 document.addEventListener('keydown',function(e){
   if(e.code!=='Space') return;
   if(e.repeat) return; // ignore key-held-down repeat fires
+  // Handoff screen: space = "Start My Turn" (then the next space rolls)
+  const ho=$('mp-handoff');
+  if(ho&&ho.style.display==='flex'){e.preventDefault();mpDismissHandoff();return;}
   if(!_spaceCanRoll()) return;
   e.preventDefault(); // prevent page scroll
   // Fast Track outer board uses obRoll(); inner board uses rollDice()
@@ -10828,7 +10839,8 @@ function mpShowHandoff(){
 
 function mpDismissHandoff(){
   $('mp-handoff').style.display='none';
-  $('board-msg').textContent=PLAYERS[ACTIVE_PLAYER_IDX].name+"'s turn";
+  const _ap=PLAYERS[ACTIVE_PLAYER_IDX];
+  $('board-msg').textContent=(_ap?_ap.name:'Your')+"'s turn";
   if(document.hidden){showTurnDialog();}
   else{setTimeout(()=>showTurnDialog(),300);}
 }
