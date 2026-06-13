@@ -4042,6 +4042,7 @@ function _mpLockToast(){
   addLog('⏳','Not your turn — you can look, not touch.','');
 }
 function rollDice(){
+  if(window._mpPaused){return;} // game paused for a dropped player — nobody rolls
   if(_mpLocked()){_mpLockToast();return;}
   if(!G||G.rolling){
     // Die-1 always works: resume regardless of what overlay is currently visible
@@ -10319,6 +10320,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 // NOTE: intentionally does NOT guard on G.rolling or document.hidden —
 //   rollDice() handles mid-roll state itself, and hidden-tab checks block too aggressively.
 function _spaceCanRoll(){
+  if(window._mpPaused) return false; // paused waiting for a dropped player
   // Must be on the main game screen (not splash, setup, win, etc.)
   if(!_gameScreenActive()) return false;
   // Any modal open — user must respond to it first
@@ -10478,6 +10480,7 @@ function startGame(prof,loc){
   // SOLO game — hard-reset any multiplayer state that leaked in from a loaded
   // MP save (boot loads the save for the Resume button; starting fresh solo
   // used to keep PLAYERS=2 and route turns through multiplayer logic)
+  try{window._mpPaused=null;if(typeof _mpHidePauseBanner==='function')_mpHidePauseBanner();}catch(e){}
   PLAYERS=[];ACTIVE_PLAYER_IDX=0;_mpCount=1;_mpSetupIdx=0;_bcRole=null;_bcLobbyPhase=false;
   try{clearInterval(_bcHeartbeatTimer);clearInterval(window._joinerPingTimer);}catch(e){}
   try{if(_bc){_bc.close();_bc=null;}}catch(e){}
@@ -10792,6 +10795,7 @@ function mpCancelPassword(){
 // The other side notices on its own: host marks us "left" when pings stop;
 // joiners get the host-loss watchdog if the host leaves.
 function mpLeaveRoom(){
+  try{window._mpPaused=null;if(typeof _mpHidePauseBanner==='function')_mpHidePauseBanner();}catch(e){}
   if(!confirm(_bcRole==='host'
     ?'Close this room and go back to the menu? Other players will be disconnected.'
     :'Leave this game and go back to the menu? You can rejoin later with the same name.'))return;
@@ -11248,6 +11252,7 @@ function bcHostBroadcastTurnStart(idx){
 setInterval(()=>{
   try{
     if(_bcRole!=='host'||PLAYERS.length<2)return;
+    if(window._mpPaused)return; // disconnect pause handles timing; don't AFK-skip
     if(typeof window._turnStartTs!=='number')return;
     const idx=window._turnStartIdx;
     if(idx===undefined||idx===_bcMyIdx)return;          // never skip the host's own turn
@@ -11359,32 +11364,57 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 // ── HOST: detect joiners who closed their tab / lost connection ──
+// ── DISCONNECT GRACE: pause the game when a player drops, wait up to 120s for
+// them to rejoin/refresh and resume where they left off; only skip if they never
+// come back. Detection at ~28s of silence; grace window 120s. ──
+const MP_DROP_DETECT_MS=28000, MP_RECONNECT_GRACE_MS=120000;
 function bcHostCheckPresence(){
   if(_bcRole!=='host')return;
   window._lastPing=window._lastPing||{};
   const now=Date.now();
+  // Already paused for someone?
+  if(window._mpPaused){
+    const pi=window._mpPaused.idx;
+    if(PLAYERS[pi]&&!PLAYERS[pi]._left&&(now-(window._lastPing[pi]||0))<=MP_DROP_DETECT_MS){
+      _mpResumeGame(); // recent ping = they're back
+    } else if(now>window._mpPaused.until){
+      // grace expired — they didn't return; skip them and carry on
+      const wasTurn=ACTIVE_PLAYER_IDX===pi;
+      if(PLAYERS[pi]){PLAYERS[pi]._left=true;_bcJoinedSlots.delete(pi);addLog('🚪',PLAYERS[pi].name+" didn't return — their turns are skipped now.",'b');mpUpdateStrip();saveGame();}
+      _mpResumeGame();
+      if(wasTurn&&PLAYERS[pi]){G=JSON.parse(JSON.stringify(PLAYERS[pi].G));mpAdvanceTurn();}
+    }
+    return; // hold everything else while paused
+  }
   for(let i=1;i<PLAYERS.length;i++){
     if(!_bcJoinedSlots.has(i)||PLAYERS[i]._left||PLAYERS[i].won)continue;
-    if(window._lastPing[i]===undefined)window._lastPing[i]=now; // grace period from first check
-    // 75s, not 15s: a worker keeps pings at 3s normally, but if the worker is
-    // unavailable the browser may clamp a background tab to one timer/min —
-    // the threshold has to clear that worst case or idle players flap left/rejoined
-    if(now-window._lastPing[i]>75000){
-      PLAYERS[i]._left=true;
-      _bcJoinedSlots.delete(i);
-      addLog('🚪',PLAYERS[i].name+' left the game — their turns are skipped','b');
-      mpUpdateStrip();saveGame();
-      openModal({band:'gray',title:'🚪 '+PLAYERS[i].name+' Left',
-        desc:'They disconnected. Their turns are skipped from now on — if they come back and rejoin with the same name, they pick up right where they left off.',
-        rows:[],actions:[{label:'Continue',cls:'btn-gold',fn:()=>{closeModal();
-          // If it was the leaver's turn, rotation moves on without them
-          if(PLAYERS[ACTIVE_PLAYER_IDX]?._left){
-            G=JSON.parse(JSON.stringify(PLAYERS[ACTIVE_PLAYER_IDX].G));mpAdvanceTurn();
-          }
-        }}]});
-    }
+    if(window._lastPing[i]===undefined){window._lastPing[i]=now;continue;}
+    if(now-window._lastPing[i]>MP_DROP_DETECT_MS){_mpPauseGame(i);break;}
   }
 }
+function _mpPauseGame(i){
+  window._mpPaused={idx:i,name:PLAYERS[i].name,until:Date.now()+MP_RECONNECT_GRACE_MS};
+  _mpShowPauseBanner(PLAYERS[i].name,Math.round(MP_RECONNECT_GRACE_MS/1000));
+  addLog('⏸',PLAYERS[i].name+' dropped — game paused, waiting up to '+(MP_RECONNECT_GRACE_MS/1000)+'s for them to rejoin…','b');
+  try{netSend({type:'mp-pause',idx:i,name:PLAYERS[i].name,until:window._mpPaused.until});}catch(e){}
+  try{saveGame();}catch(e){}
+}
+function _mpResumeGame(){
+  if(!window._mpPaused)return;
+  window._mpPaused=null;_mpHidePauseBanner();
+  try{netSend({type:'mp-resume'});}catch(e){}
+}
+// pause banner (all players see it; play is blocked while it's up)
+function _mpShowPauseBanner(name,secs){
+  let b=document.getElementById('mp-pause-banner');
+  if(!b){b=document.createElement('div');b.id='mp-pause-banner';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9300;display:flex;justify-content:center;pointer-events:none';document.body.appendChild(b);}
+  b.innerHTML='<div style="margin-top:8px;background:linear-gradient(180deg,rgba(44,22,10,.97),rgba(30,15,8,.93));border:1px solid rgba(251,191,36,.55);border-radius:0 0 14px 14px;padding:9px 20px;color:#fde68a;font-family:Georgia,serif;font-weight:800;font-size:.84rem;box-shadow:0 8px 26px rgba(0,0,0,.55);text-align:center;backdrop-filter:blur(3px)">⏸ '+String(name).replace(/[<>&]/g,'')+' disconnected — game paused<br><span style="font-size:.66rem;color:rgba(255,225,160,.75);font-weight:600">Waiting for them to rejoin… <b id="mp-pause-cd">'+secs+'s</b></span></div>';
+  b.style.display='flex';
+  clearInterval(window._mpPauseCd);
+  const end=Date.now()+secs*1000;
+  window._mpPauseCd=setInterval(()=>{const el=document.getElementById('mp-pause-cd');const left=Math.max(0,Math.round((end-Date.now())/1000));if(el)el.textContent=left+'s';if(left<=0)clearInterval(window._mpPauseCd);},1000);
+}
+function _mpHidePauseBanner(){const b=document.getElementById('mp-pause-banner');if(b)b.style.display='none';clearInterval(window._mpPauseCd);}
 
 // ── HOST: handle join request ───────────────────────────
 function bcHostHandleJoinRequest(msg){
@@ -11538,6 +11568,17 @@ function bcHandleMessage(msg){
     if(_bcRole==='host')netRelay(msg); // pass it on to the other joiners
     return;
   }
+  if(msg.type==='mp-pause'){
+    window._mpPaused={idx:msg.idx,name:msg.name,until:msg.until};
+    _mpShowPauseBanner(msg.name||'A player',Math.max(1,Math.round(((msg.until||Date.now())-Date.now())/1000)));
+    if(_bcRole==='host')netRelay(msg);
+    return;
+  }
+  if(msg.type==='mp-resume'){
+    window._mpPaused=null;_mpHidePauseBanner();
+    if(_bcRole==='host')netRelay(msg);
+    return;
+  }
   if(msg.type==='dice-roll'){
     // spectators replay the active player's dice with THEIR skin, then revert
     if(msg.from!==_bcMyIdx&&$('mp-wait')&&$('mp-wait').style.display==='flex'){
@@ -11561,6 +11602,10 @@ function bcHandleMessage(msg){
     if(_bcRole==='host'&&typeof msg.playerIdx==='number'){
       window._lastPing=window._lastPing||{};
       window._lastPing[msg.playerIdx]=Date.now();
+      // Paused for this player? They're back — resume the game immediately.
+      if(window._mpPaused&&window._mpPaused.idx===msg.playerIdx){
+        addLog('🔄',PLAYERS[msg.playerIdx].name+' reconnected — resuming!','gold');_mpResumeGame();mpUpdateStrip();
+      }
       // A "left" player whose pings resume is back (e.g. tab was suspended, not closed)
       if(PLAYERS[msg.playerIdx]&&PLAYERS[msg.playerIdx]._left){
         PLAYERS[msg.playerIdx]._left=false;PLAYERS[msg.playerIdx]._profileReady=true;_bcJoinedSlots.add(msg.playerIdx);
