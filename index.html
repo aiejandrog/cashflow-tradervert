@@ -1503,7 +1503,16 @@ body{
 .ob-layout{width:100%;max-width:900px;display:flex;gap:14px;align-items:flex-start}
 .ob-board{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .ob-space{border-radius:10px;padding:10px 6px;text-align:center;border:2px solid rgba(255,255,255,.1);transition:all .2s;min-height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:default}
-.ob-space.ob-player{box-shadow:0 0 0 3px #fff,0 0 20px rgba(255,255,255,.5);transform:scale(1.05)}
+.ob-space.ob-player{box-shadow:0 0 0 3px #fff,0 0 20px rgba(255,255,255,.5);transform:scale(1.08)}
+/* Fast Track avatar token — rides the outer ring (position:fixed, placed by tile rect) */
+#ob-token{position:fixed;z-index:60;width:38px;height:38px;border-radius:50%;display:none;align-items:center;justify-content:center;line-height:1;pointer-events:none;
+  background:radial-gradient(circle at 35% 28%,#fff7d8,#f0c020 58%,#a8730a);
+  border:2px solid #fff;box-shadow:0 0 0 2px #1a0800,0 5px 16px rgba(240,192,32,.7),0 0 24px rgba(240,192,32,.6);
+  animation:obTokenIdle 1.6s ease-in-out infinite}
+#ob-token .obt-av{filter:drop-shadow(0 1px 1px rgba(0,0,0,.55))}
+@keyframes obTokenIdle{0%,100%{box-shadow:0 0 0 2px #1a0800,0 5px 16px rgba(240,192,32,.7),0 0 24px rgba(240,192,32,.55)}50%{box-shadow:0 0 0 2px #1a0800,0 6px 20px rgba(240,192,32,.95),0 0 34px rgba(240,192,32,.85)}}
+/* tile flash when the token lands on it */
+@keyframes obTileLand{0%{transform:scale(1.08)}40%{transform:scale(1.22);filter:brightness(1.5)}100%{transform:scale(1.08);filter:brightness(1)}}
 .ob-space-deal{background:rgba(22,163,74,.12);border-color:rgba(22,163,74,.4)}
 .ob-space-payday{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4)}
 .ob-space-event{background:rgba(234,179,8,.1);border-color:rgba(234,179,8,.3)}
@@ -8885,6 +8894,7 @@ function replaySameProfession(){
   const gEl=$('game');if(gEl)gEl.classList.remove('ob-mode');
   if(typeof forceFitBoard==='function')forceFitBoard(1200);
   const obp=$('ob-game-panel');if(obp)obp.style.display='none';
+  if(typeof hideObToken==='function')hideObToken();
   const bi=$('board-inner');if(bi)bi.style.cssText='';
   // Re-init with same profession + location, skip splash
   initGame(prof,loc);_prevCash=null;
@@ -9079,6 +9089,9 @@ function _launchOuterBoard(){
   const badge=$('ob-dream-badge');if(badge)badge.textContent=`🎯 Dream: ${dream.icon} ${dream.name}`;
   obUpdateStats();
   forceFitBoard(3000); // ensure board scales correctly after transition
+  ensureObToken();
+  positionObToken(false); // drop the avatar token onto the start tile
+  setTimeout(()=>positionObToken(false),650); // reposition once the fit settles
   if(G._waivedNextPayday) obAddLog('🎫 Expenses waived on next Payday — enjoy it!');
   if(G._charityBonus) obAddLog('🎁 Charity bonus active — +50% CF on next Payday!');
 }
@@ -9100,9 +9113,9 @@ function buildOuterBoard(){
     div.className=`ob-space ${sp.cls}${isPlayer?' ob-player':''}`;
     div.id=`ob-sp-${i}`;
     div.style.cssText=`width:${w}px;height:${h}px;flex-shrink:0;border-radius:6px;box-sizing:border-box`;
-    const marker=isPlayer?`<div data-you="1" style="font-size:.42rem;color:#fff;font-weight:700;background:rgba(255,255,255,.2);border-radius:4px;padding:1px 3px;margin-bottom:1px">👤 YOU</div>`:'';
+    // No in-tile "YOU" text — the floating #ob-token avatar marks the player's position.
     const dreamName=isDream?(G.dream||DREAMS[0]).name+' ⭐':sp.name;
-    div.innerHTML=`${marker}<div class="ob-spc-icon" style="font-size:1rem">${sp.icon}</div><div class="ob-spc-name" style="font-size:.48rem">${dreamName}</div><div class="ob-spc-sub" style="font-size:.42rem">${sp.sub}</div>`;
+    div.innerHTML=`<div class="ob-spc-icon" style="font-size:1rem">${sp.icon}</div><div class="ob-spc-name" style="font-size:.48rem">${dreamName}</div><div class="ob-spc-sub" style="font-size:.42rem">${sp.sub}</div>`;
     return div;
   }
   // Top row L→R: spaces 0-3
@@ -9181,6 +9194,40 @@ function obShake(){
   setTimeout(()=>{b.style.animation='';},550);
 }
 
+// ── Fast Track avatar token (rides the outer ring) ──
+function ensureObToken(){
+  let t=document.getElementById('ob-token');
+  if(!t){t=document.createElement('div');t.id='ob-token';t.innerHTML='<span class="obt-av"></span>';document.body.appendChild(t);}
+  const av=(G&&G.identity&&G.identity.avatar)||(G&&G.prof&&G.prof.icon)||'🏃';
+  const s=t.querySelector('.obt-av');if(s)s.textContent=av;
+  return t;
+}
+function positionObToken(animate){
+  if(document.hidden)return;
+  const tile=document.getElementById('ob-sp-'+(G._outerPos||0));
+  const t=ensureObToken();
+  if(!tile){t.style.display='none';return;}
+  const r=tile.getBoundingClientRect();
+  if(!r.width){t.style.display='none';return;}
+  const size=Math.max(24,Math.min(44,Math.round(r.width*0.5)));
+  t.style.width=size+'px';t.style.height=size+'px';t.style.fontSize=Math.round(size*0.58)+'px';
+  const nx=Math.round(r.left+r.width/2-size/2), ny=Math.round(r.top+r.height/2-size/2);
+  t.style.display='flex';
+  if(animate&&t._lx!=null&&t.animate){
+    const dx=t._lx-nx, dy=t._ly-ny;
+    t.style.left=nx+'px';t.style.top=ny+'px';
+    try{t.animate([
+      {transform:`translate(${dx}px,${dy}px) scale(1)`},
+      {transform:`translate(${dx/2}px,${dy/2 - 16}px) scale(1.2)`,offset:.5},
+      {transform:'translate(0,0) scale(1)'}
+    ],{duration:190,easing:'cubic-bezier(.3,.85,.4,1)'});}catch(e){}
+  } else {
+    t.style.left=nx+'px';t.style.top=ny+'px';
+  }
+  t._lx=nx;t._ly=ny;
+}
+function hideObToken(){const t=document.getElementById('ob-token');if(t)t.style.display='none';}
+
 function obRoll(){
   if(_mpLocked()){_mpLockToast();return;}
   if(G._outerRolling)return;
@@ -9218,6 +9265,7 @@ function obMove(steps){
     G._outerRolling=false;
     const btn=$('ob-roll-btn');if(btn)btn.disabled=false;
     buildOuterBoard(); // sync marker even in background/instant path
+    positionObToken(false);
     obLand();return;
   }
   let moved=0;
@@ -9232,6 +9280,7 @@ function obMove(steps){
     moved++;
     playClick(); // audible tick per step — movement you can feel
     buildOuterBoard(); // rebuild outer ring after each step — guaranteed sync, no class drift
+    positionObToken(true); // hop the avatar token to the new tile
     saveGame(); // persist position after each step — crash-safe
     setTimeout(step,180);
   }
@@ -9273,11 +9322,17 @@ const OB_FX={
 function obLand(){
   const sp=OUTER_SPACES[G._outerPos];
   obAddLog(`📍 Landed on: ${sp.name}`);
+  const tileEl=document.getElementById('ob-sp-'+G._outerPos);
   const fx=OB_FX[sp.type];
   if(fx){
     if(!window._muted&&fx.s)try{fx.s();}catch(e){}
-    _emojiPopAtEl(document.getElementById('ob-sp-'+G._outerPos),fx.e);
+    _emojiPopAtEl(tileEl,fx.e);
   }
+  // ── Landing juice (dopamine): tile flash + token pop + type-aware haptic ──
+  if(tileEl&&!document.hidden&&tileEl.animate){try{tileEl.style.animation='obTileLand .5s ease';setTimeout(()=>{if(tileEl)tileEl.style.animation='';},520);}catch(e){}}
+  const _tok=document.getElementById('ob-token');
+  if(_tok&&!document.hidden&&_tok.animate){try{_tok.animate([{transform:'scale(1)'},{transform:'scale(1.4) rotate(-8deg)',offset:.4},{transform:'scale(1)'}],{duration:360,easing:'cubic-bezier(.3,.8,.4,1)'});}catch(e){}}
+  try{if(typeof _haptic==='function')_haptic(sp.type==='dream'?[40,30,40,30,90]:sp.type==='payday'?[20,45,20]:sp.type==='danger'?[60,30,60]:14);}catch(e){}
   switch(sp.type){
     case'payday':{
       // Tick crash recovery countdown FIRST — so restored CF is included in this payday
@@ -10641,6 +10696,7 @@ function showScreen(id){
   if(id!=='game'){
     const gEl=$('game');if(gEl)gEl.classList.remove('ob-mode');
     const obPanel=$('ob-game-panel');if(obPanel)obPanel.style.display='none';
+    if(typeof hideObToken==='function')hideObToken();
   }
   // FS panel only makes sense during gameplay — fully hide it on start/win/other non-game screens
   const fsEl=$('fs-panel');
