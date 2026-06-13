@@ -2854,6 +2854,7 @@ function applyCosmetics(){
   }catch(e){}
 }
 function buyShopItem(id){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   const item=SHOP_ITEMS.find(i=>i.id===id);if(!item)return;
   const p=loadProfile();
   if(p.owned.includes(id))return;
@@ -2876,6 +2877,7 @@ function equipShopItem(id){
   saveProfile(p);applyCosmetics();openShop();
 }
 function openShop(){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   const p=loadProfile();
   let el=document.getElementById('credits-shop');if(el)el.remove();
   el=document.createElement('div');el.id='credits-shop';
@@ -4656,6 +4658,7 @@ function _srRender(dir){
 
 // ══ CAR DEALERSHIP (segment showroom → car detail) ════
 function openCarDealership(fromBoard){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   window._modalFromBoard=!!fromBoard;
   const tier=creditTier(G.creditScore||650);
   const tierIdx=CAR_TIER_IDX[tier.label];
@@ -4706,6 +4709,7 @@ function showCarSegment(segKey,fromBoard){
     actions});
 }
 function showCarDetail(car,fromBoard){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   const tier=creditTier(G.creditScore||650);
   const tierIdx=CAR_TIER_IDX[tier.label];
   const apr=loanRate()+0.02;
@@ -4832,6 +4836,7 @@ function _currentHomeEquity(){
   return{home,owed:mort?mort.amt:0,value:home.cost,equity:Math.max(0,home.cost-(mort?mort.amt:0))};
 }
 function openRealtyOffice(){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   const tier=creditTier(G.creditScore||650);
   const tierIdx=CAR_TIER_IDX[tier.label];
   const cur=_currentHomeEquity();
@@ -4897,6 +4902,7 @@ function _homeArtSVG(h){
   return '<svg viewBox="0 0 160 80" style="width:100%;max-width:240px">'+sky+grass+scene+'</svg>';
 }
 function showHomeDetail(h){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   const tier=creditTier(G.creditScore||650);
   const price=_homePrice(h);
   const cur=_currentHomeEquity();
@@ -5716,6 +5722,7 @@ function onPayday(){
 }
 
 function showDealChoice(){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   showEventCard('opportunity','🏆 Deal Hub — Choose Your Play',
     'You landed on a Deal space. Two types of opportunities are available — a nimble Small Deal you can get into quickly, or a Big Deal with higher returns and bigger entry costs.',
     'The rich don\'t wait for perfect conditions. They pick the deal that fits their resources today.',
@@ -5881,6 +5888,7 @@ function triggerBankruptcy(cause){
 }
 
 function borrowAndBuy(deal,shortage){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   // Cap borrow at MAX_BANK_LOAN — prevents silent over-cap
   const loanRoom=Math.max(0,MAX_BANK_LOAN-(G.bankLoan||0));
   const actualBorrow=Math.min(shortage,loanRoom);
@@ -6040,6 +6048,7 @@ function showBizLoanModal(deal){
 }
 
 function buyDealWithLoan(deal,downAmt,rateOverride){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   const shortage=downAmt-G.cash;
   if(shortage>0){
     const loanRoom=Math.max(0,MAX_BANK_LOAN-(G.bankLoan||0));
@@ -6051,6 +6060,7 @@ function buyDealWithLoan(deal,downAmt,rateOverride){
 }
 
 function buyDeal(deal){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   if(deal.type==='raise'){
     G.salaryBoost=(G.salaryBoost||0)+deal.cf;
     addLog('💼',`Raise: +$${fmt(deal.cf)}/mo salary → $${fmt(income().salary)}/mo total`,'gold');
