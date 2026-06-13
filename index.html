@@ -4868,6 +4868,34 @@ function _clearOldCarLoans(){
   G.liabilities=(G.liabilities||[]).filter(l=>!(l.type==='carfin'||l.name==='Car Loan'));
 }
 // 🏁 Dream-garage moment — buying a Supercar/Exotic/Dream car deserves a beat
+// Freedom-journey milestone toast — fires when you cross 25/50/75% of the way out
+// of the Rat Race. 100% is handled by the escape cutscene, so we skip it here.
+function _freedomMilestoneToast(tier){
+  try{
+    if(document.hidden)return;
+    var msgs={
+      1:{icon:'🌱',head:'25% TO FREEDOM',sub:'Your first assets are working for you now.',c:'#fde68a',g:'rgba(202,138,4,.55)'},
+      2:{icon:'⚡',head:'HALFWAY THERE',sub:'50% covered. Most people never get this far.',c:'#86efac',g:'rgba(34,197,94,.6)'},
+      3:{icon:'🔥',head:'75% — FREEDOM IS CLOSE',sub:"Don't let up. The last stretch is the sweetest.",c:'#86efac',g:'rgba(34,197,94,.7)'}
+    };
+    var m=msgs[tier];if(!m)return;
+    var el=document.createElement('div');
+    el.style.cssText='position:fixed;left:50%;top:74px;transform:translateX(-50%);z-index:9701;pointer-events:none;'
+      +'background:linear-gradient(135deg,rgba(8,3,20,.96),rgba(20,8,40,.94));border:2px solid '+m.c+';'
+      +'border-radius:14px;padding:11px 22px;text-align:center;font-family:Georgia,serif;'
+      +'box-shadow:0 10px 34px '+m.g+',0 0 0 1px rgba(255,255,255,.05) inset;backdrop-filter:blur(6px)';
+    el.innerHTML='<div style="font-size:1.5rem;line-height:1;margin-bottom:5px">'+m.icon+'</div>'
+      +'<div style="font-size:.92rem;font-weight:900;letter-spacing:1.2px;color:'+m.c+'">'+m.head+'</div>'
+      +'<div style="font-size:.68rem;color:rgba(255,255,255,.72);margin-top:3px;font-style:italic">'+m.sub+'</div>';
+    document.body.appendChild(el);
+    el.animate([
+      {opacity:0,transform:'translateX(-50%) translateY(-16px) scale(.9)'},
+      {opacity:1,transform:'translateX(-50%) translateY(0) scale(1)',offset:.16},
+      {opacity:1,transform:'translateX(-50%) translateY(0) scale(1)',offset:.82},
+      {opacity:0,transform:'translateX(-50%) translateY(-10px) scale(.97)'}
+    ],{duration:3200,easing:'cubic-bezier(.2,.9,.2,1)'}).onfinish=function(){el.remove();};
+  }catch(e){}
+}
 function _dreamGarageCelebrate(car){
   try{
     if(typeof spawnWinConfetti==='function')spawnWinConfetti();
@@ -9874,13 +9902,18 @@ function updateUI(){
     // Milestone pulse — WAAPI so it survives prefers-reduced-motion
     const tier=pct>=100?4:pct>=75?3:pct>=50?2:pct>=25?1:0;
     if(G._lastFreedomTier===undefined)G._lastFreedomTier=tier;
-    if(tier>G._lastFreedomTier&&fChip&&fChip.animate){
-      try{fChip.animate([{transform:'scale(1)'},{transform:'scale(1.18)'},{transform:'scale(1)'}],{duration:560,easing:'ease-out'});
-        fChip.animate([{boxShadow:'0 0 0 0 rgba(134,239,172,0)'},{boxShadow:'0 0 14px 4px rgba(134,239,172,.7)'},{boxShadow:'0 0 0 0 rgba(134,239,172,0)'}],{duration:900,easing:'ease-out'});
-        try{_tone&&_tone(660,.06,'triangle',.05,0,990);}catch(e){}
-      }catch(e){}
+    if(tier>G._lastFreedomTier){
+      if(fChip&&fChip.animate){
+        try{fChip.animate([{transform:'scale(1)'},{transform:'scale(1.18)'},{transform:'scale(1)'}],{duration:560,easing:'ease-out'});
+          fChip.animate([{boxShadow:'0 0 0 0 rgba(134,239,172,0)'},{boxShadow:'0 0 14px 4px rgba(134,239,172,.7)'},{boxShadow:'0 0 0 0 rgba(134,239,172,0)'}],{duration:900,easing:'ease-out'});
+          try{_tone&&_tone(660,.06,'triangle',.05,0,990);}catch(e){}
+        }catch(e){}
+      }
+      // Motivational toast on 25/50/75% crossings (100% = escape cutscene handles it).
+      // Guard initial setup: only toast when we had a real prior tier (not first updateUI).
+      if(tier>=1&&tier<=3&&G._freedomTierInit)_freedomMilestoneToast(tier);
     }
-    G._lastFreedomTier=tier;
+    G._lastFreedomTier=tier;G._freedomTierInit=true;
   })();
 
   // Top bar
