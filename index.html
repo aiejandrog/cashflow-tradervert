@@ -12323,6 +12323,35 @@ function _syncBoardModeForActive(){
   }
 }
 
+// ── PLAYER SKIP-VOTE ─────────────────────────────────────────────────────
+// In 3+ player networked games, a stalling/AFK player can be skipped EARLY by
+// a vote (instead of waiting out the 120s auto-skip). Two distinct non-active
+// players agreeing → skip to the next turn. Reuses the proven mpAdvanceTurn().
+const SKIP_VOTES_NEEDED=2;
+function mpVoteSkip(){
+  if(PLAYERS.length<3||!_bcRole)return;            // 3+ networked players only
+  if(ACTIVE_PLAYER_IDX===_bcMyIdx)return;          // can't vote to skip yourself
+  const btn=document.getElementById('mp-skip-vote-btn');
+  if(btn){btn.disabled=true;btn.textContent='✓ Skip vote sent';btn.style.opacity='.6';}
+  if(_bcRole==='host')_mpTallySkip(_bcMyIdx);
+  else { try{netSend({type:'skip-request',from:_bcMyIdx,target:ACTIVE_PLAYER_IDX});}catch(e){} }
+}
+function _mpTallySkip(fromIdx){ // HOST authority
+  if(_bcRole!=='host'||PLAYERS.length<3)return;
+  if(typeof fromIdx!=='number'||fromIdx===ACTIVE_PLAYER_IDX)return;
+  const active=ACTIVE_PLAYER_IDX;
+  if(!window._skipVotes||window._skipVotes.target!==active)window._skipVotes={target:active,set:new Set()};
+  window._skipVotes.set.add(fromIdx);
+  const n=window._skipVotes.set.size, name=(PLAYERS[active]&&PLAYERS[active].name)||'Player';
+  try{netSend({type:'turn-event',icon:'⏭',txt:`Skip vote: ${n}/${SKIP_VOTES_NEEDED} to skip ${name}`,from:_bcMyIdx});}catch(e){}
+  addLog('⏭',`Skip vote: ${n}/${SKIP_VOTES_NEEDED} to skip ${name}`,'b');
+  if(n>=SKIP_VOTES_NEEDED){
+    window._skipVotes=null;window._turnStartTs=null;
+    addLog('⏭',`${name} skipped by player vote.`,'r');
+    try{netSend({type:'turn-event',icon:'⏭',txt:`${name} skipped by vote`,from:_bcMyIdx});}catch(e){}
+    mpAdvanceTurn();
+  }
+}
 function mpAdvanceTurn(){
   // Snapshot current G back into PLAYERS
   PLAYERS[ACTIVE_PLAYER_IDX].G=JSON.parse(JSON.stringify(G));
@@ -12719,6 +12748,7 @@ const MP_TURN_LIMIT_MS=120000;
 function bcHostBroadcastTurnStart(idx){
   if(!_bc||_bcRole!=='host')return;
   const p=PLAYERS[idx];
+  window._skipVotes=null; // new turn — clear any skip-vote tally
   window._turnStartTs=Date.now();window._turnStartIdx=idx; // AFK watchdog reference
   netSend({type:'turn-start',activeIdx:idx,playerName:p.name,
     playerColor:p.color,G:JSON.parse(JSON.stringify(p.G)),ts:Date.now()});
@@ -13094,6 +13124,7 @@ function bcHandleMessage(msg){
   if(_bcRole==='host'){
     if(msg.type==='join-request')bcHostHandleJoinRequest(msg);
     if(msg.type==='turn-done')bcHostHandleTurnDone(msg);
+    if(msg.type==='skip-request')_mpTallySkip(msg.from);
     if(msg.type==='player-won')bcHostHandlePlayerWon(msg);
     if(msg.type==='player-profile')bcHostHandlePlayerProfile(msg);
   } else if(_bcRole==='joiner'){
@@ -13348,14 +13379,32 @@ function bcShowWaiting(playerName){
   }
   $('mp-wait').style.display='flex';
   mpMakeWaitDraggable();
+  // Skip-vote button (3+ players) — appears after the active player stalls 30s
+  const inner=document.querySelector('.mp-wait-inner');
+  let skipBtn=document.getElementById('mp-skip-vote-btn');
+  if(inner&&!skipBtn){
+    skipBtn=document.createElement('button');skipBtn.id='mp-skip-vote-btn';
+    skipBtn.onclick=mpVoteSkip;
+    skipBtn.style.cssText='display:none;margin-top:6px;background:rgba(220,80,80,.16);border:1.5px solid rgba(240,100,100,.5);border-radius:9px;color:#ffb4b4;font-size:.7rem;font-weight:800;padding:6px 12px;cursor:pointer;font-family:Georgia,serif';
+    inner.appendChild(skipBtn);
+  }
+  if(skipBtn){skipBtn.disabled=false;skipBtn.style.opacity='1';skipBtn.style.display='none';}
   // live countdown for the waiting banner
   clearInterval(window._mpTimerIv);
   window._mpTimerIv=setInterval(()=>{
     const el=$('mp-turn-timer');
     if(!el||$('mp-wait').style.display==='none'){clearInterval(window._mpTimerIv);return;}
-    const left=Math.max(0,Math.round((( window._turnTs||Date.now())+120000-Date.now())/1000));
+    const elapsed=Date.now()-(window._turnTs||Date.now());
+    const left=Math.max(0,Math.round(((window._turnTs||Date.now())+120000-Date.now())/1000));
     el.textContent=left+'s';
     el.style.color=left<=20?'#fb7185':left<=45?'#fbbf24':'#7ee0f0';
+    // reveal the skip-vote button after 30s of inactivity (3+ players, not my turn, not won)
+    const sb=document.getElementById('mp-skip-vote-btn');
+    if(sb&&!sb.disabled){
+      const eligible=PLAYERS.length>=3&&!(PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].won)&&ACTIVE_PLAYER_IDX!==_bcMyIdx&&elapsed>30000;
+      if(eligible){const nm=(PLAYERS[ACTIVE_PLAYER_IDX]&&PLAYERS[ACTIVE_PLAYER_IDX].name)||'this player';sb.textContent='⏭ Vote to skip '+nm;sb.style.display='';}
+      else sb.style.display='none';
+    }
   },1000);
 }
 
