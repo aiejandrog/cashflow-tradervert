@@ -3409,12 +3409,15 @@ function doSpin(){
       if(p){revealProf(p);return;}
     }
   }catch(e){}
-  // OVERWRITE GUARD: spinning a new life erases the saved run — make that explicit
+  // SLOT GUARD: a new life takes a FREE slot — nothing gets erased unless all
+  // 5 are full, and then the player explicitly approves losing the oldest one.
   try{
-    const rawSave=localStorage.getItem(SAVE_KEY);
-    if(rawSave){
-      const s=JSON.parse(rawSave);
-      if(s&&s.G&&s.G.prof&&!confirm('Start a NEW life? Your saved run — Turn '+(s.G.turn||0)+' as '+s.G.prof.name+' — will be erased when the new game begins.'))return;
+    if(!_freeSlot()){
+      let oldestK=null,oldestTs=Infinity,oldestS=null;
+      for(const k of SAVE_SLOTS){const s=_slotInfo(k);if(s&&(s.ts||0)<oldestTs){oldestTs=s.ts||0;oldestK=k;oldestS=s;}}
+      const desc=oldestS?(oldestS.G.prof.name+' — Turn '+(oldestS.G.turn||0)):'your oldest life';
+      if(!confirm('All 5 life slots are FULL. Spinning a new life will erase the oldest one ('+desc+'). Continue?'))return;
+      localStorage.removeItem(oldestK);
     }
   }catch(e){}
   const btn=$('btn-spin'),reel=$('spin-reel'),stage=$('sp-stage');
@@ -10360,7 +10363,8 @@ function startGame(prof,loc){
   const lobby=$('mp-lobby');if(lobby)lobby.style.display='none';
   const wait=$('mp-wait');if(wait)wait.style.display='none';
   try{localStorage.removeItem('cf_pending_spin');}catch(e){} // life committed — lock released
-  try{sessionStorage.setItem('cf_in_game','solo');}catch(e){} // refresh returns straight into the run
+  SAVE_KEY=_freeSlot()||SAVE_KEY; // every new life gets its own slot (max 5 — doSpin guards the overflow)
+  try{sessionStorage.setItem('cf_in_game',SAVE_KEY);}catch(e){} // refresh returns straight into THIS run
   initGame(prof,loc);_prevCash=null;
   // Hide bankruptcy overlay in case player is starting fresh after going bankrupt
   const bkOv=$('bankruptcy-overlay');if(bkOv)bkOv.style.display='none';
@@ -10387,8 +10391,17 @@ function startGame(prof,loc){
 }
 
 // ── SAVE / LOAD ───────────────────────────────────────
-const SAVE_KEY='cg_save_v2';
+// ── SAVE SLOTS — up to 5 solo lives at once, each in its own slot.
+// SAVE_KEY always points at the ACTIVE slot; multiplayer lives in its own
+// clearly-separated key so joining a room can never masquerade as a solo run.
+const SAVE_SLOTS=['cg_save_s1','cg_save_s2','cg_save_s3','cg_save_s4','cg_save_s5'];
+let SAVE_KEY=SAVE_SLOTS[0];
 const SAVE_KEY_MP='cg_save_mp';
+// migrate the legacy single-slot save into slot 1
+try{const _legacy=localStorage.getItem('cg_save_v2');if(_legacy){if(!localStorage.getItem(SAVE_SLOTS[0]))localStorage.setItem(SAVE_SLOTS[0],_legacy);localStorage.removeItem('cg_save_v2');}}catch(e){}
+function _slotInfo(k){try{const s=JSON.parse(localStorage.getItem(k)||'null');return s&&s.G&&s.G.prof?s:null;}catch(e){return null;}}
+function _freeSlot(){for(const k of SAVE_SLOTS){if(!_slotInfo(k))return k;}return null;}
+function _usedSlots(){return SAVE_SLOTS.filter(k=>_slotInfo(k));}
 function saveGame(){
   if(!G)return;
   try{
@@ -10496,7 +10509,7 @@ function loadSave(key){
 }
 function clearSave(){localStorage.removeItem(SAVE_KEY);}
 function resumeGame(){
-  try{sessionStorage.setItem('cf_in_game',PLAYERS.length>1?'mp':'solo');}catch(e){}
+  try{sessionStorage.setItem('cf_in_game',PLAYERS.length>1?'mp':SAVE_KEY);}catch(e){}
   // Password gate: MP save with a room password must be unlocked first
   if(PLAYERS.length>1&&_mpRoomPass&&!_mpPassUnlocked){
     mpCheckPassword(()=>resumeGame());
@@ -11689,54 +11702,62 @@ function bcJoinerFinishTurn(){
 let _autoResumed=false;
 try{
   const mode=sessionStorage.getItem('cf_in_game');
-  if(mode==='solo'&&loadSave()){_autoResumed=true;setTimeout(()=>resumeGame(),60);}
-  else if(mode==='mp'&&loadSave(SAVE_KEY_MP)){_autoResumed=true;setTimeout(()=>resumeGame(),60);}
+  if(mode==='mp'&&loadSave(SAVE_KEY_MP)){_autoResumed=true;setTimeout(()=>resumeGame(),60);}
+  else if(mode&&mode!=='mp'){
+    // mode is a slot key ('cg_save_sN'); legacy 'solo' falls back to the first used slot
+    const k=SAVE_SLOTS.includes(mode)?mode:_usedSlots()[0];
+    if(k&&loadSave(k)){SAVE_KEY=k;_autoResumed=true;setTimeout(()=>resumeGame(),60);}
+  }
 }catch(e){}
 // ── STATE-AWARE SPLASH ──────────────────────────────────────────────────
-// One life per spin: while a run is alive, the menu is about THAT life —
-// the career spinner makes no sense (you can't re-spin) so it's hidden.
-// Finish or abandon the run and the spinner returns for the next life.
-if(!_autoResumed&&loadSave()){
+// Up to 5 solo lives can run at once — each in its own slot. The splash lists
+// every life in progress; the spinner stays available until all 5 are used.
+// Multiplayer has its OWN save below — it can never be confused with these.
+const _bootSlots=_usedSlots();
+if(!_autoResumed&&_bootSlots.length){
   setTimeout(()=>{
     const spCard=document.querySelector('.sp-card');if(!spCard)return;
-    // hide everything that belongs to STARTING a life
-    const stage=document.getElementById('sp-stage');if(stage)stage.style.display='none';
-    const spin=document.getElementById('btn-spin');if(spin)spin.style.display='none';
-    const title=spCard.querySelector('.sp-title');if(title)title.textContent='⏳ Life in Progress';
-    // hero: the run you're living
-    const cf=(()=>{try{return monthlyCF();}catch(e){return 0;}})();
+    const full=_bootSlots.length>=SAVE_SLOTS.length;
+    if(full){
+      const stage=document.getElementById('sp-stage');if(stage)stage.style.display='none';
+      const spin=document.getElementById('btn-spin');if(spin)spin.style.display='none';
+    }
+    const title=spCard.querySelector('.sp-title');
+    if(title)title.textContent=full?'⏳ All 5 Lives in Progress':'⏳ Lives in Progress ('+_bootSlots.length+'/5)';
     const wrap=document.createElement('div');
     wrap.id='splash-resume';
-    wrap.style.cssText='display:flex;flex-direction:column;gap:8px;align-items:center;padding:6px 0 2px';
-    wrap.innerHTML=
-      `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">`+
-        `<span class="bti-chip">${G.identity&&G.identity.name?G.identity.name:'You'} · Age ${(G.identity&&G.identity.age)||G.prof.age||'?'}</span>`+
-        `<span class="bti-chip gold">💵 $${fmt(G.cash)}</span>`+
-        `<span class="bti-chip ${cf>=0?'good':'bad'}">CF ${cf>=0?'+':''}$${fmt(cf)}/mo</span>`+
-        `<span class="bti-chip">Turn ${G.turn}</span>`+
-      `</div>`;
-    const resumeBtn=document.createElement('button');
-    resumeBtn.className='btn-spin';
-    resumeBtn.style.cssText='background:linear-gradient(135deg,#3a1070 0%,#6b3fa8 45%,#8b5fc8 60%,#6b3fa8 80%,#3a1070 100%);border-color:rgba(150,100,220,.5);color:#e8d4ff;box-shadow:0 5px 20px rgba(107,63,168,.5)';
-    resumeBtn.textContent=`▶ Continue as ${G.prof.icon} ${G.prof.name}`;
-    resumeBtn.onclick=()=>resumeGame();
-    wrap.appendChild(resumeBtn);
-    // the only path back to the spinner: deliberately end this life
-    const abandon=document.createElement('button');
-    abandon.style.cssText='background:none;border:none;color:rgba(255,255,255,.35);font-size:.62rem;font-style:italic;cursor:pointer;font-family:Georgia,serif;text-decoration:underline;padding:2px';
-    abandon.textContent='🗑 Abandon this life & spin a new path';
-    abandon.onclick=()=>{
-      if(confirm('End this life for good? '+G.prof.name+' — Turn '+G.turn+' will be erased. Your ✦ credits and trophies are safe.')){
-        clearSave();
-        try{sessionStorage.removeItem('cf_in_game');}catch(e){}
-        location.reload();
-      }
-    };
-    wrap.appendChild(abandon);
-    spCard.insertBefore(wrap,spCard.firstChild.nextSibling); // right under the title
+    wrap.style.cssText='display:flex;flex-direction:column;gap:6px;align-items:stretch;padding:6px 0 2px;max-height:34vh;overflow-y:auto;scrollbar-width:thin';
+    _bootSlots.forEach(k=>{
+      const s=_slotInfo(k);if(!s)return;
+      const g=s.G;
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:8px;background:rgba(107,63,168,.16);border:1px solid rgba(150,100,220,.35);border-radius:10px;padding:7px 10px';
+      row.innerHTML=`<span style="font-size:1.2rem">${g.prof.icon}</span>
+        <span style="flex:1;text-align:left;font-family:Georgia,serif;font-size:.72rem;color:#e8d4ff;font-weight:800;line-height:1.3">${(g.identity&&g.identity.name)||'You'} — ${g.prof.name}<br>
+        <span style="font-weight:600;color:rgba(220,200,255,.55);font-size:.6rem">Turn ${g.turn||0} · 💵 $${fmt(g.cash||0)}</span></span>`;
+      const go=document.createElement('button');
+      go.className='btn-og btn-gold';go.style.cssText='padding:6px 14px;font-size:.7rem';go.textContent='▶ Continue';
+      go.onclick=()=>{SAVE_KEY=k;if(loadSave(k))resumeGame();};
+      const del=document.createElement('button');
+      del.className='btn-og btn-tan';del.style.cssText='padding:6px 9px;font-size:.7rem';del.textContent='🗑';del.title='Abandon this life';
+      del.onclick=()=>{
+        if(confirm('End this life for good? '+g.prof.name+' — Turn '+(g.turn||0)+' will be erased. Your ✦ credits and trophies are safe.')){
+          localStorage.removeItem(k);
+          try{if(sessionStorage.getItem('cf_in_game')===k)sessionStorage.removeItem('cf_in_game');}catch(e){}
+          location.reload();
+        }
+      };
+      row.appendChild(go);row.appendChild(del);
+      wrap.appendChild(row);
+    });
+    if(!full){
+      const hint=document.createElement('div');
+      hint.style.cssText='font-size:.58rem;color:rgba(255,255,255,.3);text-align:center;font-style:italic';
+      hint.textContent='— or spin below to start life #'+(_bootSlots.length+1)+' —';
+      wrap.appendChild(hint);
+    }
+    spCard.insertBefore(wrap,spCard.firstChild.nextSibling);
   },100);
-  // The save was loaded only to power the hero. resumeGame() restores the
-  // player count from PLAYERS when actually resuming.
   _mpCount=1;
 }
 showScreen('splash');
@@ -11755,7 +11776,7 @@ try{
         const b=document.createElement('button');
         b.className='btn-spin';
         b.style.cssText='margin-top:8px;background:linear-gradient(135deg,#0a4a5e,#22d3ee44,#0a4a5e);border-color:rgba(34,211,238,.4);color:#aef;box-shadow:0 5px 18px rgba(34,211,238,.25);font-size:.85rem';
-        b.textContent=`👥 Resume "${sMP._mpRoomName||'Room'}" — ${sMP.PLAYERS.length} Players (Turn ${sMP.G.turn||0})`;
+        b.textContent=`👥 MULTIPLAYER — Resume "${sMP._mpRoomName||'Room'}" · ${sMP.PLAYERS.length} Players (Turn ${sMP.G.turn||0})`;
         b.onclick=()=>{if(loadSave(SAVE_KEY_MP))resumeGame();};
         const spCard=document.querySelector('.sp-card');if(spCard)spCard.appendChild(b);
       },150);
