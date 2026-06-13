@@ -7444,7 +7444,11 @@ function refinanceAsset(uid){
     actions.push({label:`Rate/Term — ${why}`,locked:true});
   }
   // Option 2: Cash-Out refi (pulls equity, raises balance/payment)
-  if(maxCashOut>=5000&&eligible){
+  // Cooldown: a cash-out can't be pulled again for MIN_REFI_TURNS turns on the same
+  // asset — without this you could refi to 75% LTV every single turn and mint cash.
+  const _cashOutCooldown=(G.turn||0)-(a._lastCashOut!=null?a._lastCashOut:-999);
+  const _cashOutReady=_cashOutCooldown>=MIN_REFI_TURNS;
+  if(maxCashOut>=5000&&eligible&&_cashOutReady){
     const cashOutAmt=maxCashOut;
     const newBalance=a.liability+cashOutAmt;
     const newPmtCashOut=Math.round(newBalance*newRate/12);
@@ -7457,12 +7461,15 @@ function refinanceAsset(uid){
       if(!a.isPrimaryHome){a.cf=Math.max(0,a.cf+cfChangeCashOut);
         if(a._preRecessionCF!==undefined)a._preRecessionCF+=cfChangeCashOut;}
       G.cash+=cashOutAmt;
+      a._lastCashOut=G.turn||0; // start the cooldown
       boostCredit(-8);
       addLog('💵',`Cash-out refi: pulled $${fmt(cashOutAmt)} · ${a.name} balance now $${fmt(newBalance)}`,'gold');
       updateUI();
     }});
   }else if(maxCashOut<5000){
     actions.push({label:`Cash-Out — Not enough equity (need >$5k at 75% LTV)`,locked:true});
+  }else if(!_cashOutReady){
+    actions.push({label:`Cash-Out — Cooldown: wait ${MIN_REFI_TURNS-_cashOutCooldown} turn${(MIN_REFI_TURNS-_cashOutCooldown)===1?'':'s'}`,locked:true});
   }else if(!eligible){
     actions.push({label:`Cash-Out — DTI/credit issue`,locked:true});
   }
@@ -7948,7 +7955,7 @@ function _finalizePrimaryHomeSale(salePrice,label){
   boostCredit(8);
   addLog('🏠',`${label||'Sold home'} → $${fmt(equity)} equity${debt>0?' (after $'+fmt(debt)+' payoff)':''}. Credit +8`,'gold');
   updateUI();checkWin();saveGame();
-  setTimeout(()=>openRentalBrowser(),450);
+  if(!window._rentalBrowserOpen)setTimeout(()=>openRentalBrowser(),450);
   return equity;
 }
 // ── 🔑 RENTAL BROWSER — pops after every home sale: pick where you live now ──
@@ -7970,8 +7977,12 @@ function openRentalBrowser(){
       G.expenseOverrides.mortgage=o.rent;
       G.rentalHome={name:o.n,emoji:o.e,rent:o.rent,safe:o.safe,sqft:o.sqft};
       addLog(o.e,`Moved into ${o.n} — $${fmt(o.rent)}/mo rent (safety ${o.safe}/5). ${o.vibe}`,'b');
+      _resumeFn=null;window._rentalBrowserOpen=false;scheduleCloseFS&&scheduleCloseFS();
       updateUI();saveGame();
     }})),_noFS:true});
+  // CRITICAL: openModal just set _resumeFn to re-open THIS browser. Clearing it stops
+  // the space-key loop that hard-locked the game; if stuck, space now force-ends the turn.
+  _resumeFn=null;window._rentalBrowserOpen=true;
 }
 function sellPrimaryResidence(){
   if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
