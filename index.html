@@ -1998,7 +1998,7 @@ body{
       <div class="fst">
         <div class="fsr"><span class="fl">Taxes:</span><span class="fv r" id="fs-taxes">$0</span></div>
         <div class="fsr"><span class="fl" id="fs-mort-lbl">Home Mortgage Payment:</span><span class="fv r" id="fs-mortgage">$0</span></div>
-        <div class="fsr"><span class="fl">Car Loan Payment:</span><span class="fv r" id="fs-car">$0</span></div>
+        <div class="fsr"><span class="fl" id="fs-car-lbl">Transport:</span><span class="fv r" id="fs-car">$0</span></div>
         <div class="fsr" id="fs-ins-row" style="display:none"><span class="fl">Car Insurance:</span><span class="fv r" id="fs-insurance">$0</span></div>
         <div class="fsr" id="fs-school-row"><span class="fl" id="fs-school-lbl">School Loan Payment:</span><span class="fv r" id="fs-school">—</span></div>
         <div class="fsr"><span class="fl">Credit Card Payment:</span><span class="fv r" id="fs-cc">$0</span></div>
@@ -2456,6 +2456,25 @@ const BEATERS=[
   {name:'2004 Toyota Camry',emoji:'🚗'},{name:'2008 Mazda 6',emoji:'🚗'},
   {name:'2011 Kia Optima',emoji:'🚗'},{name:'2006 Honda Odyssey',emoji:'🚐'},
 ];
+// ── STARTING TRANSPORTATION ──────────────────────────────────────────────
+// Players load in with different rides. Owned vehicles cost gas/upkeep/mo;
+// public transit & rideshare charge a monthly fee. All flow into the expense
+// sheet's transport line (expenseOverrides.car) so it sits under Expenses.
+const STARTING_TRANSPORT=[
+  {id:'bike',    name:'Bicycle',         emoji:'🚲',  monthly:0,   owned:true,            weight:3, label:'Bike (no payment)',    note:'Two wheels, zero payment — pure cash flow.'},
+  {id:'transit', name:'Public Transit',  emoji:'🚌',  monthly:120, owned:false,           weight:4, label:'Transit Pass',         note:'No car — a monthly bus/metro pass on your expense sheet.'},
+  {id:'walk',    name:'Walk + Rideshare',emoji:'🚶',  monthly:70,  owned:false,           weight:2, label:'Rideshare',            note:'On foot, with the odd rideshare when it rains.'},
+  {id:'scooter', name:'Scooter',         emoji:'🛵',  monthly:60,  owned:true,            weight:2, label:'Scooter (gas+upkeep)', note:'Cheap to run and weaves through traffic.'},
+  {id:'moto',    name:'Motorcycle',      emoji:'🏍️', monthly:130, owned:true,            weight:2, label:'Motorcycle (gas+ins)', note:'Style and speed — gas, insurance, maintenance.'},
+  {id:'beater',  name:'Used Car',        emoji:'🚗',  monthly:190, owned:true, beater:true,weight:4, label:'Car (beater)',         note:'A reliable-ish beater. It gets you there.'},
+  {id:'car',     name:'Decent Car',      emoji:'🚙',  monthly:290, owned:true,            weight:3, label:'Car Payment',          note:'A comfortable ride with a comfortable payment.'},
+];
+function _pickStartTransport(){
+  const total=STARTING_TRANSPORT.reduce((s,t)=>s+(t.weight||1),0);
+  let r=Math.random()*total;
+  for(const t of STARTING_TRANSPORT){r-=(t.weight||1);if(r<=0)return t;}
+  return STARTING_TRANSPORT[STARTING_TRANSPORT.length-1];
+}
 // ── HOME CATALOG (Realty Office — personal residences, mortgage financed) ──
 // Prices scale with the city's loc.re multiplier. upkeep = HOA/tax/maintenance per month.
 const HOMES = [
@@ -3786,7 +3805,7 @@ function initGame(prof, location) {
     objectives:[], _objectivesDone:[],
     relationship:{status:'single',partner:null,income:0,sharedExp:0},
     gameYear:1, // 1 year passes per full board lap (turns are too granular — a lap ≈ a life chapter)
-    carOwned:(()=>{const b=BEATERS[Math.floor(Math.random()*BEATERS.length)];return{id:'beater',name:b.name,emoji:b.emoji,beater:true};})(),
+    carOwned:null, // set by the starting-transportation block after init (varies per player)
     carInsurance:0, delinq:{}, ccLateTier:0,
     rolling:false, milestones:{}, _stockPrices:{}, charityCount:0,
     childBirths:[],
@@ -3799,6 +3818,16 @@ function initGame(prof, location) {
     })(),
   };
   G.objectives=_drawObjectives(2); // two live goals from turn 1
+  // ── Starting transportation — varies per player (bike / transit / moto / car…) ──
+  try{
+    const T=_pickStartTransport();
+    let cName=T.name,cEmoji=T.emoji;
+    if(T.beater){const b=BEATERS[Math.floor(Math.random()*BEATERS.length)];cName=b.name;cEmoji=b.emoji;}
+    G.transport={id:T.id,name:cName,emoji:cEmoji,monthly:T.monthly,owned:!!T.owned,label:T.label,note:T.note};
+    G.expenseOverrides=G.expenseOverrides||{};
+    G.expenseOverrides.car=T.monthly; // transport cost on the expense sheet (replaces profession's base car line)
+    G.carOwned=T.owned?{id:T.beater?'beater':T.id,name:cName,emoji:cEmoji,beater:!!T.beater}:null;
+  }catch(e){}
   try{
     const p=loadProfile();p.games++;
     // Snapshot the character for MP prefill ("use my saved character") — identity only, never finances
@@ -11093,6 +11122,7 @@ function updateUI(){
   $('fs-taxes').textContent='$'+fmt(exp.taxes);
   $('fs-mortgage').textContent='$'+fmt(exp.mortgage);
   $('fs-car').textContent='$'+fmt(exp.car);
+  {const _cl=$('fs-car-lbl');if(_cl)_cl.textContent=(G.transport?(G.transport.emoji+' '+(G.transport.label||'Transport')):'Car Payment')+':';}
   // School loan payment — was missing from FS, causing ghost expense in totals
   const schRowEl=$('fs-school-row'),schValEl=$('fs-school'),schLblEl=$('fs-school-lbl');
   if(schValEl){schValEl.textContent=exp.school>0?'$'+fmt(exp.school):'—';}
@@ -11736,6 +11766,11 @@ function startGame(prof,loc){
   else{setTimeout(()=>{$('fs-panel').classList.add('open');setTimeout(()=>showTurnDialog(),400);},200);}
   addLog('🎮',startMsg,'gold');
   setTimeout(()=>addLog('📊',creditMsg,tier.color==='#2a8a2a'?'g':'b'),400);
+  if(G.transport){
+    const tp=G.transport, costStr=tp.monthly>0?'$'+fmt(tp.monthly)+'/mo (in Expenses)':'no monthly cost';
+    setTimeout(()=>addLog(tp.emoji,'You roll in with '+(tp.owned?'your '+tp.name:tp.name)+' — '+costStr+'. '+tp.note,'b'),650);
+    if(!document.hidden)setTimeout(()=>{try{showToast(tp.emoji+' You start with '+tp.name+' — '+costStr,'#3a2d6e',4400,true);}catch(e){}},1150);
+  }
   _rivalGameStart(); // SOLO: choose a rival to race (no-op in MP)
 }
 
