@@ -266,10 +266,10 @@ body{
 
 /* ── FINANCIAL STATEMENT ── */
 #fs-panel{
-  position:fixed;left:0;top:50px;bottom:0;width:660px;
+  position:fixed;left:0;top:50px;bottom:0;width:min(660px,94vw);box-sizing:border-box;
   background:var(--parch);border-right:3px solid var(--parch-b);
   display:flex;flex-direction:column;
-  transform:translateX(calc(-660px - 8px));
+  transform:translateX(calc(-100% - 8px));
   transition:transform .42s cubic-bezier(0.32,0.72,0,1), box-shadow .42s ease;
   z-index:138;overflow:hidden;
 }
@@ -11768,8 +11768,16 @@ function bcJoinerActivateMyTurn(){
 // ── JOINER: show waiting screen ──────────────────────────
 function bcShowWaiting(playerName){
   const nameEl=$('mp-wait-name'),subEl=$('mp-wait-sub');
-  if(nameEl)nameEl.textContent=playerName+"'s Turn";
-  if(subEl)subEl.textContent='"'+_mpRoomName+'" · Watching live...';
+  const iWon=PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].won;
+  if(iWon){
+    // escaping the rat race first IS the win in MP — make it unmistakable instead
+    // of looking like you're stuck waiting for a turn you'll never get.
+    if(nameEl)nameEl.textContent='🏆 YOU ESCAPED FIRST!';
+    if(subEl)subEl.textContent='You already won — watching the rest race for 2nd.';
+  }else{
+    if(nameEl)nameEl.textContent=playerName+"'s Turn";
+    if(subEl)subEl.textContent='"'+_mpRoomName+'" · Watching live...';
+  }
   bcRefreshWaitScores();
   // Keep the GAME board on screen behind the HUD so the spectator watches live.
   // (Earlier the blackout overlay hid everything.) Ensure the board is built and
