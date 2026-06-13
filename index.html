@@ -546,10 +546,10 @@ body{
 /* ── 🎲 3D thrown dice — real CSS cubes tumble in from the table edge ── */
 .fly-die3d{position:fixed;z-index:240;width:54px;height:54px;pointer-events:none;perspective:520px;will-change:transform,opacity;filter:drop-shadow(0 16px 14px rgba(0,0,0,.55))}
 .fd-cube{width:100%;height:100%;position:relative;transform-style:preserve-3d;will-change:transform}
-.fd-face{position:absolute;inset:0;border-radius:9px;background:linear-gradient(145deg,#fdfdf2,#d4d4c2);border:2px solid #888;display:grid;grid-template-rows:repeat(3,1fr);grid-template-columns:repeat(3,1fr);padding:5px}
+.fd-face{position:absolute;inset:0;border-radius:9px;background:linear-gradient(145deg,var(--fdface1,#fdfdf2),var(--fdface2,#d4d4c2));border:2px solid var(--fdbord,#888);display:grid;grid-template-rows:repeat(3,1fr);grid-template-columns:repeat(3,1fr);padding:5px}
 .fly-die3d.fd-glow .fd-face{box-shadow:0 0 16px rgba(240,192,32,.85),inset 0 1px 0 #fff;border-color:#c8910c}
 .fd-cell{display:flex;align-items:center;justify-content:center}
-.fd-pip{width:70%;height:70%;border-radius:50%;background:#16161a}
+.fd-pip{width:70%;height:70%;border-radius:50%;background:var(--fdpip,#16161a)}
 /* static board dice retired — the 3D throw IS the dice now */
 #dice-row{display:none}
 /* ── turn info lives in the board center now — the parchment box is retired ── */
@@ -2830,9 +2830,9 @@ const SHOP_ITEMS=[
   {id:'th_ocean',   cat:'Board Themes',icon:'🌊',name:'Ocean Felt',    cost:750, type:'theme',vals:{f1:'#0e3d4d',f2:'#082530',f3:'#04141a'}},
   {id:'th_royal',   cat:'Board Themes',icon:'👑',name:'Royal Felt',    cost:1000,type:'theme',vals:{f1:'#3a1a5e',f2:'#220e3a',f3:'#120620'}},
   // Dice skins
-  {id:'di_gold',    cat:'Dice Skins',  icon:'🎲',name:'Gold Dice',     cost:600, type:'dice', vals:{d1:'#7a5a08',d2:'#4a3404',db:'#f0c020'}},
-  {id:'di_neon',    cat:'Dice Skins',  icon:'🎲',name:'Neon Dice',     cost:800, type:'dice', vals:{d1:'#0a4d44',d2:'#06281f',db:'#22eecc'}},
-  {id:'di_stealth', cat:'Dice Skins',  icon:'🎲',name:'Stealth Dice',  cost:600, type:'dice', vals:{d1:'#222',d2:'#0c0c0c',db:'#555'}},
+  {id:'di_gold',    cat:'Dice Skins',  icon:'🎲',name:'Gold Dice',     cost:600, type:'dice', vals:{d1:'#7a5a08',d2:'#4a3404',db:'#f0c020',fd1:'#fff0b8',fd2:'#e0a818',fb:'#a8780a',fp:'#3a2a00'}},
+  {id:'di_neon',    cat:'Dice Skins',  icon:'🎲',name:'Neon Dice',     cost:800, type:'dice', vals:{d1:'#0a4d44',d2:'#06281f',db:'#22eecc',fd1:'#bafff0',fd2:'#1fd8b8',fb:'#0a8d77',fp:'#06281f'}},
+  {id:'di_stealth', cat:'Dice Skins',  icon:'🎲',name:'Stealth Dice',  cost:600, type:'dice', vals:{d1:'#222',d2:'#0c0c0c',db:'#555',fd1:'#52525c',fd2:'#1c1c24',fb:'#6a6a72',fp:'#d8d8e0'}},
   // Premium avatars (selectable in the character creator once owned)
   {id:'av_ninja',   cat:'Premium Avatars',icon:'🥷',name:'The Ninja',    cost:400,type:'avatar'},
   {id:'av_robot',   cat:'Premium Avatars',icon:'🤖',name:'The Machine',  cost:400,type:'avatar'},
@@ -2851,7 +2851,17 @@ function applyCosmetics(){
     const di=SHOP_ITEMS.find(i=>i.id===eq.dice&&i.type==='dice');
     if(di){rs.setProperty('--die1',di.vals.d1);rs.setProperty('--die2',di.vals.d2);rs.setProperty('--dieb',di.vals.db);}
     else{rs.removeProperty('--die1');rs.removeProperty('--die2');rs.removeProperty('--dieb');}
+    _applyDiceSkinVars(eq.dice); // thrown 3D dice get the skin too
   }catch(e){}
+}
+// Apply (or clear) the thrown-dice skin vars for a given skin id. Spectators call
+// this with the ACTIVE player's skin so they see the roller's customized dice,
+// then revert to their own afterward.
+function _applyDiceSkinVars(skinId){
+  const rs=document.documentElement.style;
+  const di=SHOP_ITEMS.find(i=>i.id===skinId&&i.type==='dice');
+  if(di&&di.vals.fd1){rs.setProperty('--fdface1',di.vals.fd1);rs.setProperty('--fdface2',di.vals.fd2);rs.setProperty('--fdbord',di.vals.fb);rs.setProperty('--fdpip',di.vals.fp);}
+  else{rs.removeProperty('--fdface1');rs.removeProperty('--fdface2');rs.removeProperty('--fdbord');rs.removeProperty('--fdpip');}
 }
 function buyShopItem(id){
   if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
@@ -4156,18 +4166,23 @@ function rollDice(){
     finishRoll();
     return;
   }
-  // 🎲 3D THROWN DICE — true CSS cubes hurled in from the LEFT edge together,
-  // tumbling in 3D, bouncing once, then snapping to the rolled face at center.
-  // They rest glowing for a beat while the token starts moving, then fade.
-  // WAAPI keyframes: immune to prefers-reduced-motion CSS zeroing.
+  // 🎲 3D THROWN DICE — broadcast to spectators so they see MY (skinned) dice land
   const vals=[v1,d2locked?null:v2,useExpress?v3:null].filter(v=>v!==null);
+  if(PLAYERS.length>1&&!_bcLobbyPhase&&_bcRole&&ACTIVE_PLAYER_IDX===_bcMyIdx){
+    try{netSend({type:'dice-roll',from:_bcMyIdx,vals:vals,skin:(loadProfile().equipped||{}).dice||null});}catch(e){}
+  }
+  _spawnThrownDice(vals,finishRoll);
+}
+// Reusable thrown-dice renderer — used by rollDice AND by spectators replaying
+// the active player's roll (with their skin). doneCb fires once when all land.
+function _spawnThrownDice(vals,doneCb){
   const bcEl=$('board-center');
   const bc=bcEl?bcEl.getBoundingClientRect():null;
-  if(!bc||!bc.width){finishRoll();return;} // board not laid out — skip theatrics
+  if(!bc||!bc.width){if(doneCb)doneCb();return;} // board not laid out — skip theatrics
   document.querySelectorAll('.fly-die3d').forEach(e=>e.remove()); // clear any stragglers
   const SZ=54;
   let landed=0,finished=false;
-  const finishOnce=()=>{if(finished)return;finished=true;finishRoll();};
+  const finishOnce=()=>{if(finished)return;finished=true;if(doneCb)doneCb();};
   // final cube orientation per value (faces: 1 front, 2 top, 3 right, 4 left, 5 bottom, 6 back)
   const FACE_ROT={1:[0,0],2:[-90,0],3:[0,-90],4:[0,90],5:[90,0],6:[0,180]};
   vals.forEach((val,i)=>{
@@ -11521,6 +11536,16 @@ function bcHandleMessage(msg){
   if(msg.type==='turn-event'){
     _showTurnEvent(msg);
     if(_bcRole==='host')netRelay(msg); // pass it on to the other joiners
+    return;
+  }
+  if(msg.type==='dice-roll'){
+    // spectators replay the active player's dice with THEIR skin, then revert
+    if(msg.from!==_bcMyIdx&&$('mp-wait')&&$('mp-wait').style.display==='flex'){
+      try{_applyDiceSkinVars(msg.skin);}catch(e){}
+      try{_spawnThrownDice((msg.vals||[]).slice(0,3),function(){});}catch(e){}
+      setTimeout(function(){try{_applyDiceSkinVars((loadProfile().equipped||{}).dice||null);}catch(e){}},2000);
+    }
+    if(_bcRole==='host')netRelay(msg);
     return;
   }
   // Both roles: live token movement on the spectator's board
