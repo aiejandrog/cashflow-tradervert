@@ -5759,11 +5759,42 @@ function openRealtyOffice(){
       fn:()=>showHomeDetail(h),
     };
   });
+  const reOwned=(G.assets||[]).filter(a=>a.type==='re'&&!a.isPrimaryHome).length;
+  actions.push({label:`🏘️ Investment Properties (buy rentals)${reOwned?' · own '+reOwned:''} →`,cls:'btn-tan',fn:()=>openRentalsBrowser()});
   actions.push({label:'Close',cls:'btn-gold',fn:()=>{}});
   openModal({band:'green',title:'🏡 Realty Office — '+(G.location?G.location.name:''),
-    desc:`Currently: ${curDesc}. Your credit (${G.creditScore} ${tier.label}) gets a ${(loanRate()*100).toFixed(0)}% mortgage with ${Math.round(HOME_DOWN_PCT[tier.label]*100)}% down. ${cur?'Buying a new home SELLS your current one — equity rolls into the deal.':'Buying kills your rent payment forever.'} Prices reflect ${G.location?G.location.name+' ('+G.location.re+'×)':'your market'}.`,
-    rows:[['Your Cash','$'+fmt(G.cash),'gold'],...(cur?[['Current Home Equity','+$'+fmt(cur.equity),'green']]:[]),['Mortgage Rate',(loanRate()*100).toFixed(0)+'%','']],
+    desc:`Currently: ${curDesc}. Your credit (${G.creditScore} ${tier.label}) gets a ${(loanRate()*100).toFixed(0)}% mortgage with ${Math.round(HOME_DOWN_PCT[tier.label]*100)}% down. ${cur?'A new HOME sells your current one (equity rolls in) — but rentals stack: buy as many as you want.':'A home is where you live; rentals build passive income — buy as many rentals as you can afford.'} Prices reflect ${G.location?G.location.name+' ('+G.location.re+'×)':'your market'}.`,
+    rows:[['Your Cash','$'+fmt(G.cash),'gold'],...(cur?[['Current Home Equity','+$'+fmt(cur.equity),'green']]:[]),['Rentals Owned',String(reOwned),''],['Mortgage Rate',(loanRate()*100).toFixed(0)+'%','']],
     actions});
+}
+// Investment-property browser — buy as MANY rentals as you can afford (does NOT
+// replace your home, does NOT end your turn). Reuses the RE deal pool + buyDeal.
+function openRentalsBrowser(){
+  const pool=[...SMALL_DEALS,...(typeof BIG_DEALS!=='undefined'?BIG_DEALS:[])].filter(d=>d.type==='re'&&!d.isLand);
+  const actions=pool.map(d=>{
+    const cf=Math.round((d.cf||0)*(G._cfMultRE||1));
+    const aff=G.cash>=d.down;
+    return {label:`${d.name} — $${fmt(d.down)} down · +$${fmt(cf)}/mo${aff?'':' 🔒'}`,cls:'btn-tan',locked:!aff,fn:()=>buyRentalProperty(d)};
+  });
+  actions.push({label:'← Back to Realty',cls:'btn-gold',fn:()=>openRealtyOffice()});
+  const owned=(G.assets||[]).filter(a=>a.type==='re'&&!a.isPrimaryHome).length;
+  openModal({band:'green',title:'🏘️ Investment Properties',
+    desc:`Build a portfolio — own as MANY rentals as you can afford. Same terms as landing on the deal: a down payment now, the bank finances the rest. CF starts once you list tenants. Cash: $${fmt(G.cash)}.`,
+    rows:[['Your Cash','$'+fmt(G.cash),'gold'],['Rentals Owned',String(owned),'']],
+    actions});
+}
+function buyRentalProperty(deal){
+  if(G.cash<deal.down){try{showToast('Need $'+fmt(deal.down)+' cash for the down payment.','#8b1a1a',3200,true);}catch(e){}return;}
+  // Pass the deal UNCHANGED so a Realty rental is identical to landing on that deal
+  // (same down, mortgage, and CF balance) — just initiated on demand, no turn end.
+  buyDeal({...deal},{noEnd:true,after:()=>{
+    const cf=Math.round((deal.cf||0)*(G._cfMultRE||1));
+    showEventCard('life','🏠 Property Acquired — '+deal.name,
+      `You closed on ${deal.name} for $${fmt(deal.down)} down. It's vacant — list tenants from your Financial Statement to start the +$${fmt(cf)}/mo cash flow.`,
+      'Every cash-flowing property is a brick in your freedom. Stack them — passive income is the whole game.',
+      [['Down','$'+fmt(deal.down),'red'],['CF when tenanted','+$'+fmt(cf)+'/mo','green'],['Cash Left','$'+fmt(G.cash),'gold']],
+      [{label:'Buy Another 🏘️',cls:'btn-gold',fn:()=>openRentalsBrowser()},{label:'Done for now',cls:'btn-tan',fn:()=>{}}],true);
+  }});
 }
 // ── 🏠 CARTOON HOME ART — flat, friendly SVG scene per home category,
 // injected above the realty detail copy so buyers SEE what they're buying.
@@ -7042,8 +7073,9 @@ function buyDealWithLoan(deal,downAmt,rateOverride){
   buyDeal({...deal,down:downAmt,_mortgageRate:rateOverride});
 }
 
-function buyDeal(deal){
-  if(typeof _mpNotMyTurn==="function"&&_mpNotMyTurn()){_mpLockToast();return;} // the deal you landed on is a turn action
+function buyDeal(deal,opts){
+  // opts.noEnd: bought from a FACILITY (Realty rentals) — don't end the turn; run opts.after instead.
+  if(!(opts&&opts.noEnd)&&typeof _mpNotMyTurn==="function"&&_mpNotMyTurn()){_mpLockToast();return;} // the deal you landed on is a turn action
   if(deal.type==='raise'){
     G.salaryBoost=(G.salaryBoost||0)+deal.cf;
     addLog('💼',`Raise: +$${fmt(deal.cf)}/mo salary → $${fmt(income().salary)}/mo total`,'gold');
@@ -7073,6 +7105,7 @@ function buyDeal(deal){
   }
   const cfNote=deal.type==='re'?` — vacant, list tenants to earn CF`:mortgagePmt>0?` +$${fmt(startCF)}/mo net (gross $${fmt(grossCF)} − $${fmt(mortgagePmt)}/mo loan)`:grossCF>0?` +$${fmt(grossCF)}/mo`:'';
   addLog(isCash?'💵':'✅',`${isCash?'Cash purchase':'Bought'}: ${deal.name}${cfNote}`,'gold');
+  if(opts&&opts.noEnd){updateUI();saveGame();if(opts.after)try{opts.after();}catch(e){}return;} // facility buy — keep the turn going
   endTurn();
 }
 
