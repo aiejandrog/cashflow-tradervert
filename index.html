@@ -8855,7 +8855,10 @@ function fsPayModal(liabKey){
   // Use the modal box directly
   const box=document.querySelector('.mbox');
   if(box){
-    window._mboxSavedHTML=box.innerHTML;window._mboxSavedStyle=box.getAttribute('style')||'';
+    // Only snapshot the CANONICAL mbox (mb-band present). Saving when foreign pay-modal
+    // content is already in place is what permanently corrupted the box (restore looped
+    // its own content back in → mb-band null → every openModal crashed).
+    if(window._mboxSavedHTML===undefined&&document.getElementById('mb-band')){window._mboxSavedHTML=box.innerHTML;window._mboxSavedStyle=box.getAttribute('style')||'';}
     box.innerHTML=html;box.style.maxWidth='360px';box.style.width='min(360px,92vw)';
     // This modal's palette (white labels, neon red/green values) is designed for
     // a DARK panel — on the default parchment everything washes out. Restore on close
@@ -8990,7 +8993,22 @@ function openSettings(){
 }
 
 // ── MODAL ─────────────────────────────────────────────
+// Self-heal: the .mbox is SHARED. The Pay-debt sheet (fsPayModal) swaps in its own
+// innerHTML and restores via _mboxSavedHTML — if that restore ever fails/double-saves,
+// the box is left stuck with foreign content and mb-band/mb-title/etc go null, which
+// CRASHED every later openModal (couldn't finance/buy ANYTHING). Rebuild on demand.
+function _ensureMboxStructure(){
+  const box=document.querySelector('.mbox');
+  if(!box)return;
+  if($('mb-band')&&$('mb-title')&&$('mb-desc')&&$('mb-tbl')&&$('mb-acts'))return; // intact
+  box.removeAttribute('style');
+  box.innerHTML='<div class="mbox-band gray" id="mb-band">Action</div>'
+    +'<div class="mbox-body"><h3 id="mb-title"></h3><p id="mb-desc"></p><table class="mbox-tbl" id="mb-tbl" style="display:none"></table></div>'
+    +'<div class="mbox-acts" id="mb-acts"></div>';
+  try{delete window._mboxSavedHTML;delete window._mboxSavedStyle;}catch(e){window._mboxSavedHTML=undefined;window._mboxSavedStyle=undefined;}
+}
 function openModal({band,title,desc,rows,actions,customInput,_noFS}){
+  _ensureMboxStructure(); // never crash on a corrupted/foreign modal box
   // ALWAYS preserve the turn's resume. openModal dialogs are side-trips (FS
   // Sell/Refi/Manage/Pay, board events, Leisure, etc.) — _resumeFn is set to
   // re-show THIS modal only while it's open, and closeModal restores the prior
