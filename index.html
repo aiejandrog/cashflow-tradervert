@@ -9341,6 +9341,18 @@ function obLand(){
   const _tok=document.getElementById('ob-token');
   if(_tok&&!document.hidden&&_tok.animate){try{_tok.animate([{transform:'scale(1)'},{transform:'scale(1.4) rotate(-8deg)',offset:.4},{transform:'scale(1)'}],{duration:360,easing:'cubic-bezier(.3,.8,.4,1)'});}catch(e){}}
   try{if(typeof _haptic==='function')_haptic(sp.type==='dream'?[40,30,40,30,90]:sp.type==='payday'?[20,45,20]:sp.type==='danger'?[60,30,60]:14);}catch(e){}
+  // ── Dream near-miss tension (dopamine): you JUST missed your dream ──
+  (function(){
+    if(sp.type==='dream')return;
+    const di=OUTER_SPACES.findIndex(s=>s.type==='dream');
+    if(di<0)return;
+    const dist=(di-(G._outerPos||0)+OUTER_SPACES.length)%OUTER_SPACES.length;
+    if(dist>=1&&dist<=3&&((G.dream&&G.dream.cost)?G.cash>=G.dream.cost*0.6:true)){
+      const dreamTile=document.getElementById('ob-sp-'+di);
+      if(dreamTile&&!document.hidden&&dreamTile.animate){try{dreamTile.animate([{transform:'scale(1.08)',filter:'brightness(1)'},{transform:'scale(1.32)',filter:'brightness(1.6)',offset:.5},{transform:'scale(1.08)',filter:'brightness(1)'}],{duration:560,iterations:2,easing:'ease-in-out'});}catch(e){}}
+      setTimeout(()=>{obAddLog(`⭐ SO CLOSE — your dream is just ${dist} space${dist!==1?'s':''} away!`);try{if(typeof _haptic==='function')_haptic([15,40,15,40,15]);}catch(e){}},260);
+    }
+  })();
   switch(sp.type){
     case'payday':{
       // Tick crash recovery countdown FIRST — so restored CF is included in this payday
@@ -9372,7 +9384,13 @@ function obLand(){
       G._freedomHistory.push({t:G.turn,p:pass,e:expenses().total});
       if(G._freedomHistory.length>30)G._freedomHistory.shift();
       obAddLog(collect>0?`💰 Payday! +$${fmt(collect)} collected`:`💰 Payday — expenses exceeded passive income this turn`);
-      if(collect>0)spawnCoinBurst(false);
+      // Escalating payday burst (dopamine): each consecutive payday celebrates harder
+      if(collect>0){
+        G._obPaydayStreak=(G._obPaydayStreak||0)+1;
+        const bursts=Math.min(3,G._obPaydayStreak);
+        for(let b=0;b<bursts;b++)setTimeout(()=>{try{spawnCoinBurst(b>0);}catch(e){}},b*130);
+        if(G._obPaydayStreak>=3){obAddLog(`🔥 Cashflow streak x${G._obPaydayStreak}!`);try{if(typeof _haptic==='function')_haptic([20,40,20,40,50]);}catch(e){}}
+      } else { G._obPaydayStreak=0; }
       obUpdateStats();saveGame();
       // Always show payday modal (even zero collect — player needs feedback)
       const obPayRows=[['Passive Income','+$'+fmt(pass)+'/mo'],['Expenses','-$'+fmt(expenses().total)+'/mo']];
