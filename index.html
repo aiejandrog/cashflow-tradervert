@@ -3520,6 +3520,7 @@ function buildOuterTrack(){
   // In Fast Track (ob-mode) the outer ring is managed by buildOuterBoard() — don't overwrite it
   if(document.getElementById('game')?.classList.contains('ob-mode'))return;
   const top=$('ot-top'),bot=$('ot-bot'),left=$('ot-left'),right=$('ot-right');
+  top.innerHTML='';bot.innerHTML='';left.innerHTML='';right.innerHTML=''; // rebuild clean — appending stacked duplicate rings every turn (host-only board blowup)
   top.appendChild(makeOt('corner',OT_SZ,OT_SZ));
   OT_TOP.forEach(t=>top.appendChild(makeOt(t,OT_SZ,OT_SZ)));
   top.appendChild(makeOt('corner',OT_SZ,OT_SZ));
@@ -10747,7 +10748,11 @@ function mpAdvanceTurn(){
   const activeCount=PLAYERS.filter(p=>!p.won).length;
   if(activeCount<=0){mpShowFinalResults();return;}
   ACTIVE_PLAYER_IDX=nextIdx;
-  G=JSON.parse(JSON.stringify(PLAYERS[nextIdx].G));
+  // Host spectating a REMOTE player's turn stays in its own file — adopting the
+  // opponent's G desynced the HUD (showed the opponent) and ran board/token logic
+  // on foreign state. The opponent rides the separate #spectate-token instead.
+  const _remoteSpectate=_bc&&_bcRole==='host'&&nextIdx!==_bcMyIdx&&_bcJoinedSlots.has(nextIdx);
+  G=JSON.parse(JSON.stringify(_remoteSpectate?PLAYERS[_bcMyIdx].G:PLAYERS[nextIdx].G));
   _prevCash=null;
   saveGame(); // save AFTER advancing — resume will land on the right player
   buildBoard();updateUI();forceFitBoard(3000);
