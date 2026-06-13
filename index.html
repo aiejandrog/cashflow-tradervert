@@ -4924,18 +4924,29 @@ function ageOneYear(){
   const chip=$('year-age-chip');if(chip)chip.textContent=`Yr ${G.gameYear} · Age ${G.identity.age}`;
   saveGame();
 }
-// Kid life stage from turn-age (same scale as checkChildMilestones: school@8, teen@16, grad@22)
-function childStage(turnAge){
-  if(turnAge>=22)return{emoji:'🎓',label:'Adult',cost:50};
-  if(turnAge>=16)return{emoji:'🧑',label:'Teen',cost:300};
-  if(turnAge>=8) return{emoji:'🧒',label:'Child',cost:250};
+// Kid life stage from age in YEARS (school@8, teen@16, grad@22)
+function childStage(ageYears){
+  if(ageYears>=22)return{emoji:'🎓',label:'Adult',cost:50};
+  if(ageYears>=16)return{emoji:'🧑',label:'Teen',cost:300};
+  if(ageYears>=8) return{emoji:'🧒',label:'Child',cost:250};
   return             {emoji:'👶',label:'Baby',cost:200};
+}
+// A child's age in YEARS — the game ages 1 year per board lap (ageOneYear), but
+// turns tick several times per lap, so child age MUST come from gameYear, not
+// G.turn. (Bug fix: using turns let a 5-year-old "turn 16" and get a license.)
+function childAgeYears(c){
+  if(!c)return 0;
+  if(c.bornYear==null){ // legacy save: born was stored as a turn — convert to a year estimate and stamp it
+    const ratio=(G.gameYear>0&&G.turn>0)?G.gameYear/G.turn:0.25;
+    c.bornYear=(G.gameYear||1)-Math.round(Math.max(0,(G.turn||0)-(c.born||0))*ratio);
+  }
+  return Math.max(0,(G.gameYear||1)-c.bornYear);
 }
 // Recompute total monthly child cost from stages. Replaces the old flat +=200/-=150
 // increments so costs RISE as kids grow (and drop when they're independent).
 function recalcChildCosts(){
   if(!G.childBirths||!G.childBirths.length){G.extraChildren=0;return;}
-  G.extraChildren=G.childBirths.reduce((s,c)=>s+childStage(G.turn-c.born).cost,0);
+  G.extraChildren=G.childBirths.reduce((s,c)=>s+childStage(childAgeYears(c)).cost,0);
 }
 
 // ══ 🎪 INTERACTIVE SHOWROOM — drag between cars, full spec sheets ══
@@ -6652,11 +6663,30 @@ function ensureCash(needed,label){
     G._everBorrowed=true; // Phantom trophy tracker
     boostCredit(-3,'emergency borrowing');
     addLog('🏦',`Auto-borrowed $${fmt(actualBorrow)} for ${label||'payment'} — bank loan $${fmt(G.bankLoan)}`,'b');
+    _forcedLoanNotice(label,actualBorrow,G.bankLoan,G.extraBankPmt); // make the WHY visible — players were confused why the loan kept rising
   }
   if(actualBorrow<shortage){
     // Loan maxed — cash goes negative, bankruptcy check will fire
     addLog('💀',`Bank loan maxed at $${fmt(MAX_BANK_LOAN)} — can't borrow more`,'b');
+    try{showToast(`🏦 Bank loan maxed at $${fmt(MAX_BANK_LOAN)} — no more borrowing. Cash is going negative.`,'#8b1a1a',4500,true);}catch(e){}
   }
+}
+// A loud, unmissable notice when the bank FORCES a loan to cover a shortfall.
+// (Was log-only — players saw their bank loan creep toward the cap with no idea why.)
+function _forcedLoanNotice(label,borrowed,newLoan,pmt){
+  try{
+    let n=document.getElementById('forced-loan-note');if(n)n.remove();
+    n=document.createElement('div');n.id='forced-loan-note';
+    n.onclick=function(){n.remove();};
+    n.style.cssText='position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:9600;max-width:min(440px,92vw);background:linear-gradient(160deg,rgba(60,16,16,.98),rgba(28,6,6,.99));border:2px solid #e0584f;border-radius:14px;padding:13px 16px;font-family:Georgia,serif;color:#fff;box-shadow:0 14px 44px rgba(0,0,0,.62);cursor:pointer;animation:cPop .2s ease';
+    n.innerHTML='<div style="font-size:.94rem;font-weight:900;color:#ff8c84;margin-bottom:5px">🏦 Forced Bank Loan</div>'
+      +'<div style="font-size:.77rem;line-height:1.5;color:rgba(255,236,236,.93)">You didn\'t have the cash to cover <b>$'+fmt(borrowed)+'</b> for <b>'+(label||'a payment')+'</b>, so the bank <b>automatically loaned</b> it to you to keep you in the game.</div>'
+      +'<div style="font-size:.75rem;line-height:1.5;margin-top:8px;color:#ffd9a8">Your bank loan is now <b style="color:#fff">$'+fmt(newLoan)+'</b> &middot; +$'+fmt(pmt)+'/mo interest. Pay it down in <b>Financials</b> to stop it from growing.</div>'
+      +'<div style="font-size:.6rem;margin-top:9px;color:rgba(255,255,255,.45);text-align:right">tap to dismiss</div>';
+    document.body.appendChild(n);
+    try{if(typeof _haptic==='function')_haptic([40,40,40]);}catch(e){}
+    setTimeout(function(){if(n&&n.parentNode){n.style.transition='opacity .5s';n.style.opacity='0';setTimeout(function(){if(n.parentNode)n.remove();},500);}},7500);
+  }catch(e){}
 }
 
 // ── BANKRUPTCY ────────────────────────────────────────
@@ -7285,7 +7315,7 @@ function showBabyEvent(){
   const moCost=count*200;
   // Track birth turn for lifecycle milestones
   if(!G.childBirths)G.childBirths=[];
-  for(let i=0;i<count;i++)G.childBirths.push({born:G.turn,milestones:{}});
+  for(let i=0;i<count;i++)G.childBirths.push({born:G.turn,bornYear:(G.gameYear||1),milestones:{}});
   recalcChildCosts(); // stage-based: babies start at $200/mo each, rises as they grow
   saveGame(); // persist baby mutations before card — crash during card would add baby twice
   const stories={
@@ -7310,7 +7340,7 @@ function checkChildMilestones(){
   if(!G.childBirths||!G.childBirths.length)return false;
   const age8turns=8,age16turns=16,age22turns=22;
   for(const child of G.childBirths){
-    const age=G.turn-child.born;
+    const age=childAgeYears(child);
     if(age===age8turns&&!child.milestones.school){
       child.milestones.school=true;
       const cost=Math.round(800*(G.location?G.location.exp:1)/50)*50;
@@ -8081,6 +8111,11 @@ function endTurn(){
   if(G._boomTurns>0){G._boomTurns--;if(G._boomTurns===0){G._boomMult=1;addLog('🚀','Economic boom ended — CF returns to baseline','');}}
   if(G._recLiteTurns>0){G._recLiteTurns--;if(G._recLiteTurns===0){G._recLiteMult=1;addLog('📉','Recession eased — market stabilizing','gold');}}
   updateUI();checkWin();checkMilestones();
+  try{ // proactive heads-up: warn the FIRST time monthly CF turns negative — this is what later forces the auto-loans
+    const _cf=monthlyCF();
+    if(_cf<0&&!G._cfNegWarned){G._cfNegWarned=true;showToast(`⚠️ Your expenses now exceed income by $${fmt(Math.abs(_cf))}/mo. If cash runs out, the bank will auto-loan to cover bills — pay down debt or add cash flow.`,'#a8500c',5600,true);}
+    else if(_cf>=0&&G._cfNegWarned){G._cfNegWarned=false;}
+  }catch(e){}
   checkBankruptcy();
   if(G._bankrupt)return; // stop — bankruptcy overlay takes over
   // MP: a player who escaped via the LEGACY win path (mpEscapeWin, flag OFF) ends here.
@@ -9614,12 +9649,13 @@ function spawnWinConfetti(){
 }
 
 // ── SHARE / TOAST UTILITIES ───────────────────────────
-function showToast(msg,bg,dur){
+function showToast(msg,bg,dur,wrap){
   const t=document.createElement('div');
   t.style.cssText=`position:fixed;bottom:80px;left:50%;transform:translateX(-50%);`+
     `background:${bg||'#2e7d32'};color:#fff;padding:8px 18px;border-radius:10px;`+
     `font-family:Georgia,serif;font-size:.82rem;font-weight:700;z-index:9999;`+
-    `pointer-events:none;box-shadow:0 3px 14px rgba(0,0,0,.45);white-space:nowrap;`+
+    `pointer-events:none;box-shadow:0 3px 14px rgba(0,0,0,.45);`+
+    (wrap?`white-space:normal;max-width:min(440px,92vw);text-align:center;line-height:1.45;`:`white-space:nowrap;`)+
     `animation:toastIn .2s ease both`;
   t.textContent=msg;document.body.appendChild(t);
   setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},(dur||2200));
@@ -10986,7 +11022,7 @@ function updateUI(){
     if(kidsEl){
       const births=G.childBirths||[];
       kidsEl.innerHTML=births.length?births.map(c=>{
-        const tAge=Math.max(0,G.turn-c.born),st=childStage(tAge);
+        const tAge=childAgeYears(c),st=childStage(tAge);
         return `<span title="${st.label} — $${fmt(st.cost)}/mo" style="display:flex;flex-direction:column;align-items:center;background:rgba(138,48,96,.10);border:1px solid rgba(138,48,96,.3);border-radius:8px;padding:2px 6px;min-width:34px">
           <span style="font-size:1.05rem;line-height:1.2">${st.emoji}</span>
           <span style="font-size:.5rem;font-weight:800;color:#8a3060">${Math.min(tAge,25)}y</span>
