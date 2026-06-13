@@ -3097,7 +3097,7 @@ function renderPlaysTray(){
     return '<button onclick="usePlay('+i+')" title="'+p.name+' — '+p.desc+'" style="background:rgba(20,8,40,.92);border:1.5px solid '+rc+';border-radius:9px;font-size:1rem;padding:3px 7px;cursor:pointer;line-height:1;box-shadow:0 0 8px '+rc+'55;transition:transform .1s" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'\'">'+p.icon+'</button>';}).join('');
 }
 function usePlay(i){
-  if(typeof _mpLocked==='function'&&_mpLocked()){_mpLockToast&&_mpLockToast();return;}
+  if(typeof _mpNotMyTurn==='function'&&_mpNotMyTurn()){_mpLockToast&&_mpLockToast();return;}
   const hand=(G&&G._plays)||[];const p=_playDef(hand[i]);if(!p)return;
   openModal({band:'gold',title:p.icon+' '+p.name,desc:p.desc,rows:[['Power-up Play',p.name,'gold'],['In hand',hand.length+'/'+MAX_HAND,'']],
     actions:[{label:'⚡ Use it',cls:'btn-gold',fn:()=>_applyPlay(i)},{label:'Keep it',cls:'btn-tan',fn:()=>{}}],_noFS:true});
@@ -3845,6 +3845,13 @@ function initGame(prof, location) {
     G.expenseOverrides=G.expenseOverrides||{};
     G.expenseOverrides.car=T.monthly; // transport cost on the expense sheet (replaces profession's base car line)
     G.carOwned=T.owned?{id:T.beater?'beater':T.id,name:cName,emoji:cEmoji,beater:!!T.beater}:null;
+    // Only an actual financed CAR carries the profession's starting car loan. Bike/
+    // scooter/moto/transit/walk riders don't own a financed car — so drop that debt.
+    // (Fixes the stuck "Car Loan 0% paid": its servicing payment was the car line,
+    // which is now the transport cost — e.g. $0 for a bike — so it never paid down.)
+    if(T.id!=='beater'&&T.id!=='car'){
+      G.liabilities=(G.liabilities||[]).filter(l=>l.name!=='Car Loan');
+    }
   }catch(e){}
   try{
     const p=loadProfile();p.games++;
@@ -4792,16 +4799,22 @@ function syncDie2Lock(){
 // True when in a NETWORK multiplayer game and it's not my turn — spectators may
 // look at everything but mutate nothing (out-of-turn changes desync + get
 // overwritten by the host's next turn-start snapshot anyway).
-function _mpLocked(){
+// TRUE only for actual TURN actions (rolling, using a Play, buying the deal you
+// landed on) when it's not your turn. Managing your OWN file is always allowed.
+function _mpNotMyTurn(){
   return PLAYERS.length>1&&_bcRole&&ACTIVE_PLAYER_IDX!==_bcMyIdx;
 }
+// Self-management (pay debt, shop, sell, credit, buy car/home) is ALWAYS allowed —
+// in networked MP your local file is your OWN (PLAYERS[_bcMyIdx].G), never the
+// active player's, so paying your bills or shopping while you wait is safe.
+function _mpLocked(){ return false; }
 function _mpLockToast(){
-  addLog('⏳','Not your turn — you can look, not touch.','');
+  addLog('⏳','Not your turn yet — but you can still manage your own money (pay debts, shop, sell).','');
 }
 function rollDice(){
   if(G&&G._bankrupt){return;} // dead game — block any chained/doubles roll under the bankruptcy overlay
   if(window._mpPaused){return;} // game paused for a dropped player — nobody rolls
-  if(_mpLocked()){_mpLockToast();return;}
+  if(_mpNotMyTurn()){_mpLockToast();return;}
   if(!G||G.rolling){
     // Die-1 always works: resume regardless of what overlay is currently visible
     if(G&&G.rolling&&_resumeFn){_resumeFn();return;}
@@ -7013,7 +7026,7 @@ function showBizLoanModal(deal){
 }
 
 function buyDealWithLoan(deal,downAmt,rateOverride){
-  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
+  if(typeof _mpNotMyTurn==="function"&&_mpNotMyTurn()){_mpLockToast();return;} // the deal you landed on is a turn action
   const shortage=downAmt-G.cash;
   if(shortage>0){
     const loanRoom=Math.max(0,MAX_BANK_LOAN-(G.bankLoan||0));
@@ -7025,7 +7038,7 @@ function buyDealWithLoan(deal,downAmt,rateOverride){
 }
 
 function buyDeal(deal){
-  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
+  if(typeof _mpNotMyTurn==="function"&&_mpNotMyTurn()){_mpLockToast();return;} // the deal you landed on is a turn action
   if(deal.type==='raise'){
     G.salaryBoost=(G.salaryBoost||0)+deal.cf;
     addLog('💼',`Raise: +$${fmt(deal.cf)}/mo salary → $${fmt(income().salary)}/mo total`,'gold');
