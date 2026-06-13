@@ -4085,7 +4085,7 @@ function rollDice(){
     $('board-msg').textContent=`Moving ${total} space${total!==1?'s':''}...`;
     // MP spectate: dice results stream to the waiting players
     if(PLAYERS.length>1&&!_bcLobbyPhase&&_bcRole&&ACTIVE_PLAYER_IDX===_bcMyIdx){
-      try{netSend({type:'turn-event',icon:'🎲',txt:`rolled ${total}`,from:_bcMyIdx});}catch(e){}
+      try{netSend({type:'turn-event',icon:'🎲',txt:`rolled ${total}`,from:_bcMyIdx,cash:G.cash,pass:passiveIncome()});}catch(e){}
     }
     // Doubles = mystery box before moving (10-turn cooldown prevents spamming free properties)
     // Normal: v1===v2 (die-2 unlocked). Express: any two dice match
@@ -8540,7 +8540,15 @@ function openSettings(){
 
 // ── MODAL ─────────────────────────────────────────────
 function openModal({band,title,desc,rows,actions,customInput,_noFS}){
-  _resumeFn=()=>openModal({band,title,desc,rows,actions,customInput,_noFS});
+  // Side-action detection: if a turn card is already showing, this modal is a
+  // detour (FS Sell/Refi/Manage/etc). Preserve the card's resume so pressing
+  // ROLL/space after the detour continues the turn instead of re-opening this.
+  const _cardActive=$('event-modal')&&$('event-modal').classList.contains('vis');
+  if(_cardActive){
+    if(window._sideResumeSaved===undefined)window._sideResumeSaved=_resumeFn;
+  }else{
+    _resumeFn=()=>openModal({band,title,desc,rows,actions,customInput,_noFS});
+  }
   if(!_noFS)openFS();
   $('mb-band').textContent=title;
   $('mb-band').className='mbox-band '+(band||'gray');
@@ -8563,6 +8571,7 @@ function openModal({band,title,desc,rows,actions,customInput,_noFS}){
 }
 function closeModal(){
   window._modalFromBoard=false;
+  if(window._sideResumeSaved!==undefined){_resumeFn=window._sideResumeSaved;delete window._sideResumeSaved;}
   $('modal').classList.remove('vis');$('modal-bg').classList.remove('vis');
   $('fs-panel').classList.remove('open');
   ['event-modal','event-modal-bg','modal','modal-bg'].forEach(id=>{const el=$(id);if(el)el.style.paddingLeft='';});
@@ -10081,13 +10090,20 @@ function addLog(ico,txt,cls){
   while(cont.children.length>60)cont.removeChild(cont.lastChild);
   // MP spectate: the active player's log lines stream to everyone's waiting screen
   if(PLAYERS.length>1&&!_bcLobbyPhase&&_bcRole&&ACTIVE_PLAYER_IDX===_bcMyIdx&&typeof netSend==='function'){
-    try{netSend({type:'turn-event',icon:ico,txt:String(txt).slice(0,120),from:_bcMyIdx});}catch(e){}
+    try{netSend({type:'turn-event',icon:ico,txt:String(txt).slice(0,120),from:_bcMyIdx,cash:(typeof G!=='undefined'&&G)?G.cash:undefined,pass:(typeof G!=='undefined'&&G)?passiveIncome():undefined});}catch(e){}
   }
 }
 
 // Render a remote player's action on the waiting screen feed
 function _showTurnEvent(msg){
   if(!msg||msg.from===_bcMyIdx)return;
+  // keep the live balance current as they play (spectate score cards)
+  if(typeof msg.cash==='number'&&PLAYERS[msg.from]){
+    if(!PLAYERS[msg.from].G)PLAYERS[msg.from].G={};
+    PLAYERS[msg.from].G.cash=msg.cash;
+    if(typeof msg.pass==='number')PLAYERS[msg.from].G._livePass=msg.pass;
+    try{bcRefreshWaitScores();mpUpdateStrip();}catch(e){}
+  }
   const wait=$('mp-wait');if(!wait||wait.style.display!=='flex')return;
   let feed=$('mp-wait-feed');
   if(!feed){
@@ -11269,9 +11285,14 @@ function bcStartGameHeartbeat(){
     roomsAnnounce(); // directory shows "in game" status while playing
     if(_bc&&_bcRole==='host')netSend({type:'room-alive',
       slots:PLAYERS.map((p,i)=>({name:p.name,color:p.color,idx:i,joined:_bcJoinedSlots.has(i),ready:i===0||!!p._profileReady})),
-      scores:PLAYERS.map(p=>({cash:p.G?p.G.cash||0:0,
-        pass:p.G?(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0):0,
-        turn:p.G?p.G.turn||0:0,won:!!p.won})),
+      scores:PLAYERS.map((p,i)=>{
+        // host's OWN slot: read the LIVE G (PLAYERS[me].G is stale until turn-end),
+        // so spectators always see the host's current balance, not a frozen one
+        const _own=(i===_bcMyIdx&&typeof G!=='undefined'&&G);
+        return {cash:_own?G.cash:(p.G?p.G.cash||0:0),
+          pass:_own?passiveIncome():(p.G?((typeof p.G._livePass==='number')?p.G._livePass:(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0)):0),
+          turn:_own?(G.turn||0):(p.G?p.G.turn||0:0),won:!!p.won};
+      }),
       activeIdx:ACTIVE_PLAYER_IDX,lobbyPhase:false});
     bcHostCheckPresence();
   },3000);
@@ -11762,7 +11783,7 @@ function bcRefreshWaitScores(){
   sc.innerHTML=PLAYERS.map((p,i)=>{
     const isActive=i===ACTIVE_PLAYER_IDX,isMe=i===_bcMyIdx;
     const cash=p.G?p.G.cash||0:0;
-    const pass=p.G?(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0):0;
+    const pass=p.G?((typeof p.G._livePass==='number')?p.G._livePass:(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0)):0;
     return`<div class="mp-ho-score" style="${isActive?'border:1.5px solid '+p.color:isMe?'border:1.5px solid rgba(255,255,255,.3)':''}">
       <span style="color:${p.color};font-size:.63rem">● ${p.name}${p.won?' 🏆':''}${isMe?' (you)':''}</span>
       <strong>$${fmt(cash)}</strong>
