@@ -9260,6 +9260,48 @@ function ftMove(steps){
     setTimeout(step,180);
   })();
 }
+// Fast Track DEAL space — buy a mega business (grows passive income toward the dream)
+function ftShowDeal(){
+  const biz=OUTER_BUSINESSES[Math.floor(Math.random()*OUTER_BUSINESSES.length)];
+  const canBuy=G.cash>=biz.down, shortage=biz.down-G.cash;
+  const coC=Math.round(biz.cf*12/biz.down*100), cocColor=coC>=20?'green':coC>=10?'gold':'red';
+  const _el=biz.cost-biz.down,_ep=_el>0?Math.round(_el*loanRate()/12):0,_en=Math.max(0,biz.cf-_ep);
+  function doBuy(actualDown){
+    G.cash-=actualDown;
+    const uid='ft_'+G.turn+'_'+G._ftPos+'_'+Math.round(G.cash);
+    const liab=biz.cost-actualDown, pmt=liab>0?Math.round(liab*loanRate()/12):0, netCF=Math.max(0,biz.cf-pmt);
+    G.assets.push({uid,id:uid,type:'biz',name:biz.name,cost:biz.cost,down:actualDown,cf:netCF,_grossCF:biz.cf,liability:liab,mortgagePmt:pmt,purchaseTurn:G.turn,cashPurchase:false});
+    if(liab>0)G.liabilities.push({name:biz.name+' Loan',amt:liab,type:'biz',assetUid:uid});
+    addLog(biz.icon,'Bought '+biz.name+' — +$'+fmt(netCF)+'/mo','gold');
+    try{if(typeof sfxCash==='function')sfxCash();if(typeof spawnCoinBurst==='function')spawnCoinBurst(false);}catch(e){}
+    _ftEndRoll('🏢 Acquired '+biz.name+' — passive income +$'+fmt(netCF)+'/mo!');
+  }
+  const loanRoom=Math.max(0,MAX_BANK_LOAN-(G.bankLoan||0)), canBorrow=!canBuy&&shortage>0&&shortage<=loanRoom;
+  const actions=[];
+  if(canBuy)actions.push({label:biz.icon+' Buy — $'+fmt(biz.down)+' Down',cls:'btn-gold',fn:()=>doBuy(biz.down)});
+  else if(canBorrow)actions.push({label:'🏦 Borrow $'+fmt(shortage)+' + Buy',cls:'btn-gold',fn:()=>{G.bankLoan=(G.bankLoan||0)+shortage;G.extraBankPmt=Math.round(G.bankLoan*loanRate());G.cash+=shortage;try{boostCredit(-3);}catch(e){}doBuy(biz.down);}});
+  else actions.push({label:'Need $'+fmt(shortage)+' more',cls:'btn-tan',fn:()=>{_ftEndRoll('Passed on '+biz.name+' — saving up.');}});
+  actions.push({label:'Pass →',cls:'btn-tan',fn:()=>{_ftEndRoll('Passed on '+biz.name+'.');}});
+  openModal({band:'gold',title:'🏢 Mega Deal: '+biz.name,desc:biz.desc,
+    rows:[['Cost','$'+fmt(biz.cost)],['Down Payment','$'+fmt(biz.down)],['Gross CF','+$'+fmt(biz.cf)+'/mo'],...(_ep>0?[['Est. Net CF','+$'+fmt(_en)+'/mo','green']]:[]),['CoC Return',coC+'%',cocColor],['Your Cash','$'+fmt(G.cash),canBuy?'green':canBorrow?'gold':'red']],
+    actions,_noFS:true});
+}
+// Fast Track MARKET space — a quick market swing for variety
+function ftShowMarket(){
+  const base=Math.max(1200,passiveIncome()||1500);
+  const events=[
+    {t:'📈 Bull Run',d:'Your holdings rip higher and you take profits.',amt:Math.round(base*2),good:true},
+    {t:'💹 Dividend Day',d:'Quarterly dividends land in your account.',amt:Math.round(base*1.4),good:true},
+    {t:'🏦 Interest Windfall',d:'High-yield savings pays off.',amt:Math.round(base*1.1),good:true},
+    {t:'📉 Market Dip',d:'A pullback nicks your cash position.',amt:-Math.round(base*0.7),good:false},
+  ];
+  const e=events[Math.floor(Math.random()*events.length)];
+  G.cash=Math.max(0,G.cash+e.amt);
+  try{if(e.good){if(typeof sfxCash==='function')sfxCash();}else if(typeof sfxDownturn==='function')sfxDownturn();}catch(_e){}
+  openModal({band:e.good?'gold':'gray',title:e.t,desc:e.d,
+    rows:[[e.good?'Gain':'Loss',(e.amt>=0?'+$':'-$')+fmt(Math.abs(e.amt)),e.good?'green':'red'],['New Cash','$'+fmt(G.cash),'']],
+    actions:[{label:'Continue →',cls:'btn-gold',fn:()=>{_ftEndRoll('');}}],_noFS:true});
+}
 function ftLand(){
   const type=ftType(G._ftPos);
   const tile=document.getElementById('ft-'+G._ftPos);
@@ -9274,8 +9316,8 @@ function ftLand(){
     case'dream':ftDreamLand();return;
     case'payday':try{collectPassByPayday();}catch(e){}try{if(typeof sfxCash==='function')sfxCash();spawnCoinBurst&&spawnCoinBurst(false);}catch(e){}_ftEndRoll('💰 Cashflow Day — passive income collected!');return;
     case'charity':try{if(typeof boostCredit==='function')boostCredit(5,'charity on the Fast Track');}catch(e){}_ftEndRoll('❤️ Charity — credit +5, goodwill banked.');return;
-    case'deal':_ftEndRoll('🤝 Deal space — scouting opportunities (bigger Fast Track deals coming soon).');return;
-    case'market':_ftEndRoll('📈 Market space — portfolio holds steady.');return;
+    case'deal':ftShowDeal();return;
+    case'market':ftShowMarket();return;
     default:_ftEndRoll('');return; // neutral corner
   }
 }
