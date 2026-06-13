@@ -9158,6 +9158,11 @@ function obUpdateStats(){
     badge.style.animation=dist>0&&dist<=6?'giftPulse .7s ease-in-out infinite alternate':'';
   }
   checkMilestones(); // fire credit/net-worth milestone banners on outer board too
+  // Keep the WHOLE shared HUD in sync during Fast Track — top-bar Freedom Meter,
+  // credit chips, Life Hub drawer, and the financial statement all read live G.
+  // (updateUI never calls obUpdateStats, so no recursion.) Fixes the "Life Hub goes
+  // stale as you roll the Fast Track" issue.
+  if(typeof updateUI==='function'){try{updateUI();}catch(e){}}
   saveGame(); // persist outer board state on every stat update
 }
 
