@@ -2882,24 +2882,57 @@ function _renderCreditChips(){
 }
 
 // ══ 🛍 CREDITS SHOP — spend ✦ on cosmetics ══
+// Rarity tiers (rarer = pricier + flashier + lower mystery-box odds)
+const RARITY={
+  common:   {label:'Common',    color:'#8a9aa0', glow:'rgba(138,154,160,.4)', weight:46},
+  rare:     {label:'Rare',      color:'#4a9ad0', glow:'rgba(74,154,208,.55)', weight:30},
+  epic:     {label:'Epic',      color:'#b060e0', glow:'rgba(176,96,224,.6)',  weight:16},
+  legendary:{label:'Legendary', color:'#f0c020', glow:'rgba(240,192,32,.7)',  weight:6.5},
+  mythic:   {label:'Mythic',    color:'#ff3a6d', glow:'rgba(255,58,109,.8)',  weight:1.5},
+};
+const RARITY_ORDER=['common','rare','epic','legendary','mythic'];
 const SHOP_ITEMS=[
-  // Board felt themes
-  {id:'th_midnight',cat:'Board Themes',icon:'🌌',name:'Midnight Felt', cost:500, type:'theme',vals:{f1:'#1a2550',f2:'#0e1530',f3:'#070a18'}},
-  {id:'th_crimson', cat:'Board Themes',icon:'🟥',name:'Crimson Felt',  cost:750, type:'theme',vals:{f1:'#4d1a22',f2:'#2d0e14',f3:'#1a0808'}},
-  {id:'th_ocean',   cat:'Board Themes',icon:'🌊',name:'Ocean Felt',    cost:750, type:'theme',vals:{f1:'#0e3d4d',f2:'#082530',f3:'#04141a'}},
-  {id:'th_royal',   cat:'Board Themes',icon:'👑',name:'Royal Felt',    cost:1000,type:'theme',vals:{f1:'#3a1a5e',f2:'#220e3a',f3:'#120620'}},
-  // Dice skins
-  {id:'di_gold',    cat:'Dice Skins',  icon:'🎲',name:'Gold Dice',     cost:600, type:'dice', vals:{d1:'#7a5a08',d2:'#4a3404',db:'#f0c020',fd1:'#fff0b8',fd2:'#e0a818',fb:'#a8780a',fp:'#3a2a00'}},
-  {id:'di_neon',    cat:'Dice Skins',  icon:'🎲',name:'Neon Dice',     cost:800, type:'dice', vals:{d1:'#0a4d44',d2:'#06281f',db:'#22eecc',fd1:'#bafff0',fd2:'#1fd8b8',fb:'#0a8d77',fp:'#06281f'}},
-  {id:'di_stealth', cat:'Dice Skins',  icon:'🎲',name:'Stealth Dice',  cost:600, type:'dice', vals:{d1:'#222',d2:'#0c0c0c',db:'#555',fd1:'#52525c',fd2:'#1c1c24',fb:'#6a6a72',fp:'#d8d8e0'}},
-  // Premium avatars (selectable in the character creator once owned)
-  {id:'av_ninja',   cat:'Premium Avatars',icon:'🥷',name:'The Ninja',    cost:400,type:'avatar'},
-  {id:'av_robot',   cat:'Premium Avatars',icon:'🤖',name:'The Machine',  cost:400,type:'avatar'},
-  {id:'av_alien',   cat:'Premium Avatars',icon:'👽',name:'The Visitor',  cost:400,type:'avatar'},
-  {id:'av_king',    cat:'Premium Avatars',icon:'🤴',name:'The Prince',   cost:400,type:'avatar'},
-  {id:'av_queen',   cat:'Premium Avatars',icon:'👸',name:'The Princess', cost:400,type:'avatar'},
-  {id:'av_vamp',    cat:'Premium Avatars',icon:'🧛',name:'The Count',    cost:400,type:'avatar'},
+  // ── Board felt themes ──
+  {id:'th_midnight',cat:'Board Themes',icon:'🌌',name:'Midnight Felt', cost:500, rarity:'common',type:'theme',vals:{f1:'#1a2550',f2:'#0e1530',f3:'#070a18'}},
+  {id:'th_crimson', cat:'Board Themes',icon:'🟥',name:'Crimson Felt',  cost:750, rarity:'rare',  type:'theme',vals:{f1:'#4d1a22',f2:'#2d0e14',f3:'#1a0808'}},
+  {id:'th_ocean',   cat:'Board Themes',icon:'🌊',name:'Ocean Felt',    cost:750, rarity:'rare',  type:'theme',vals:{f1:'#0e3d4d',f2:'#082530',f3:'#04141a'}},
+  {id:'th_emerald', cat:'Board Themes',icon:'💚',name:'Emerald Felt',  cost:900, rarity:'rare',  type:'theme',vals:{f1:'#0a4a2a',f2:'#062818',f3:'#03140a'}},
+  {id:'th_lava',    cat:'Board Themes',icon:'🌋',name:'Lava Felt',     cost:1400,rarity:'epic',  type:'theme',vals:{f1:'#5a1a0a',f2:'#2a0c04',f3:'#150400'}},
+  {id:'th_royal',   cat:'Board Themes',icon:'👑',name:'Royal Felt',    cost:1000,rarity:'epic',  type:'theme',vals:{f1:'#3a1a5e',f2:'#220e3a',f3:'#120620'}},
+  {id:'th_galaxy',  cat:'Board Themes',icon:'🌠',name:'Galaxy Felt',   cost:2000,rarity:'legendary',type:'theme',vals:{f1:'#2a1a5e',f2:'#140a35',f3:'#080418'}},
+  {id:'th_midas',   cat:'Board Themes',icon:'🏆',name:'Midas Felt',    cost:3200,rarity:'mythic',type:'theme',vals:{f1:'#5a4508',f2:'#2a2004',f3:'#151000'}},
+  // ── Dice skins (drive BOTH the small HUD dice and the thrown 3D dice) ──
+  {id:'di_gold',    cat:'Dice Skins',  icon:'🎲',name:'Gold Dice',     cost:600, rarity:'rare',  type:'dice', vals:{d1:'#7a5a08',d2:'#4a3404',db:'#f0c020',fd1:'#fff0b8',fd2:'#e0a818',fb:'#a8780a',fp:'#3a2a00'}},
+  {id:'di_neon',    cat:'Dice Skins',  icon:'🎲',name:'Neon Dice',     cost:800, rarity:'rare',  type:'dice', vals:{d1:'#0a4d44',d2:'#06281f',db:'#22eecc',fd1:'#bafff0',fd2:'#1fd8b8',fb:'#0a8d77',fp:'#06281f'}},
+  {id:'di_stealth', cat:'Dice Skins',  icon:'🎲',name:'Stealth Dice',  cost:500, rarity:'common',type:'dice', vals:{d1:'#222',d2:'#0c0c0c',db:'#555',fd1:'#52525c',fd2:'#1c1c24',fb:'#6a6a72',fp:'#d8d8e0'}},
+  {id:'di_camo',    cat:'Dice Skins',  icon:'🪖',name:'Camo Dice',     cost:650, rarity:'rare',  type:'dice', vals:{d1:'#3a4a2a',d2:'#1e2a14',db:'#6b7a3a',fd1:'#9aae6a',fd2:'#4a5a2a',fb:'#3a4a1a',fp:'#10160a'}},
+  {id:'di_ice',     cat:'Dice Skins',  icon:'🧊',name:'Frostbite Dice',cost:700, rarity:'rare',  type:'dice', vals:{d1:'#1a4a5a',d2:'#0a2530',db:'#7adfff',fd1:'#d4f6ff',fd2:'#5ad0e8',fb:'#2a8da8',fp:'#06283a'}},
+  {id:'di_devil',   cat:'Dice Skins',  icon:'😈',name:'Devil Dice',    cost:1200,rarity:'epic',  type:'dice', vals:{d1:'#5a0a0a',d2:'#1a0000',db:'#ff2a2a',fd1:'#ff7a5a',fd2:'#b00a0a',fb:'#700000',fp:'#160000'}},
+  {id:'di_fire',    cat:'Dice Skins',  icon:'🔥',name:'Wildfire Dice', cost:1200,rarity:'epic',  type:'dice', vals:{d1:'#7a2a08',d2:'#3a1004',db:'#ff8a20',fd1:'#ffd070',fd2:'#ff6a10',fb:'#a84a08',fp:'#2a0c00'}},
+  {id:'di_toxic',   cat:'Dice Skins',  icon:'☣️',name:'Toxic Dice',    cost:1000,rarity:'epic',  type:'dice', vals:{d1:'#1a5a0a',d2:'#0a2804',db:'#7aff2a',fd1:'#c8ff8a',fd2:'#5ad81f',fb:'#2a8d0a',fp:'#0a2804'}},
+  {id:'di_royal',   cat:'Dice Skins',  icon:'👑',name:'Regal Dice',    cost:1500,rarity:'epic',  type:'dice', vals:{d1:'#3a1a5e',d2:'#1a0a30',db:'#f0c020',fd1:'#fff0b8',fd2:'#c8a0f0',fb:'#7040a0',fp:'#1a0a30'}},
+  {id:'di_galaxy',  cat:'Dice Skins',  icon:'🌌',name:'Galaxy Dice',   cost:2000,rarity:'legendary',type:'dice',vals:{d1:'#2a1a5e',d2:'#0e0828',db:'#a060e0',fd1:'#d0a8ff',fd2:'#7040c0',fb:'#4a2a8a',fp:'#0e0828'}},
+  {id:'di_diamond', cat:'Dice Skins',  icon:'💎',name:'Diamond Dice',  cost:2400,rarity:'legendary',type:'dice',vals:{d1:'#5a7a8a',d2:'#2a3a4a',db:'#dffaff',fd1:'#ffffff',fd2:'#bfe8f5',fb:'#8ab8c8',fp:'#3a5a6a'}},
+  {id:'di_inferno', cat:'Dice Skins',  icon:'⚡',name:'Inferno Dice',  cost:3500,rarity:'mythic',type:'dice', vals:{d1:'#3a0000',d2:'#100000',db:'#ff3a00',fd1:'#ffc84a',fd2:'#ff2a00',fb:'#8a1500',fp:'#180000'}},
+  // ── Premium avatars (selectable in the character creator once owned) ──
+  {id:'av_clown',   cat:'Premium Avatars',icon:'🤡',name:'The Joker',    cost:300,rarity:'common',type:'avatar'},
+  {id:'av_ninja',   cat:'Premium Avatars',icon:'🥷',name:'The Ninja',    cost:400,rarity:'common',type:'avatar'},
+  {id:'av_robot',   cat:'Premium Avatars',icon:'🤖',name:'The Machine',  cost:400,rarity:'common',type:'avatar'},
+  {id:'av_ghost',   cat:'Premium Avatars',icon:'👻',name:'The Phantom',  cost:550,rarity:'rare',  type:'avatar'},
+  {id:'av_alien',   cat:'Premium Avatars',icon:'👽',name:'The Visitor',  cost:550,rarity:'rare',  type:'avatar'},
+  {id:'av_zombie',  cat:'Premium Avatars',icon:'🧟',name:'The Undead',   cost:550,rarity:'rare',  type:'avatar'},
+  {id:'av_king',    cat:'Premium Avatars',icon:'🤴',name:'The Prince',   cost:600,rarity:'rare',  type:'avatar'},
+  {id:'av_queen',   cat:'Premium Avatars',icon:'👸',name:'The Princess', cost:600,rarity:'rare',  type:'avatar'},
+  {id:'av_vamp',    cat:'Premium Avatars',icon:'🧛',name:'The Count',    cost:700,rarity:'rare',  type:'avatar'},
+  {id:'av_wizard',  cat:'Premium Avatars',icon:'🧙',name:'The Wizard',   cost:1000,rarity:'epic', type:'avatar'},
+  {id:'av_genie',   cat:'Premium Avatars',icon:'🧞',name:'The Genie',    cost:1000,rarity:'epic', type:'avatar'},
+  {id:'av_hero',    cat:'Premium Avatars',icon:'🦸',name:'The Hero',     cost:1200,rarity:'epic', type:'avatar'},
+  {id:'av_unicorn', cat:'Premium Avatars',icon:'🦄',name:'The Unicorn',  cost:1400,rarity:'epic', type:'avatar'},
+  {id:'av_demon',   cat:'Premium Avatars',icon:'👹',name:'The Oni',      cost:2000,rarity:'legendary',type:'avatar'},
+  {id:'av_dragon',  cat:'Premium Avatars',icon:'🐉',name:'The Dragon',   cost:2200,rarity:'legendary',type:'avatar'},
+  {id:'av_crown',   cat:'Premium Avatars',icon:'👑',name:'The Sovereign',cost:3500,rarity:'mythic',type:'avatar'},
 ];
+function rarityOf(id){const it=SHOP_ITEMS.find(i=>i.id===id);return (it&&it.rarity)||'common';}
 function applyCosmetics(){
   try{
     const eq=loadProfile().equipped||{};
@@ -2945,6 +2978,59 @@ function equipShopItem(id){
   // avatars are equipped by selecting them in the character creator
   saveProfile(p);applyCosmetics();openShop();
 }
+// ══ 🎁 MYSTERY BOX — spin credits for a random rarity-weighted cosmetic ══
+const MYSTERY_COST=400;
+function mysteryBoxSpin(){
+  if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;}
+  const p=loadProfile();
+  if((p.credits||0)<MYSTERY_COST){alert('Not enough ✦ — the Mystery Box costs '+MYSTERY_COST+'. You have '+fmt(p.credits||0)+'.');return;}
+  p.credits-=MYSTERY_COST;saveProfile(p);_renderCreditChips();
+  // weighted rarity pick
+  let total=RARITY_ORDER.reduce((s,r)=>s+RARITY[r].weight,0),roll=Math.random()*total,picked='common';
+  for(const r of RARITY_ORDER){roll-=RARITY[r].weight;if(roll<=0){picked=r;break;}}
+  let pool=SHOP_ITEMS.filter(i=>i.rarity===picked); if(!pool.length)pool=SHOP_ITEMS.slice();
+  const unowned=pool.filter(i=>!p.owned.includes(i.id));
+  const src=unowned.length?unowned:pool;
+  const win=src[Math.floor(Math.random()*src.length)];
+  const isDupe=p.owned.includes(win.id);
+  let refund=0;
+  const p2=loadProfile();
+  if(isDupe){refund=Math.round(win.cost*0.4);p2.credits=(p2.credits||0)+refund;}
+  else{p2.owned.push(win.id);}
+  saveProfile(p2);_renderCreditChips();
+  if(!isDupe)applyCosmetics();
+  _showMysteryReveal(win,isDupe,refund);
+}
+function _showMysteryReveal(item,isDupe,refund){
+  let ov=document.getElementById('mystery-reveal');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='mystery-reveal';
+  ov.style.cssText='position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 45%,rgba(40,20,80,.7),rgba(4,2,12,.96));animation:fadeIn .3s';
+  ov.innerHTML='<div style="text-align:center;font-family:Georgia,serif;pointer-events:none">'
+    +'<div style="font-size:.7rem;letter-spacing:3px;text-transform:uppercase;color:rgba(240,192,32,.7);margin-bottom:10px">🎁 Mystery Box</div>'
+    +'<div id="mb-spin" style="font-size:4.5rem;height:90px;line-height:90px;filter:drop-shadow(0 6px 16px rgba(0,0,0,.6))">🎲</div>'
+    +'<div id="mb-result" style="opacity:0;margin-top:8px"></div></div>';
+  ov.onclick=()=>{ov.remove();if(document.getElementById('credits-shop'))openShop();};
+  document.body.appendChild(ov);
+  const icons=SHOP_ITEMS.map(i=>i.icon);
+  const spinEl=ov.querySelector('#mb-spin');let t=0;
+  const tm=setInterval(()=>{spinEl.textContent=icons[Math.floor(Math.random()*icons.length)];try{if(typeof playClick==='function')playClick();}catch(e){}
+    if(++t>=18){clearInterval(tm);_mbReveal(ov,item,isDupe,refund);}},85);
+}
+function _mbReveal(ov,item,isDupe,refund){
+  const rar=RARITY[item.rarity]||RARITY.common;
+  const spinEl=ov.querySelector('#mb-spin'),res=ov.querySelector('#mb-result');
+  spinEl.textContent=item.icon;spinEl.style.fontSize='5.5rem';
+  if(spinEl.animate)try{spinEl.animate([{transform:'scale(.4) rotate(-12deg)'},{transform:'scale(1.35) rotate(6deg)',offset:.6},{transform:'scale(1)'}],{duration:520,easing:'cubic-bezier(.2,.8,.3,1)'});}catch(e){}
+  res.innerHTML='<div style="font-size:.82rem;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:'+rar.color+';text-shadow:0 0 18px '+rar.glow+'">'+rar.label+'</div>'
+    +'<div style="font-size:1.5rem;font-weight:900;color:#fff;margin:5px 0">'+item.name+'</div>'
+    +'<div style="font-size:.82rem;color:'+(isDupe?'#fca5a5':'#86efac')+'">'+(isDupe?'Duplicate — refunded ✦ '+fmt(refund):'✓ Added to your inventory!')+'</div>'
+    +'<div style="font-size:.66rem;color:rgba(255,255,255,.45);margin-top:16px">tap anywhere to continue</div>';
+  res.style.opacity='1';
+  if(res.animate)try{res.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration:420,easing:'ease-out'});}catch(e){}
+  try{if(!isDupe){if(typeof sfxWinSting==='function')sfxWinSting();if(typeof spawnWinConfetti==='function'&&(item.rarity==='legendary'||item.rarity==='mythic'))spawnWinConfetti();}else if(typeof playClick==='function')playClick();}catch(e){}
+  try{if(typeof _haptic==='function')_haptic(item.rarity==='mythic'?[60,40,60,40,120]:item.rarity==='legendary'?[40,30,40,30,80]:[25,40,25]);}catch(e){}
+}
+
 function openShop(){
   if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
   const p=loadProfile();
@@ -2955,6 +3041,7 @@ function openShop(){
   const sections=cats.map(cat=>{
     const items=SHOP_ITEMS.filter(i=>i.cat===cat).map(i=>{
       const owned=p.owned.includes(i.id);
+      const rar=RARITY[i.rarity]||RARITY.common;
       const equipped=p.equipped.theme===i.id||p.equipped.dice===i.id;
       const swatch=i.type==='theme'
         ?'<div style="width:100%;height:34px;border-radius:8px;background:radial-gradient(ellipse,'+i.vals.f1+','+i.vals.f3+')"></div>'
@@ -2968,9 +3055,10 @@ function openShop(){
           ?'<div style="font-size:.58rem;color:rgba(255,255,255,.5)">pick in Character Creator</div>'
           :'<button onclick="equipShopItem(\''+i.id+'\')" style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.4);border-radius:8px;color:#86efac;font-size:.62rem;font-weight:800;padding:4px 12px;cursor:pointer">Equip</button>')
         :'<button onclick="buyShopItem(\''+i.id+'\')" style="background:rgba(200,145,12,.15);border:1px solid rgba(240,192,32,.45);border-radius:8px;color:#f0dc90;font-size:.62rem;font-weight:800;padding:4px 12px;cursor:pointer">✦ '+fmt(i.cost)+'</button>';
-      return '<div style="background:linear-gradient(155deg,rgba(26,8,54,.85),rgba(14,4,32,.9));border:1px solid rgba(240,192,32,'+(owned?'.5':'.18')+');border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:7px;text-align:center">'
+      return '<div style="position:relative;background:linear-gradient(155deg,rgba(26,8,54,.85),rgba(14,4,32,.9));border:2px solid '+(owned?rar.color:'rgba(255,255,255,.12)')+';border-radius:12px;padding:9px 10px 10px;display:flex;flex-direction:column;gap:5px;text-align:center;box-shadow:'+(owned?'0 0 14px '+rar.glow+' inset':'none')+'">'
+        +'<div style="font-size:.48rem;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;color:'+rar.color+'">'+rar.label+'</div>'
         +swatch
-        +'<div style="font-size:.72rem;font-weight:900;color:'+(owned?'#f0dc90':'rgba(255,255,255,.7)')+';font-family:Georgia,serif">'+i.name+'</div>'
+        +'<div style="font-size:.72rem;font-weight:900;color:'+(owned?'#f0dc90':'rgba(255,255,255,.78)')+';font-family:Georgia,serif">'+i.name+'</div>'
         +btn+'</div>';
     }).join('');
     return '<div style="font-size:.66rem;letter-spacing:2px;text-transform:uppercase;color:rgba(240,192,32,.85);font-weight:800;font-family:Arial,sans-serif;margin:18px 0 8px">'+cat+'</div>'
@@ -2981,6 +3069,16 @@ function openShop(){
     +'<div><div style="font-size:1.5rem;font-weight:900;color:#f0dc90;font-family:\'Arial Black\',Arial,sans-serif">🛍 CREDITS SHOP</div>'
     +'<div style="font-size:.72rem;color:rgba(200,175,120,.7);font-style:italic">Balance: ✦ '+fmt(p.credits||0)+' — earned from goals, trophies, wins & dailies</div></div>'
     +'<button onclick="document.getElementById(\'credits-shop\').remove()" style="background:rgba(255,255,255,.08);border:1.5px solid rgba(240,192,32,.4);border-radius:10px;color:#f0dc90;font-size:.85rem;font-weight:800;padding:9px 22px;cursor:pointer;font-family:Georgia,serif">✕ Close</button></div>'
+    // 🎁 Mystery Box
+    +'<div style="margin:16px 0 6px;background:linear-gradient(135deg,rgba(70,32,125,.6),rgba(20,8,45,.8));border:2px solid rgba(176,96,224,.55);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 0 24px rgba(176,96,224,.22) inset">'
+      +'<div style="font-size:2.6rem;animation:giftPulse .9s ease-in-out infinite alternate">🎁</div>'
+      +'<div style="flex:1;min-width:150px;text-align:left">'
+        +'<div style="font-size:1rem;font-weight:900;color:#e8d0ff;font-family:Georgia,serif">Mystery Box</div>'
+        +'<div style="font-size:.64rem;color:rgba(220,200,255,.72);line-height:1.4">Spin for a random dice skin, avatar or theme — rarer pulls are flashier. Duplicates refund 40% ✦.</div>'
+      +'</div>'
+      +'<button onclick="mysteryBoxSpin()" style="background:linear-gradient(135deg,#7a30c0,#b060e0);border:none;border-radius:12px;color:#fff;font-size:.9rem;font-weight:900;padding:12px 22px;cursor:pointer;font-family:Georgia,serif;box-shadow:0 4px 18px rgba(176,96,224,.5);white-space:nowrap">🎲 SPIN — ✦ '+fmt(MYSTERY_COST)+'</button>'
+    +'</div>'
+    +'<div style="font-size:.62rem;color:rgba(200,175,120,.65);font-style:italic;margin:2px 0 0">📦 Inventory: '+(p.owned||[]).filter(function(id){return SHOP_ITEMS.find(function(s){return s.id===id;});}).length+' / '+SHOP_ITEMS.length+' collected · rarity colors show what you own</div>'
     +sections+'</div>';
   document.body.appendChild(el);
 }
