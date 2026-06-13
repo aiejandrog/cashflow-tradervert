@@ -5991,8 +5991,10 @@ function collectPassByPayday(){
     document.body.appendChild(t);
     setTimeout(()=>{t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(()=>t.remove(),400);},2600);
   }
+  // Pay down debt on pass-by too — loans & expenses shrink every payday, not just landings
+  let _passPrincipal=0;try{_passPrincipal=_paydayDebtPaydown(delinq);}catch(e){}
   saveGame(); // persist cash change — crash after passing payday would otherwise lose the money
-  addLog('🌾',`Passed CASHFLOW DAY — collected ${_passTotal>=0?'+':''}$${fmt(_passTotal)}`,'g');
+  addLog('🌾',`Passed CASHFLOW DAY — collected ${_passTotal>=0?'+':''}$${fmt(_passTotal)}${_passPrincipal>0?` · debt -$${fmt(_passPrincipal)}`:''}`,'g');
   if(_passTotal<0){checkBankruptcy();}
   const toast=document.createElement('div');
   toast.style.cssText=`position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:${_passTotal>=0?'#2e7d32':'#8b1a1a'};color:#fff;padding:7px 16px;border-radius:9px;font-family:Georgia,serif;font-size:.8rem;font-weight:900;z-index:9999;pointer-events:none;box-shadow:0 3px 12px rgba(0,0,0,.4)`;
@@ -6530,6 +6532,130 @@ function showGiftCar(){
      {label:`💵 Flip for $${fmt(flip)} cash`,cls:'btn-tan',fn:flipIt}]);
 }
 
+// ── SHARED AUTO DEBT PAYDOWN ─────────────────────────────────────────────
+// Runs on EVERY payday — whether you LAND on the space (onPayday) or PASS it
+// (collectPassByPayday). Previously only landing paid down debt, so loans &
+// expenses never shrank for players who kept passing paydays. Returns the
+// total principal paid this payday.
+function _paydayDebtPaydown(delinq){
+  let totalPrincipalPaid=0;
+  // Property mortgages: ~28% of monthly payment = principal
+  let paidOffProp=null;
+  (G.assets||[]).forEach(a=>{
+    if(a.type==='re'&&!a.cashPurchase&&!a.isPrimaryHome&&(a.liability||0)>0&&(a.mortgagePmt||0)>0){
+      const principal=Math.round(a.mortgagePmt*0.28);
+      a.liability=Math.max(0,a.liability-principal);
+      totalPrincipalPaid+=principal;
+      if(a.liability===0&&!paidOffProp){
+        const freedPmt=a.mortgagePmt||0;
+        if(a.cf>0){
+          a.cf+=freedPmt;
+          if(a._preRecessionCF!==undefined)a._preRecessionCF+=freedPmt;
+        }
+        a.mortgagePmt=0;
+        paidOffProp=a;
+        addLog('🏠',`${a.name} mortgage PAID OFF — CF +${a.cf>0?'$'+fmt(freedPmt):'$0 (vacant — CF unlocks when tenant placed)'}/mo!`,'gold');
+      }
+    }
+  });
+  // Personal liabilities: each monthly payment chips away at the balance
+  const LIAB_PAYDOWN={
+    'Home Mortgage':{pct:0.32},
+    'School Loan':  {pct:0.55},
+    'Car Loan':     {pct:0.60},
+    'Credit Cards': {pct:0.18},
+  };
+  const exp=expenses();
+  const liabPayments={'Home Mortgage':exp.mortgage,'School Loan':exp.school,'Car Loan':exp.car,'Credit Cards':exp.cc};
+  let autoDebtMsg=null;
+  G._basePmts=G._basePmts||{};
+  let pmtDropTotal=0;
+  G.liabilities.forEach(l=>{
+    const pd=LIAB_PAYDOWN[l.name];if(!pd||l.amt<=0)return;
+    const curPmt=liabPayments[l.name]||0;
+    if(G._basePmts[l.name]===undefined||curPmt>G._basePmts[l.name])G._basePmts[l.name]=curPmt;
+    if(l.orig===undefined||l.amt>l.orig*1.6)l.orig=l.amt;
+    const basePmt=G._basePmts[l.name];if(!basePmt)return;
+    const principal=Math.round(basePmt*pd.pct);
+    const before=l.amt;
+    l.amt=Math.max(0,l.amt-principal);
+    totalPrincipalPaid+=Math.min(principal,before);
+    if(l.amt===0&&before>0){
+      autoDebtMsg=l.name;
+      boostCredit(15,l.name+' cleared');
+      const ek=LIAB_TO_EXPENSE[l.name];
+      if(ek){G.expenseOverrides=G.expenseOverrides||{};G.expenseOverrides[ek]=0;}
+    } else {
+      const ratio=Math.min(1.5,l.amt/Math.max(1,l.orig));
+      const newPmt=Math.max(25,Math.round(basePmt*(0.30+0.70*ratio)/5)*5);
+      const ek=LIAB_TO_EXPENSE[l.name];
+      if(ek){
+        G.expenseOverrides=G.expenseOverrides||{};
+        const cur=G.expenseOverrides[ek]!==undefined?G.expenseOverrides[ek]:basePmt;
+        if(newPmt<cur)pmtDropTotal+=cur-newPmt;
+        G.expenseOverrides[ek]=cur===0?0:newPmt;
+      }
+    }
+  });
+  if(pmtDropTotal>=10)addLog('📉',`Debt payments shrank -$${fmt(pmtDropTotal)}/mo — balances melting, payday rising`,'g');
+  G.liabilities=G.liabilities.filter(l=>l.amt>0||!LIAB_PAYDOWN[l.name]);
+  if(autoDebtMsg)setTimeout(()=>celebrateDebtFree(autoDebtMsg),600);
+  // Biz/note loans
+  G.liabilities.forEach(l=>{
+    if((l.type!=='biz'&&l.type!=='business'&&l.type!=='note')||l.amt<=0)return;
+    const linkedAsset=G.assets.find(a=>a.uid===l.assetUid||(a.name+' Loan'===l.name&&(a.type==='biz'||a.type==='note')));
+    const pmt=linkedAsset&&linkedAsset.mortgagePmt?linkedAsset.mortgagePmt:0;
+    if(!pmt)return;
+    const principal=Math.round(pmt*0.35);
+    const before=l.amt;
+    l.amt=Math.max(0,l.amt-principal);
+    totalPrincipalPaid+=Math.min(principal,before);
+    if(l.amt===0&&before>0){
+      if(linkedAsset){
+        if(linkedAsset.mortgagePmt>0)linkedAsset.cf+=linkedAsset.mortgagePmt;
+        linkedAsset.mortgagePmt=0;linkedAsset.liability=0;
+      }
+      boostCredit(8);
+      const icon=l.type==='note'?'📜':'🏪';
+      addLog(icon,`${l.name} PAID OFF! CR +8`+(linkedAsset&&linkedAsset.cf>0?` — CF now $${fmt(linkedAsset.cf)}/mo`:''),'gold');
+    }
+  });
+  G.liabilities=G.liabilities.filter(l=>(l.type==='biz'||l.type==='business'||l.type==='note')?l.amt>0:true);
+  // Financed cars — skipped while delinquent
+  if(!delinq){
+    G.liabilities.forEach(l=>{
+      if(l.type!=='carfin'||l.amt<=0||!(l.pmt>0))return;
+      const principal=Math.round(l.pmt*0.60);
+      const before=l.amt;
+      l.amt=Math.max(0,l.amt-principal);
+      totalPrincipalPaid+=Math.min(principal,before);
+      if(l.amt===0&&before>0){
+        G.expenseOverrides=G.expenseOverrides||{};
+        G.expenseOverrides.car=0;
+        boostCredit(12,'car paid off');
+        addLog('🚗',`${l.name} PAID OFF — car payment gone forever. CR +12`,'gold');
+      }
+    });
+    G.liabilities=G.liabilities.filter(l=>l.type!=='carfin'||l.amt>0);
+  }
+  // Bank loan: interest + principal
+  if(G.bankLoan>0&&G.extraBankPmt>0){
+    const interest=Math.round(G.bankLoan*loanRate()/12);
+    const paid=Math.max(0,Math.min(G.bankLoan,G.extraBankPmt-interest));
+    G.bankLoan=Math.max(0,G.bankLoan-paid);
+    totalPrincipalPaid+=paid;
+    if(interest>0)addLog('🏦',`Bank loan: -$${fmt(interest)} interest burned, $${fmt(paid)} to principal`,'b');
+    if(G.bankLoan===0){
+      G.extraBankPmt=0;boostCredit(10,'bank loan paid off');
+      addLog('🏦','Bank loan fully paid off! CR +10','gold');
+    }else{
+      G.extraBankPmt=Math.round(G.bankLoan*loanRate());
+    }
+  }
+  boostCredit(1,'on-time payments'); // seasoning every payday
+  checkTrophies('payday');
+  return totalPrincipalPaid;
+}
 function onPayday(){
   if(G&&G._bankrupt)return; // dead game — no payday processing under the bankruptcy overlay
   const cf=monthlyCF(),pass=passiveIncome();
@@ -6557,143 +6683,7 @@ function onPayday(){
   if(!G._freedomHistory)G._freedomHistory=[];
   G._freedomHistory.push({t:G.turn,p:passiveIncome(),e:expenses().total});
   if(G._freedomHistory.length>30)G._freedomHistory.shift();
-  // ── AUTO DEBT PAYDOWN each payday ────────────────────────────────────────
-  let totalPrincipalPaid=0;
-  // Property mortgages: ~28% of monthly payment = principal
-  let paidOffProp=null;
-  (G.assets||[]).forEach(a=>{
-    if(a.type==='re'&&!a.cashPurchase&&!a.isPrimaryHome&&(a.liability||0)>0&&(a.mortgagePmt||0)>0){
-      const principal=Math.round(a.mortgagePmt*0.28);
-      a.liability=Math.max(0,a.liability-principal);
-      totalPrincipalPaid+=principal;
-      if(a.liability===0&&!paidOffProp){
-        const freedPmt=a.mortgagePmt||0;
-        // Only boost CF if property has tenants paying rent — vacant props (cf===0) get no phantom CF;
-        // recalcCF() will compute gross-0 correctly when the next tenant is placed
-        if(a.cf>0){
-          a.cf+=freedPmt;
-          // Fix11: if recession active, _preRecessionCF is the snapshot recovery will restore.
-          // Bump it by freedPmt so the payoff bonus survives absolute-restore recovery.
-          if(a._preRecessionCF!==undefined)a._preRecessionCF+=freedPmt;
-        }
-        a.mortgagePmt=0; // clear payment — prevents recalcCF() from subtracting it again after payoff
-        paidOffProp=a;
-        addLog('🏠',`${a.name} mortgage PAID OFF — CF +${a.cf>0?'$'+fmt(freedPmt):'$0 (vacant — CF unlocks when tenant placed)'}/mo!`,'gold');
-      }
-    }
-  });
-  // Personal liabilities: each monthly payment chips away at the balance
-  const LIAB_PAYDOWN={
-    'Home Mortgage':{pct:0.32},  // 32% of payment = principal (long amortization)
-    'School Loan':  {pct:0.55},  // faster paydown
-    'Car Loan':     {pct:0.60},  // shortest term
-    'Credit Cards': {pct:0.18},  // mostly interest — slow without extra payments
-  };
-  const exp=expenses();
-  const liabPayments={'Home Mortgage':exp.mortgage,'School Loan':exp.school,'Car Loan':exp.car,'Credit Cards':exp.cc};
-  let autoDebtMsg=null;
-  // Payments amortize for real now: principal paydown is computed from the
-  // ORIGINAL payment (constant absolute paydown → guaranteed finite payoff),
-  // while the payment the player owes each month scales DOWN with the
-  // remaining balance. Every payday visibly shrinks expenses as debts melt —
-  // the core feedback loop the game is teaching.
-  G._basePmts=G._basePmts||{};
-  let pmtDropTotal=0;
-  G.liabilities.forEach(l=>{
-    const pd=LIAB_PAYDOWN[l.name];if(!pd||l.amt<=0)return;
-    const curPmt=liabPayments[l.name]||0;
-    // capture base payment; refresh if a NEW bigger loan replaced the old one (e.g. home purchase)
-    if(G._basePmts[l.name]===undefined||curPmt>G._basePmts[l.name])G._basePmts[l.name]=curPmt;
-    if(l.orig===undefined||l.amt>l.orig*1.6)l.orig=l.amt; // fresh loan → new baseline (1.6 guard: delinquency interest doesn't reset it)
-    const basePmt=G._basePmts[l.name];if(!basePmt)return;
-    const principal=Math.round(basePmt*pd.pct);
-    const before=l.amt;
-    l.amt=Math.max(0,l.amt-principal);
-    totalPrincipalPaid+=Math.min(principal,before);
-    if(l.amt===0&&before>0){
-      autoDebtMsg=l.name;
-      boostCredit(15,l.name+' cleared');
-      // the payment dies WITH the debt (manual payoff already did this — auto payoff didn't)
-      const ek=LIAB_TO_EXPENSE[l.name];
-      if(ek){G.expenseOverrides=G.expenseOverrides||{};G.expenseOverrides[ek]=0;}
-    } else {
-      // Scale this month's payment to the surviving balance: floor 30% of the
-      // original payment, cap 150% (delinquency interest can grow the balance)
-      const ratio=Math.min(1.5,l.amt/Math.max(1,l.orig));
-      const newPmt=Math.max(25,Math.round(basePmt*(0.30+0.70*ratio)/5)*5);
-      const ek=LIAB_TO_EXPENSE[l.name];
-      if(ek){
-        G.expenseOverrides=G.expenseOverrides||{};
-        const cur=G.expenseOverrides[ek]!==undefined?G.expenseOverrides[ek]:basePmt;
-        if(newPmt<cur)pmtDropTotal+=cur-newPmt;
-        G.expenseOverrides[ek]=cur===0?0:newPmt; // never resurrect a payment the player already cleared
-      }
-    }
-  });
-  if(pmtDropTotal>=10)addLog('📉',`Debt payments shrank -$${fmt(pmtDropTotal)}/mo — balances melting, payday rising`,'g');
-  G.liabilities=G.liabilities.filter(l=>l.amt>0||!LIAB_PAYDOWN[l.name]); // keep unknowns
-  if(autoDebtMsg)setTimeout(()=>celebrateDebtFree(autoDebtMsg),600);
-  // Biz loans: pay down from each asset's mortgagePmt (~35% principal portion)
-  // Handles both type:'biz' (new), legacy type:'business', and type:'note' (leveraged note purchases)
-  G.liabilities.forEach(l=>{
-    if((l.type!=='biz'&&l.type!=='business'&&l.type!=='note')||l.amt<=0)return;
-    const linkedAsset=G.assets.find(a=>a.uid===l.assetUid||(a.name+' Loan'===l.name&&(a.type==='biz'||a.type==='note')));
-    const pmt=linkedAsset&&linkedAsset.mortgagePmt?linkedAsset.mortgagePmt:0;
-    if(!pmt)return;
-    const principal=Math.round(pmt*0.35);
-    const before=l.amt;
-    l.amt=Math.max(0,l.amt-principal);
-    totalPrincipalPaid+=Math.min(principal,before);
-    if(l.amt===0&&before>0){
-      if(linkedAsset){
-        // Restore the freed payment as CF boost — same pattern as RE mortgage payoff at line ~2473.
-        // buyDeal set startCF = gross - mortgagePmt; payoff restores it to gross.
-        if(linkedAsset.mortgagePmt>0)linkedAsset.cf+=linkedAsset.mortgagePmt;
-        linkedAsset.mortgagePmt=0;linkedAsset.liability=0;
-      }
-      boostCredit(8);
-      const icon=l.type==='note'?'📜':'🏪';
-      addLog(icon,`${l.name} PAID OFF! CR +8`+(linkedAsset&&linkedAsset.cf>0?` — CF now $${fmt(linkedAsset.cf)}/mo`:''),'gold');
-    }
-  });
-  G.liabilities=G.liabilities.filter(l=>(l.type==='biz'||l.type==='business'||l.type==='note')?l.amt>0:true);
-  // Financed cars (dealership system): payment flows through expenses().car override —
-  // here only the principal portion (~60%, short amortization) reduces the note.
-  // Skipped while delinquent: missed paydays don't pay principal.
-  if(!delinq){
-    G.liabilities.forEach(l=>{
-      if(l.type!=='carfin'||l.amt<=0||!(l.pmt>0))return;
-      const principal=Math.round(l.pmt*0.60);
-      const before=l.amt;
-      l.amt=Math.max(0,l.amt-principal);
-      totalPrincipalPaid+=Math.min(principal,before);
-      if(l.amt===0&&before>0){
-        G.expenseOverrides=G.expenseOverrides||{};
-        G.expenseOverrides.car=0; // note retired — payment disappears, insurance stays
-        boostCredit(12,'car paid off');
-        addLog('🚗',`${l.name} PAID OFF — car payment gone forever. CR +12`,'gold');
-      }
-    });
-    G.liabilities=G.liabilities.filter(l=>l.type!=='carfin'||l.amt>0);
-  }
-  // Bank loan: payment = real monthly interest + principal. Only principal reduces
-  // the balance — borrowing is no longer free money (was 100% principal = 0% APR).
-  if(G.bankLoan>0&&G.extraBankPmt>0){
-    const interest=Math.round(G.bankLoan*loanRate()/12);
-    const paid=Math.max(0,Math.min(G.bankLoan,G.extraBankPmt-interest));
-    G.bankLoan=Math.max(0,G.bankLoan-paid);
-    totalPrincipalPaid+=paid;
-    if(interest>0)addLog('🏦',`Bank loan: -$${fmt(interest)} interest burned, $${fmt(paid)} to principal`,'b');
-    if(G.bankLoan===0){
-      G.extraBankPmt=0;boostCredit(10,'bank loan paid off');
-      addLog('🏦','Bank loan fully paid off! CR +10','gold');
-    }else{
-      G.extraBankPmt=Math.round(G.bankLoan*loanRate()); // recalculate on new balance
-    }
-  }
-  // Passive credit score seasoning (+1 every payday for on-time payment history)
-  boostCredit(1,'on-time payments');
-  checkTrophies('payday');
+  const totalPrincipalPaid=_paydayDebtPaydown(delinq);
   const expTot=expenses().total;
   const freePct=expTot>0?Math.min(100,Math.round(pass/expTot*100)):0;
   const freeBar='█'.repeat(Math.round(freePct/10))+'░'.repeat(10-Math.round(freePct/10));
