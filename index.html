@@ -1781,12 +1781,21 @@ body{
     </div>
     <div id="year-age-chip" title="Year · Age" style="display:flex;align-items:center;background:#2a3d5e;border:2px solid #4a6a96;border-radius:18px;padding:5px 12px;flex-shrink:0;font-size:.68rem;font-weight:900;font-family:Georgia,serif;color:#c8ddf0">Yr 1 · Age 25</div>
     <div id="credits-chip" title="Lifetime Credits — earned from goals, trophies & wins" style="display:flex;align-items:center;background:linear-gradient(135deg,#5e4708,#8a6508);border:2px solid #c8910c;border-radius:18px;padding:5px 12px;flex-shrink:0;font-size:.68rem;font-weight:900;font-family:Georgia,serif;color:#ffe9a8">✦ 0</div>
-    <div id="freedom-chip" title="Passive income vs expenses — reach 100% to escape the Rat Race and hit the Fast Track" style="display:flex;align-items:center;gap:7px;background:#0c2a18;border:2px solid #1f7a45;border-radius:18px;padding:4px 11px;flex-shrink:0">
-      <span style="font-size:.74rem;line-height:1">🏁</span>
-      <div style="width:72px;height:9px;background:rgba(255,255,255,.13);border-radius:5px;overflow:hidden;position:relative;flex-shrink:0">
-        <div id="freedom-bar" style="position:absolute;left:0;top:0;height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#86efac);border-radius:5px;transition:width .5s ease"></div>
+    <div id="freedom-chip" title="Race to freedom — escape the Rat Race before your rival does" style="display:flex;flex-direction:column;align-items:stretch;gap:3px;background:#0c2a18;border:2px solid #1f7a45;border-radius:14px;padding:4px 10px;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:.7rem;line-height:1" title="You">🏁</span>
+        <div style="width:64px;height:8px;background:rgba(255,255,255,.13);border-radius:5px;overflow:hidden;position:relative;flex-shrink:0">
+          <div id="freedom-bar" style="position:absolute;left:0;top:0;height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#86efac);border-radius:5px;transition:width .5s ease"></div>
+        </div>
+        <span id="freedom-pct" style="font-size:.62rem;font-weight:900;font-family:Georgia,serif;color:#86efac;min-width:32px;letter-spacing:.3px">0%</span>
       </div>
-      <span id="freedom-pct" style="font-size:.66rem;font-weight:900;font-family:Georgia,serif;color:#86efac;min-width:34px;letter-spacing:.3px">0%</span>
+      <div id="rival-row" style="display:none;align-items:center;gap:6px">
+        <span id="rival-av" style="font-size:.7rem;line-height:1" title="Rival">🤵</span>
+        <div style="width:64px;height:8px;background:rgba(255,255,255,.10);border-radius:5px;overflow:hidden;position:relative;flex-shrink:0">
+          <div id="rival-bar" style="position:absolute;left:0;top:0;height:100%;width:0%;background:linear-gradient(90deg,#b91c1c,#f87171);border-radius:5px;transition:width .5s ease"></div>
+        </div>
+        <span id="rival-pct" style="font-size:.62rem;font-weight:900;font-family:Georgia,serif;color:#fca5a5;min-width:32px;letter-spacing:.3px">0%</span>
+      </div>
     </div>
     <div id="credit-chip" title="Credit Score" style="display:none;align-items:center;gap:6px;background:#3d2a5e;border:2px solid #6a4a96;border-radius:18px;padding:5px 12px;flex-shrink:0">
       <span style="font-size:.85rem;line-height:1">💳</span>
@@ -2811,6 +2820,100 @@ function _renderDiffPicker(){
   });
 }
 document.addEventListener('DOMContentLoaded',()=>{try{_renderDiffPicker();}catch(e){}});
+
+// ══ RIVAL — a live opponent racing you to financial freedom (SOLO only) ══
+const RIVALS=[
+  {id:'tyler',name:'Trust-Fund Tyler',av:'🤵',color:'#f0c040',escTurns:18,blurb:"Daddy's money. Thinks you can't keep up.",taunts:["Still renting? Adorable.","Bought a building while you rolled dice.","Catch up — oh wait, you can't.","Money makes money. You wouldn't know."]},
+  {id:'gary', name:'Grindset Gary',  av:'🧑‍💼',color:'#5b9bd5',escTurns:26,blurb:'Hustles 24/7. Steady and relentless.',taunts:["Sleep is for the broke.","Another deal closed. You?","Consistency beats luck.","I'm not faster — I just never stop."]},
+  {id:'carla',name:'Coupon Carla',   av:'🧕',color:'#86efac',escTurns:34,blurb:'Frugal queen. Slow but unstoppable.',taunts:["Slow money is still money.","Clipped a coupon AND a deal today.","Patience, darling.","No debt, no stress, no rush."]},
+  {id:'chad', name:'Crypto Chad',    av:'🧑‍🚀',color:'#c77dff',escTurns:22,blurb:'All-in, all the time. Boom or bust.',taunts:["To the moon! 🚀","Diamond hands beat your rentals.","Risk it for the biscuit.","You're so... traditional."]},
+];
+function _makeRival(id){
+  if(id==='ghost'){const pb=loadProfile().bestOverall;const et=pb&&pb>0?Math.max(10,pb):26;
+    return{id:'ghost',name:'Your Ghost',av:'🏁',color:'#9ad8ff',prog:0,pace:1/et,blurb:pb?('Your best: '+pb+' turns'):'Race your own pace',taunts:["Your past self is gaining...","Beat your best.","The ghost never tires."]};}
+  const d=RIVALS.find(x=>x.id===id)||RIVALS[Math.floor(Math.random()*RIVALS.length)];
+  return{id:d.id,name:d.name,av:d.av,color:d.color,prog:0,pace:1/d.escTurns,blurb:d.blurb,taunts:d.taunts.slice()};
+}
+function renderRivalBar(){
+  const row=$('rival-row');if(!row)return;
+  const r=(typeof G!=='undefined'&&G)?G._rival:null;
+  if(!r||PLAYERS.length>1){row.style.display='none';return;}
+  row.style.display='flex';
+  const pct=Math.round(Math.min(1,r.prog||0)*100);
+  const bar=$('rival-bar'),pc=$('rival-pct'),av=$('rival-av');
+  if(bar)bar.style.width=pct+'%';
+  if(pc){pc.textContent=pct>=100?'FREE!':pct+'%';}
+  if(av){av.textContent=r.av;av.title=r.name;}
+}
+function advanceRival(){
+  if(PLAYERS.length>1)return;            // solo only — MP rivals are the real players
+  const r=G&&G._rival;if(!r||r.prog>=1)return;
+  if(G._winning||G._onFastTrack||G._rivalWon)return; // race already decided
+  r.prog=Math.min(1,(r.prog||0)+(r.pace||0.04)*diffCfg().rivalPaceMult);
+  renderRivalBar();
+  const mile=r.prog>=0.75?3:r.prog>=0.5?2:r.prog>=0.25?1:0;
+  if(mile>(r.mileShown||0)){r.mileShown=mile;if(Math.random()<diffCfg().tauntFreq)_rivalTaunt(r.taunts[Math.floor(Math.random()*r.taunts.length)]);}
+  if(r.prog>=1)rivalWinsGame();
+}
+function _rivalTaunt(msg){
+  const r=G&&G._rival;if(!r)return;
+  addLog(r.av,r.name+': "'+msg+'"','b');
+  if(document.hidden)return;
+  try{const t=document.createElement('div');t.style.cssText='position:fixed;left:50%;top:96px;transform:translateX(-50%);z-index:8500;background:rgba(30,8,8,.95);border:1.5px solid '+r.color+';border-radius:12px;padding:8px 15px;font-family:Georgia,serif;font-size:.76rem;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.55);pointer-events:none;max-width:80vw';t.innerHTML='<b style="color:'+r.color+'">'+r.av+' '+r.name+':</b> "'+msg+'"';document.body.appendChild(t);t.animate([{opacity:0,transform:'translateX(-50%) translateY(-8px)'},{opacity:1,transform:'translateX(-50%) translateY(0)',offset:.13},{opacity:1,offset:.8},{opacity:0,transform:'translateX(-50%) translateY(-6px)'}],{duration:3000,easing:'ease-out'}).onfinish=function(){t.remove();};}catch(e){}
+}
+function rivalWinsGame(){
+  if(G._rivalWon||G._winning)return;G._rivalWon=true;saveGame();
+  try{if(typeof sfxDownturn==='function')sfxDownturn();if(typeof _haptic==='function')_haptic([80,60,80,60,120]);}catch(e){}
+  const r=G._rival;const youPct=Math.round(Math.min(100,(G._escapeProg||0)*100));
+  let ov=document.getElementById('rival-win-overlay');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='rival-win-overlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:9000;background:radial-gradient(ellipse at 50% 28%,rgba(120,10,10,.5),transparent 60%),linear-gradient(160deg,#0d0000,#1a0505);display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;font-family:Georgia,serif;padding:24px;animation:fadeIn .5s';
+  ov.innerHTML='<div style="font-size:4rem;animation:bkPulse 1.8s ease infinite">'+r.av+'</div>'
+   +'<div style="font-size:1.7rem;font-weight:900;color:#ff5a5a;letter-spacing:1px;margin:6px 0;text-shadow:0 0 26px rgba(255,60,60,.5)">'+r.name+' ESCAPED FIRST</div>'
+   +'<div style="font-size:.9rem;color:rgba(255,180,180,.85);max-width:420px;margin-bottom:6px">They hit financial freedom before you did. The race is theirs — this time.</div>'
+   +'<div style="font-size:.78rem;color:rgba(255,255,255,.55);margin-bottom:22px">You reached '+youPct+'% on turn '+(G.turn||0)+'. Run it back and beat them.</div>'
+   +'<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">'
+   +'<button onclick="document.getElementById(\'rival-win-overlay\').remove();if(typeof replaySameProfession===\'function\')replaySameProfession();" style="padding:13px 30px;border-radius:10px;border:none;background:linear-gradient(135deg,#b02020,#e03030);color:#fff;font-size:1rem;font-weight:900;cursor:pointer;font-family:Georgia,serif;box-shadow:0 4px 20px rgba(200,32,32,.4)">🔁 Rematch</button>'
+   +'<button onclick="clearSave();location.reload()" style="padding:13px 26px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);font-size:.9rem;font-weight:700;cursor:pointer;font-family:Arial">Main Menu</button>'
+   +'</div>';
+  document.body.appendChild(ov);
+}
+function _rivalBeaten(){ // player escaped before the rival — celebrate it once
+  const r=G&&G._rival;if(!r||G._rivalBeatenShown||PLAYERS.length>1)return;G._rivalBeatenShown=true;
+  addLog('🏆','You beat '+r.av+' '+r.name+' to freedom!','gold');
+  _rivalTaunt && setTimeout(()=>{try{const t=document.createElement('div');t.style.cssText='position:fixed;left:50%;top:96px;transform:translateX(-50%);z-index:8500;background:rgba(8,30,16,.96);border:1.5px solid #34c87a;border-radius:12px;padding:8px 15px;font-family:Georgia,serif;font-size:.8rem;color:#fff;pointer-events:none';t.innerHTML='🏆 You beat <b style="color:'+r.color+'">'+r.name+'</b> to freedom!';document.body.appendChild(t);t.animate([{opacity:0},{opacity:1,offset:.15},{opacity:1,offset:.8},{opacity:0}],{duration:3000}).onfinish=function(){t.remove();};}catch(e){}},200);
+}
+// Rival select overlay at solo game start
+function rivalCardHTML(id,av,name,blurb,color,et){
+  const turns=Math.max(8,Math.round(et/DIFF[getDifficulty()].rivalPaceMult));
+  return '<div onclick="_chooseRival(\''+id+'\')" style="cursor:pointer;background:linear-gradient(155deg,rgba(26,8,54,.9),rgba(14,4,32,.92));border:2px solid '+color+'66;border-radius:14px;padding:12px 10px;text-align:center;transition:all .15s" onmouseover="this.style.borderColor=\''+color+'\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\''+color+'66\';this.style.transform=\'\'">'
+    +'<div style="font-size:2.2rem;line-height:1">'+av+'</div>'
+    +'<div style="font-size:.8rem;font-weight:900;color:#fff;margin:4px 0">'+name+'</div>'
+    +'<div style="font-size:.58rem;color:rgba(255,255,255,.6);line-height:1.35;min-height:30px">'+blurb+'</div>'
+    +'<div style="font-size:.56rem;color:'+color+';font-weight:800;margin-top:5px">escapes ~'+turns+' turns</div></div>';
+}
+function showRivalPick(){
+  let ov=document.getElementById('rival-pick');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='rival-pick';
+  ov.style.cssText='position:fixed;inset:0;z-index:9300;background:radial-gradient(ellipse at 50% 18%,rgba(60,30,110,.6),rgba(6,3,16,.97));display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;overflow-y:auto;font-family:Georgia,serif;animation:fadeIn .3s';
+  const cards=RIVALS.map(r=>rivalCardHTML(r.id,r.av,r.name,r.blurb,r.color,r.escTurns)).join('')
+    +rivalCardHTML('ghost','🏁','Your Ghost',(loadProfile().bestOverall?('Race your best run'):'Race your own pace'),'#9ad8ff',loadProfile().bestOverall||26);
+  ov.innerHTML='<div style="font-size:1.4rem;font-weight:900;color:#f0dc90;margin-bottom:2px">🏁 Choose Your Rival</div>'
+    +'<div style="font-size:.72rem;color:rgba(220,200,255,.72);margin-bottom:14px;text-align:center;max-width:440px">Beat them to financial freedom — or they win the game. <b style="color:'+DIFF[getDifficulty()].col+'">'+DIFF[getDifficulty()].label+'</b> difficulty.</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;max-width:560px;width:100%">'+cards+'</div>'
+    +'<button onclick="_chooseRival(RIVALS[Math.floor(Math.random()*RIVALS.length)].id)" style="margin-top:14px;padding:9px 22px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:rgba(255,255,255,.75);font-size:.78rem;font-weight:700;cursor:pointer;font-family:Georgia,serif">🎲 Surprise Me</button>';
+  document.body.appendChild(ov);
+}
+function _chooseRival(id){
+  G._rival=_makeRival(id);
+  const ov=document.getElementById('rival-pick');if(ov)ov.remove();
+  renderRivalBar();saveGame();
+  addLog('🏁','Your rival: '+G._rival.av+' '+G._rival.name+' — race them to freedom!','gold');
+}
+function _rivalGameStart(){
+  if(PLAYERS.length>1){const row=$('rival-row');if(row)row.style.display='none';return;} // no rival in MP
+  showRivalPick();
+}
 function recordWin(){
   // Guard: checkOuterWin re-runs on resume-after-win and in MP flows —
   // without this, every reload of the win screen farms +1 win into the profile.
@@ -7680,6 +7783,7 @@ function endTurn(){
   // resume chain — that leak was jamming deal buying + glitching the Financing button.
   try{delete window._sideResumeSaved;}catch(e){window._sideResumeSaved=undefined;}
   try{G._escapeProg=Math.max(0,Math.min(1,passiveIncome()/Math.max(1,expenses().total)));}catch(e){} // race-to-freedom % for MP leaderboard
+  try{if(!G._winning&&!G._onFastTrack)advanceRival();}catch(e){} // solo rival gains ground each turn
   driftStocks();
   // Track net worth history for sparkline
   if(!G._netWorthHistory)G._netWorthHistory=[];
@@ -9203,10 +9307,6 @@ function replaySameProfession(){
 
 // triggerEpicWin() removed — replaced by enterOuterBoard() + checkOuterWin() two-stage win flow
 
-function enterFastTrack(){
-  // Legacy stub — redirects to outer board
-  enterOuterBoard(passiveIncome(),expenses().total);
-}
 
 function spawnWinConfetti(){
   _haptic([60,40,60,40,140]); // celebratory buzz (win / dream-car garage)
@@ -9359,6 +9459,7 @@ function _ftClearState(){const t=document.getElementById('ob-token');if(t)t.styl
 // Solo escape → Fast Track on the perimeter (NO panel, NO themed ring — same board)
 function enterFastTrack(pass,exp){
   G._onFastTrack=true;G._ftPos=0;G.rolling=false;G._winning=true;G._outerBoard=false;
+  try{_rivalBeaten();}catch(e){} // escaped before the rival — you win the race
   // Ensure the REAL 40-tile perimeter is in place (not a leftover 16-tile ob ring):
   // clear any legacy ob-mode/panel, then (re)build the perimeter before indexing.
   const _g=$('game');if(_g)_g.classList.remove('ob-mode');
@@ -10555,6 +10656,7 @@ function updateUI(){
     }
     G._lastFreedomTier=tier;G._freedomTierInit=true;
   })();
+  try{renderRivalBar();}catch(e){} // keep the rival bar synced + restored on load
 
   // Top bar
   $('pc-av').textContent=(G.identity&&G.identity.avatar)||G.prof.icon;
@@ -11309,6 +11411,7 @@ function startGame(prof,loc){
   else{setTimeout(()=>{$('fs-panel').classList.add('open');setTimeout(()=>showTurnDialog(),400);},200);}
   addLog('🎮',startMsg,'gold');
   setTimeout(()=>addLog('📊',creditMsg,tier.color==='#2a8a2a'?'g':'b'),400);
+  _rivalGameStart(); // SOLO: choose a rival to race (no-op in MP)
 }
 
 // ── SAVE / LOAD ───────────────────────────────────────
