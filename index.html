@@ -10156,30 +10156,47 @@ function toggleGifPicker(){
   const gp=$('cl-gif-picker');if(!gp)return;
   const open=gp.style.display==='flex'||gp.style.display==='block';
   gp.style.display=open?'none':'block';
-  if(!open){const s=$('cl-gif-search');if(s){s.value='money';searchGifs('money');setTimeout(()=>s.focus(),80);}}
+  if(!open){const s=$('cl-gif-search');if(s){s.value='meme';searchGifs('meme');setTimeout(()=>s.focus(),80);}}
 }
+// TENOR v2 (Google) public demo key — searchable real memes/GIFs, no signup.
+const TENOR_KEY='AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
 function searchGifs(q){
   clearTimeout(_gifDebounce);
   const grid=$('cl-gif-grid');if(!grid)return;
   if(!q||q.length<2){grid.innerHTML='';return;}
+  grid.innerHTML='<span style="font-size:.6rem;color:rgba(255,255,255,.4);padding:6px">Searching memes…</span>';
   _gifDebounce=setTimeout(async()=>{
     try{
-      const r=await fetch(`https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(q)}&key=LIVDSRZULELA&limit=8&media_filter=gif`);
+      const ep=`https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(q)}&key=${TENOR_KEY}&limit=18&media_filter=tinygif,gif&contentfilter=medium`;
+      const r=await fetch(ep);
       const d=await r.json();
-      grid.innerHTML=(d.results||[]).map(item=>{
-        const url=item.media_formats?.gif?.url||item.media_formats?.tinygif?.url||'';
-        return url?`<img src="${url}" loading="lazy" onclick="sendGifMsg('${url}')" title="Send GIF">`:'';
+      const items=(d.results||[]);
+      if(!items.length){grid.innerHTML='<span style="font-size:.6rem;color:rgba(255,255,255,.35);padding:6px">No memes found — try another word</span>';return;}
+      grid.innerHTML=items.map(it=>{
+        const mf=it.media_formats||{};
+        const thumb=(mf.tinygif&&mf.tinygif.url)||(mf.nanogif&&mf.nanogif.url)||(mf.gif&&mf.gif.url)||'';
+        const full=(mf.gif&&mf.gif.url)||(mf.mediumgif&&mf.mediumgif.url)||thumb;
+        if(!thumb)return'';
+        return`<img src="${thumb}" loading="lazy" onclick="sendGifMsg('${full.replace(/'/g,'')}')" title="Send this">`;
       }).filter(Boolean).join('');
-    }catch(e){grid.innerHTML='<span style="font-size:.6rem;color:rgba(255,255,255,.3);padding:4px">No results</span>';}
+    }catch(e){grid.innerHTML='<span style="font-size:.6rem;color:rgba(255,255,255,.35);padding:6px">GIF search unavailable — check connection</span>';}
   },420);
 }
-function sendGifMsg(url){
+function _renderGifRow(name,url,isMe){
   const cont=$('cl-rows');if(!cont)return;
-  const row=document.createElement('div');row.className='cl-row chat-gif';
-  row.innerHTML=`<span style="font-size:.6rem;color:rgba(180,150,255,.5)">🗨 You sent a GIF:</span><img src="${url}" style="width:100%;border-radius:6px">`;
+  const safe=String(url||'').replace(/"/g,'&quot;');
+  const row=document.createElement('div');row.className='cl-row chat-gif cl-new'+(isMe?' chat-msg':'');
+  row.innerHTML=`<span style="font-size:.6rem;color:rgba(180,150,255,.6)">🗨 ${isMe?'You':String(name||'Player').replace(/[<>&]/g,'')} sent a GIF:</span><img src="${safe}" style="width:100%;border-radius:6px">`;
   cont.insertBefore(row,cont.firstChild);
   while(cont.children.length>40)cont.removeChild(cont.lastChild);
-  // Close picker
+}
+function sendGifMsg(url){
+  _renderGifRow('You',url,true);
+  // broadcast to the room — GIFs were local-only before
+  if(PLAYERS.length>1&&_bcRole&&typeof netSend==='function'){
+    const myName=(PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].name)||'Player '+(_bcMyIdx+1);
+    try{netSend({type:'gif',from:_bcMyIdx,name:myName,url:String(url).slice(0,400)});}catch(e){}
+  }
   const gp=$('cl-gif-picker');if(gp)gp.style.display='none';
 }
 
@@ -11421,6 +11438,11 @@ function bcHandleMessage(msg){
   // Both roles: room chat — render + host relays to the other joiners
   if(msg.type==='chat'){
     if(msg.from!==_bcMyIdx)_renderChatRow(msg.name||('Player '+((msg.from|0)+1)),msg.txt||'');
+    if(_bcRole==='host')netRelay(msg);
+    return;
+  }
+  if(msg.type==='gif'){
+    if(msg.from!==_bcMyIdx&&msg.url)_renderGifRow(msg.name||('Player '+((msg.from|0)+1)),msg.url,false);
     if(_bcRole==='host')netRelay(msg);
     return;
   }
