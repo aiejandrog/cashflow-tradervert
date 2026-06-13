@@ -418,9 +418,13 @@ body{
 .ot-lbl{font-size:.31rem;text-transform:uppercase;letter-spacing:.3px;color:rgba(255,255,255,.85);
   font-weight:800;font-family:Arial,sans-serif;text-align:center;line-height:1.2}
 /* Fast Track: dream corners */
-.ot.ft-dream{background:radial-gradient(ellipse,rgba(200,160,40,.5),rgba(120,90,10,.35))!important;border:2px solid var(--gold2);box-shadow:0 0 16px rgba(240,192,32,.5) inset;animation:dreamPulse 2s ease-in-out infinite}
-.ot.ft-dream .ft-dream-star{font-size:1.5rem;line-height:1;filter:drop-shadow(0 0 6px rgba(240,192,32,.9))}
+.ot.ft-dream{position:relative;overflow:visible;background:linear-gradient(135deg,rgba(255,215,90,.6),rgba(180,120,20,.42))!important;border:2px solid #ffe070;box-shadow:0 0 20px rgba(240,192,32,.75),0 0 28px rgba(240,192,32,.45) inset;animation:dreamPulse 1.6s ease-in-out infinite;z-index:4}
+.ot.ft-dream::before{content:'';position:absolute;inset:-3px;border-radius:inherit;background:conic-gradient(from 0deg,#ffe070,#fff,#f0c020,#ffd700,#ffe070);filter:blur(3px);opacity:.6;z-index:-1;animation:dreamSpin 3s linear infinite}
+.ot.ft-dream .ft-dream-star{display:flex;align-items:center;justify-content:center;font-size:1.7rem;line-height:1;filter:drop-shadow(0 0 8px rgba(255,235,150,1));animation:dreamStarPop 1.6s ease-in-out infinite}
+.ot.ft-dream .ft-dream-lbl{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:.42rem;font-weight:900;letter-spacing:1px;color:#3a2400;font-family:Arial,sans-serif;text-shadow:0 1px 0 rgba(255,255,255,.55)}
 .ot.ft-dream .ot-lbl,.ot.ft-dream .ot-ico{display:none}
+@keyframes dreamSpin{to{transform:rotate(360deg)}}
+@keyframes dreamStarPop{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 .ot.ft-payday-corner{background:radial-gradient(ellipse,rgba(34,160,90,.5),rgba(10,80,40,.4))!important;border:2px solid #34c87a;box-shadow:0 0 14px rgba(52,200,122,.45) inset}
 .ot.ft-payday-corner .ft-pay-mark{font-size:1.4rem;line-height:1;filter:drop-shadow(0 0 5px rgba(52,200,122,.9))}
 .ot.ft-payday-corner .ot-lbl,.ot.ft-payday-corner .ot-ico{display:none}
@@ -646,7 +650,7 @@ body{
 
 /* ── LIFE FEED (right side, under the turn dialog) ── */
 #chat-log{
-  position:fixed;top:calc(50% - 230px);bottom:auto;right:16px;left:auto;transform:none;
+  position:fixed;top:calc(50% - 255px);bottom:auto;right:16px;left:auto;transform:none;
   width:330px;
   background:rgba(8,3,20,.92);
   border:1px solid rgba(120,70,190,.35);
@@ -669,7 +673,7 @@ body{
 }
 .cl-hdr-title{display:flex;align-items:center;gap:5px}
 .cl-toggle-btn{background:none;border:none;color:rgba(180,150,255,.6);cursor:pointer;font-size:.75rem;padding:0 2px;line-height:1}
-#cl-rows{max-height:min(52vh,360px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(120,70,190,.4) transparent;flex:1}
+#cl-rows{max-height:min(60vh,460px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(120,70,190,.4) transparent;flex:1}
 #cl-rows::-webkit-scrollbar{width:3px}
 #cl-rows::-webkit-scrollbar-thumb{background:rgba(120,70,190,.4);border-radius:2px}
 .cl-row{
@@ -1526,6 +1530,7 @@ body{
 #ob-token{position:fixed;z-index:60;width:38px;height:38px;border-radius:50%;display:none;align-items:center;justify-content:center;line-height:1;pointer-events:none;
   background:radial-gradient(circle at 35% 28%,#fff7d8,#f0c020 58%,#a8730a);
   border:2px solid #fff;box-shadow:0 0 0 2px #1a0800,0 5px 16px rgba(240,192,32,.7),0 0 24px rgba(240,192,32,.6);
+  transition:left .2s cubic-bezier(.4,.05,.25,1),top .2s cubic-bezier(.4,.05,.25,1); /* smooth glide between tiles */
   animation:obTokenIdle 1.6s ease-in-out infinite}
 #ob-token .obt-av{filter:drop-shadow(0 1px 1px rgba(0,0,0,.55))}
 @keyframes obTokenIdle{0%,100%{box-shadow:0 0 0 2px #1a0800,0 5px 16px rgba(240,192,32,.7),0 0 24px rgba(240,192,32,.55)}50%{box-shadow:0 0 0 2px #1a0800,0 6px 20px rgba(240,192,32,.95),0 0 34px rgba(240,192,32,.85)}}
@@ -2156,7 +2161,10 @@ body{
     <div class="win-box" id="wb3"><div class="wb-label">Assets Built</div><div class="wb-value" id="wv-assets">0</div></div>
     <div class="win-box" id="wb4"><div class="wb-label">Net Worth</div><div class="wb-value" id="wv-networth">$0</div></div>
     <div class="win-box" id="wb5"><div class="wb-label">Monthly Surplus</div><div class="wb-value" id="wv-surplus" style="color:#4ade80">$0</div></div>
+    <div class="win-box" id="wb6"><div class="wb-label">Credit Score</div><div class="wb-value" id="wv-credit">—</div></div>
+    <div class="win-box" id="wb7"><div class="wb-label">Passive / Year</div><div class="wb-value" id="wv-passyr" style="color:#4ade80">$0</div></div>
   </div>
+  <div id="win-rival-badge" style="display:none;text-align:center;margin:2px auto 8px;max-width:440px;font-family:Georgia,serif;font-size:.82rem;font-weight:800;color:#ffd9a8;animation:wFade .6s ease 2.6s both;opacity:0"></div>
   <!-- Achievements earned row -->
   <div id="win-achievements" style="display:none;text-align:center;margin:8px auto 4px;max-width:440px;animation:wFade .6s ease 2.8s both;opacity:0">
     <div style="font-size:.6rem;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:2px;margin-bottom:5px;font-family:Arial,sans-serif">Achievements Earned</div>
@@ -4813,6 +4821,10 @@ function _mpLockToast(){
 }
 function rollDice(){
   if(G&&G._bankrupt){return;} // dead game — block any chained/doubles roll under the bankruptcy overlay
+  // Fast Track routing — EVERY roll entry point (die tap, ROLL button, spacebar) funnels
+  // here, so guard at the top: on the Fast Track the inner board must never roll (was the
+  // "sometimes rolls in Phase 1" bug — the clickable die called rollDice() directly).
+  if(G&&G._onFastTrack){if(typeof ftRoll==='function')ftRoll();return;}
   if(window._mpPaused){return;} // game paused for a dropped player — nobody rolls
   if(_mpNotMyTurn()){_mpLockToast();return;}
   if(!G||G.rolling){
@@ -9735,8 +9747,12 @@ function checkOuterWin(){
   $('wv-assets').textContent=G.assets.length;
   $('wv-networth').textContent=(netWorth>=0?'$':'-$')+fmt(Math.abs(netWorth));
   $('wv-surplus').textContent='+$'+fmt(Math.max(0,surplus))+'/mo';
+  {const cs=$('wv-credit');if(cs){const t=creditTier(G.creditScore||650);cs.textContent=(G.creditScore||650);cs.style.color=t.color==='#8b1a1a'?'#ff8c84':'#4ade80';}}
+  {const py=$('wv-passyr');if(py)py.textContent='$'+fmt(pass*12);}
+  // Rival-beaten badge
+  {const rb=$('win-rival-badge');if(rb){if(G._rival&&!(G._rivalWon)){rb.textContent=`🏁 You beat ${G._rival.av} ${G._rival.name} to freedom!`;rb.style.display='';}else rb.style.display='none';}}
   const dream=G.dream||DREAMS[0];
-  $('win-sub').textContent=`${dream.icon} ${dream.name} achieved in ${G.turn} turns as ${G.prof.name}.`;
+  $('win-sub').textContent=`${dream.icon} ${dream.name} — achieved in ${G.turn} turns as ${G.prof.name}. Your money now works harder than you do: +$${fmt(Math.max(0,surplus))}/mo while you sleep.`;
   $('win-rat-lbl').textContent='YOU LIVED YOUR DREAM';
   $('win-freedom-lbl').textContent='DREAM UNLOCKED';
   $('win-lesson-txt').textContent=G.turn<=20?'Legendary execution. You built it faster than 99% ever will.':G.turn<=40?'Elite pace. You played the asset game and won.':'You stayed the course. Most quit. You didn\'t.';
@@ -9776,14 +9792,14 @@ function checkOuterWin(){
     achBadges.innerHTML=G._achievements.map(a=>`<div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:4px 10px;font-size:.7rem;color:#fff;font-family:Arial,sans-serif">${a}</div>`).join('');
     achEl.style.display='';
   }
-  ['wb0','wb1','wb2','wb3','wb4','wb5'].forEach(id=>{const el=$(id);if(el)el.classList.remove('show');});
+  ['wb0','wb1','wb2','wb3','wb4','wb5','wb6','wb7'].forEach(id=>{const el=$(id);if(el)el.classList.remove('show');});
   G._dreamWon=true;saveGame(); // persist final win state — reload lands on win screen not outer board
   if(PLAYERS.length>1)PLAYERS[ACTIVE_PLAYER_IDX].G=JSON.parse(JSON.stringify(G));
   showScreen('win');
   spawnWinConfetti();
   if(PLAYERS.length>1)mpMarkPlayerWon();
   setTimeout(()=>spawnWinConfetti(),1200); // second burst on dream reveal
-  [0,1,2,3,4,5].forEach(i=>setTimeout(()=>{const wb=$('wb'+i);if(wb)wb.classList.add('show');},1800+i*300));
+  [0,1,2,3,4,5,6,7].forEach(i=>setTimeout(()=>{const wb=$('wb'+i);if(wb)wb.classList.add('show');},1500+i*240));
 }
 
 function replayNewGame(){clearSave();location.reload();}
@@ -9921,16 +9937,19 @@ const OUTER_BUSINESSES=[
 // turn dialog, inner ring, outer perimeter). On escape the token just moves around the
 // outer perimeter (the buildOuterTrack ring); roll with the SAME ROLL. The 4 empty
 // corners become ⭐ Dream tiles — land on one with enough cash to buy your dream & win.
-const FT_DREAM_CORNERS=[20];        // ONE Dream tile (bottom-right corner, opposite start)
+let FT_DREAM_CORNERS=[0,10,20,30];  // FOUR Dream tiles — one on each corner (computed in _ftIndexPerimeter)
 function _ftIndexPerimeter(){
   const top=$('ot-top'),right=$('ot-right'),bot=$('ot-bot'),left=$('ot-left');
   if(!top||!right||!bot||!left)return [];
+  const T=top.children.length,R=right.children.length,B=bot.children.length;
   const tiles=[];
   [].slice.call(top.children).forEach(el=>tiles.push(el));            // top L→R
   [].slice.call(right.children).forEach(el=>tiles.push(el));          // right T→B
   [].slice.call(bot.children).reverse().forEach(el=>tiles.push(el));  // bottom R→L
   [].slice.call(left.children).reverse().forEach(el=>tiles.push(el)); // left B→T
   tiles.forEach((el,i)=>{el.id='ft-'+i;el.dataset.fti=i;});
+  // The 4 physical corners of the ring: top-left(0), top-right, bottom-right, bottom-left.
+  FT_DREAM_CORNERS=[0,T-1,T+R-1,T+R+B-1].filter((v,i,a)=>v>=0&&v<tiles.length&&a.indexOf(v)===i);
   window._ftTiles=tiles;return tiles;
 }
 function ftLen(){return (window._ftTiles&&window._ftTiles.length)||40;}
@@ -9943,7 +9962,7 @@ function _ftDecorateDreams(on){
   tiles.forEach((el,i)=>{
     el.classList.remove('ft-dream');
     const star=el.querySelector('.ft-dream-star');if(star)star.remove();
-    if(on&&FT_DREAM_CORNERS.indexOf(i)>=0){el.classList.add('ft-dream');el.insertAdjacentHTML('beforeend','<span class="ft-dream-star">⭐</span>');}
+    if(on&&FT_DREAM_CORNERS.indexOf(i)>=0){el.classList.add('ft-dream');const _di=(G&&G.dream&&G.dream.icon)?G.dream.icon:'⭐';el.insertAdjacentHTML('beforeend','<span class="ft-dream-star">'+_di+'</span><span class="ft-dream-lbl">DREAM</span>');}
   });
 }
 function positionFtToken(i,animate){
@@ -9956,8 +9975,15 @@ function positionFtToken(i,animate){
   t.style.width=size+'px';t.style.height=size+'px';t.style.fontSize=Math.round(size*0.56)+'px';
   const nx=Math.round(r.left+r.width/2-size/2),ny=Math.round(r.top+r.height/2-size/2);
   t.style.display='flex';
-  if(animate&&t._lx!=null&&t.animate){const dx=t._lx-nx,dy=t._ly-ny;t.style.left=nx+'px';t.style.top=ny+'px';try{t.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:`translate(${dx/2}px,${dy/2-14}px) scale(1.18)`,offset:.5},{transform:'translate(0,0)'}],{duration:170,easing:'cubic-bezier(.3,.85,.4,1)'});}catch(e){}}
-  else{t.style.left=nx+'px';t.style.top=ny+'px';}
+  if(animate){
+    // smooth glide — the CSS transition on left/top interpolates between tiles
+    t.style.left=nx+'px';t.style.top=ny+'px';
+  }else{
+    // instant placement (spawn / resize) — suppress the transition so it doesn't slide from a stale spot
+    const prev=t.style.transition;t.style.transition='none';
+    t.style.left=nx+'px';t.style.top=ny+'px';
+    void t.offsetWidth; t.style.transition=prev||'';
+  }
   t._lx=nx;t._ly=ny;
 }
 function _ftClearState(){const t=document.getElementById('ob-token');if(t)t.style.display='none';_ftDecorateDreams(false);}
