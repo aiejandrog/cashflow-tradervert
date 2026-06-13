@@ -1448,8 +1448,12 @@ body{
    through the transparent tint but cannot click the board, FS panel, or the
    Financial Statement button (all sit far below z-index 8900). Only the HUD
    card below (its own info + Leave Game) is interactive. */
-#mp-wait{position:fixed;top:0;left:0;right:0;bottom:auto;background:transparent;z-index:8900;display:none;align-items:center;justify-content:flex-start;flex-direction:column;pointer-events:none}
-.mp-wait-inner{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:10px 18px 12px;max-width:440px;width:auto;margin:10px auto 0;pointer-events:auto;background:linear-gradient(180deg,rgba(18,11,34,.96),rgba(18,11,34,.88));border:1px solid rgba(34,211,238,.3);border-radius:0 0 16px 16px;box-shadow:0 8px 28px rgba(0,0,0,.5);backdrop-filter:blur(4px)}
+#mp-wait{position:fixed;top:0;left:0;right:auto;bottom:auto;background:transparent;z-index:8900;display:none;align-items:flex-start;justify-content:flex-start;flex-direction:column;pointer-events:none}
+.mp-wait-inner{display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;padding:9px 14px 11px;max-width:300px;width:auto;margin:8px 0 0 12px;pointer-events:auto;background:linear-gradient(180deg,rgba(18,11,34,.97),rgba(18,11,34,.9));border:1px solid rgba(34,211,238,.32);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.55);backdrop-filter:blur(4px)}
+.mp-wait-inner.collapsed>:not(.mp-wait-hdr){display:none!important}
+.mp-wait-hdr{display:flex;align-items:center;gap:9px;cursor:grab;width:100%}
+#mp-wait-min{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;cursor:pointer;font-size:.8rem;font-weight:900;line-height:1;padding:2px 8px 3px;flex-shrink:0;font-family:Georgia,serif}
+#mp-wait-min:hover{background:rgba(255,255,255,.22)}
 .mp-wait-spinner{width:26px;height:26px;border:3px solid rgba(34,211,238,.2);border-top-color:rgba(34,211,238,.85);border-radius:50%;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{transform:scale(1);box-shadow:0 4px 14px rgba(240,192,32,.45)}50%{transform:scale(1.05);box-shadow:0 6px 20px rgba(240,192,32,.7)}}
@@ -11695,6 +11699,7 @@ function bcShowWaiting(playerName){
     placeSpectateToken(act.G.position||0,act.G.prof?.icon||'•',act.color);
   }
   $('mp-wait').style.display='flex';
+  mpMakeWaitDraggable();
   // live countdown for the waiting banner
   clearInterval(window._mpTimerIv);
   window._mpTimerIv=setInterval(()=>{
@@ -11706,6 +11711,18 @@ function bcShowWaiting(playerName){
   },1000);
 }
 
+// Collapse the spectate box to just its header (click the — button), and let
+// the player drag it anywhere by the header — it no longer blocks the board.
+function mpToggleWait(e){
+  if(e)e.stopPropagation();
+  const inner=document.querySelector('.mp-wait-inner');if(!inner)return;
+  inner.classList.toggle('collapsed');
+  const b=document.getElementById('mp-wait-min');if(b)b.textContent=inner.classList.contains('collapsed')?'▢':'—';
+}
+function mpMakeWaitDraggable(){
+  const inner=document.querySelector('.mp-wait-inner'),hdr=document.getElementById('mp-wait-hdr');
+  if(inner&&hdr&&!inner._dragWired){inner._dragWired=true;try{makeDraggable(inner,hdr);}catch(e){}}
+}
 function bcRefreshWaitScores(){
   const sc=$('mp-wait-scores');if(!sc)return;
   sc.innerHTML=PLAYERS.map((p,i)=>{
@@ -12467,13 +12484,14 @@ function endTutorial(){
 <!-- ══ WAITING FOR TURN ══ -->
 <div id="mp-wait">
   <div class="mp-wait-inner">
-    <div style="display:flex;align-items:center;gap:10px">
+    <div class="mp-wait-hdr" id="mp-wait-hdr">
       <div class="mp-wait-spinner"></div>
-      <div style="text-align:left">
+      <div style="text-align:left;flex:1;min-width:0">
         <div class="mp-wait-name" id="mp-wait-name">Waiting...</div>
         <div class="mp-wait-sub" id="mp-wait-sub">It's not your turn yet</div>
       </div>
       <div id="mp-turn-timer" style="font-size:1rem;font-weight:900;font-family:Georgia,serif;color:#7ee0f0;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);border-radius:10px;padding:4px 10px;min-width:46px;text-align:center">—</div>
+      <button id="mp-wait-min" onclick="mpToggleWait(event)" title="Minimize / expand">—</button>
     </div>
     <div id="mp-reactions" style="display:flex;gap:6px;justify-content:center">
       <span style="font-size:.55rem;color:rgba(255,255,255,.4);align-self:center;font-family:Arial,sans-serif">React:</span>
