@@ -1822,6 +1822,7 @@ body{
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗<span class="tb-lbl"> Dealer</span></button>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡<span class="tb-lbl"> Realty</span></button>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openLeisure()" title="Leisure — dining, nightlife, travel" style="padding:6px 10px;font-size:.72rem">🍸<span class="tb-lbl"> Leisure</span></button>
+    <button class="btn-og btn-tan" onclick="openShop()" title="Shop — spend your ✦ on cosmetics, Plays & the Mystery Box" style="padding:6px 10px;font-size:.72rem">🛍<span class="tb-lbl"> Shop</span></button>
     <button class="btn-og btn-tan" onclick="openSettings()" title="Settings" style="padding:6px 10px;font-size:.72rem">⚙️</button>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
@@ -2860,13 +2861,43 @@ function renderRivalBar(){
 }
 function advanceRival(){
   if(PLAYERS.length>1)return;            // solo only — MP rivals are the real players
-  const r=G&&G._rival;if(!r||r.prog>=1)return;
+  const r=G&&G._rival;if(!r||r.prog>=1)return; // no rival (solo mode) or already escaped
   if(G._winning||G._onFastTrack||G._rivalWon)return; // race already decided
-  r.prog=Math.min(1,(r.prog||0)+(r.pace||0.04)*diffCfg().rivalPaceMult);
-  renderRivalBar();
-  const mile=r.prog>=0.75?3:r.prog>=0.5?2:r.prog>=0.25?1:0;
-  if(mile>(r.mileShown||0)){r.mileShown=mile;if(Math.random()<diffCfg().tauntFreq)_rivalTaunt(r.taunts[Math.floor(Math.random()*r.taunts.length)]);}
-  if(r.prog>=1)rivalWinsGame();
+  // The rival now takes a VISIBLE turn right after yours: they "spin" a die and gain
+  // ground in proportion to the roll. Average roll (3.5) keeps the original escape pace,
+  // but you SEE them play — sometimes a surge, sometimes a stall.
+  const roll=1+Math.floor(Math.random()*6);
+  const base=(r.pace||0.04)*diffCfg().rivalPaceMult;
+  r.prog=Math.min(1,(r.prog||0)+base*(roll/3.5));
+  r._lastRoll=roll;
+  const done=r.prog>=1;
+  const reveal=function(){
+    renderRivalBar();
+    try{_rivalTurnToast(r,roll,done);}catch(e){}
+    const mile=r.prog>=0.75?3:r.prog>=0.5?2:r.prog>=0.25?1:0;
+    if(mile>(r.mileShown||0)){r.mileShown=mile;if(Math.random()<diffCfg().tauntFreq)setTimeout(function(){try{_rivalTaunt(r.taunts[Math.floor(Math.random()*r.taunts.length)]);}catch(e){}},760);}
+    if(done)setTimeout(function(){try{rivalWinsGame();}catch(e){}},950);
+  };
+  // small beat so it reads as "their turn after yours"; fire instantly if tab is hidden
+  if(document.hidden)reveal(); else setTimeout(reveal,430);
+}
+// Visible rival turn — a die + their progress, floated near the top (non-blocking)
+function _rivalTurnToast(r,roll,done){
+  if(!r||document.hidden)return;
+  const faces=['⚀','⚁','⚂','⚃','⚄','⚅'];
+  const pct=Math.round(Math.min(1,r.prog||0)*100);
+  let t=document.getElementById('rival-turn-toast');if(t)t.remove();
+  t=document.createElement('div');t.id='rival-turn-toast';
+  t.style.cssText='position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:8400;background:linear-gradient(150deg,rgba(30,8,12,.96),rgba(16,4,8,.97));border:1.5px solid '+r.color+';border-radius:14px;padding:9px 16px;font-family:Georgia,serif;color:#fff;box-shadow:0 8px 26px rgba(0,0,0,.6);pointer-events:none;display:flex;align-items:center;gap:11px;max-width:88vw';
+  t.innerHTML='<span style="font-size:1.7rem;line-height:1">'+r.av+'</span>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;text-align:left">'
+      +'<div style="font-size:.75rem;font-weight:800;color:'+r.color+'">'+r.name+(done?' escapes! 🏁':'’s turn')+'</div>'
+      +'<div style="font-size:.66rem;color:rgba(255,255,255,.82)">spun <b style="font-size:1.15rem;color:#fff;vertical-align:-2px">'+faces[roll-1]+'</b> '+roll+' → <b style="color:'+r.color+'">'+pct+'%</b> to freedom</div>'
+    +'</div>';
+  document.body.appendChild(t);
+  try{const bar=document.getElementById('rival-bar');if(bar)bar.animate([{filter:'brightness(1)'},{filter:'brightness(2)'},{filter:'brightness(1)'}],{duration:650});}catch(e){}
+  try{t.animate([{opacity:0,transform:'translateX(-50%) translateY(-10px) scale(.95)'},{opacity:1,transform:'translateX(-50%) translateY(0) scale(1)',offset:.18},{opacity:1,offset:.78},{opacity:0,transform:'translateX(-50%) translateY(-6px)'}],{duration:1900,easing:'ease-out'}).onfinish=function(){t.remove();};}catch(e){setTimeout(function(){t.remove();},1900);}
+  try{if(typeof _haptic==='function')_haptic(15);}catch(e){}
 }
 function _rivalTaunt(msg){
   const r=G&&G._rival;if(!r)return;
@@ -2909,8 +2940,14 @@ function showRivalPick(){
   let ov=document.getElementById('rival-pick');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='rival-pick';
   ov.style.cssText='position:fixed;inset:0;z-index:9300;background:radial-gradient(ellipse at 50% 18%,rgba(60,30,110,.6),rgba(6,3,16,.97));display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;overflow-y:auto;font-family:Georgia,serif;animation:fadeIn .3s';
+  const soloCard='<div onclick="_chooseRival(\'solo\')" style="cursor:pointer;background:linear-gradient(155deg,rgba(10,26,18,.9),rgba(6,16,12,.92));border:2px solid rgba(120,220,170,.4);border-radius:14px;padding:12px 10px;text-align:center;transition:all .15s" onmouseover="this.style.borderColor=\'#7ef0c0\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'rgba(120,220,170,.4)\';this.style.transform=\'\'">'
+    +'<div style="font-size:2.2rem;line-height:1">🧘</div>'
+    +'<div style="font-size:.8rem;font-weight:900;color:#fff;margin:4px 0">Solo — No Rival</div>'
+    +'<div style="font-size:.58rem;color:rgba(255,255,255,.6);line-height:1.35;min-height:30px">Play by yourself, no one chasing you. Just you versus the Rat Race.</div>'
+    +'<div style="font-size:.56rem;color:#7ef0c0;font-weight:800;margin-top:5px">relaxed mode</div></div>';
   const cards=RIVALS.map(r=>rivalCardHTML(r.id,r.av,r.name,r.blurb,r.color,r.escTurns)).join('')
-    +rivalCardHTML('ghost','🏁','Your Ghost',(loadProfile().bestOverall?('Race your best run'):'Race your own pace'),'#9ad8ff',loadProfile().bestOverall||26);
+    +rivalCardHTML('ghost','🏁','Your Ghost',(loadProfile().bestOverall?('Race your best run'):'Race your own pace'),'#9ad8ff',loadProfile().bestOverall||26)
+    +soloCard;
   const sc=(G&&G._scenario&&G._scenario.id!=='calm')?G._scenario:null;
   const scLine=sc?'<div style="font-size:.74rem;color:#f0dc90;margin-bottom:10px;text-align:center;max-width:460px;background:rgba(240,192,32,.1);border:1px solid rgba(240,192,32,.3);border-radius:10px;padding:7px 12px">This run: '+sc.icon+' <b>'+sc.name+'</b> — '+sc.desc+'</div>':'';
   ov.innerHTML='<div style="font-size:1.4rem;font-weight:900;color:#f0dc90;margin-bottom:2px">🏁 Choose Your Rival</div>'
@@ -2921,8 +2958,15 @@ function showRivalPick(){
   document.body.appendChild(ov);
 }
 function _chooseRival(id){
-  G._rival=_makeRival(id);
   const ov=document.getElementById('rival-pick');if(ov)ov.remove();
+  if(id==='solo'||id==='none'){
+    G._rival=null;
+    const row=$('rival-row');if(row)row.style.display='none';
+    saveGame();
+    addLog('🧘','Flying solo — no rival. Just you versus the Rat Race.','gold');
+    return;
+  }
+  G._rival=_makeRival(id);
   renderRivalBar();saveGame();
   addLog('🏁','Your rival: '+G._rival.av+' '+G._rival.name+' — race them to freedom!','gold');
 }
