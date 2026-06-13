@@ -646,7 +646,7 @@ body{
 
 /* ── LIFE FEED (right side, under the turn dialog) ── */
 #chat-log{
-  position:fixed;top:calc(50% - 170px);bottom:auto;right:16px;left:auto;transform:none;
+  position:fixed;top:calc(50% - 230px);bottom:auto;right:16px;left:auto;transform:none;
   width:330px;
   background:rgba(8,3,20,.92);
   border:1px solid rgba(120,70,190,.35);
@@ -669,7 +669,7 @@ body{
 }
 .cl-hdr-title{display:flex;align-items:center;gap:5px}
 .cl-toggle-btn{background:none;border:none;color:rgba(180,150,255,.6);cursor:pointer;font-size:.75rem;padding:0 2px;line-height:1}
-#cl-rows{max-height:185px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(120,70,190,.4) transparent;flex:1}
+#cl-rows{max-height:min(52vh,360px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(120,70,190,.4) transparent;flex:1}
 #cl-rows::-webkit-scrollbar{width:3px}
 #cl-rows::-webkit-scrollbar-thumb{background:rgba(120,70,190,.4);border-radius:2px}
 .cl-row{
@@ -6901,6 +6901,7 @@ function showLoanTypeModal(deal){
     {type:'DSCR',     emoji:'📊',pct:20,  rate:baseRate+0.02,         minCredit:660, cond:deal.cf>0&&deal.type==='re',      desc:'No W-2 needed · qualified by property CF'},
     {type:'Hard $$',  emoji:'💼',pct:10,  rate:baseRate+0.06,         minCredit:0,   cond:true,                             desc:'Fast close · high rate · 10% down'},
   ];
+  let _minEligDown=Infinity; // the smallest down the player can actually afford right now
   opts.filter(o=>o.cond).forEach(o=>{
     const _dMult=deal.type==='re'?(G._downMultRE||1):deal.type==='biz'?(G._bizDownMult||1):1; // Landlord/Mogul down discount
     const down=Math.max(100,Math.round(cost*(o.pct/100)*_dMult/100)*100);
@@ -6925,18 +6926,22 @@ function showLoanTypeModal(deal){
     // Non-eligible: use locked:true (truly disabled) — clicking a btn-locked without locked:true
     // would call closeModal() without endTurn(), leaving G.rolling stuck.
     if(!eligible){actions.push({label:`${o.emoji} ${o.type} — `+statusTxt,locked:true});return;}
+    if(canAfford)_minEligDown=Math.min(_minEligDown,down); // only count downs you can pay from cash
     actions.push({label:`${o.emoji} ${o.type} — $${fmt(down)} down`,cls:'btn-gold',fn:()=>buyDealWithLoan(deal,down,o.rate)});
   });
   actions.push({label:'Pass on This Deal',cls:'btn-tan',fn:()=>{addLog('🤝','Passed on '+deal.name,'');endTurn();}});
   // Prepend asset summary rows so player sees what they're financing
   const _finCFColor=deal.cf>=500?'green':deal.cf>0?'gold':'red';
+  // Lead with the CASH NEEDED NOW so nobody thinks they must pay the full price.
+  const _cashNeedVal=_minEligDown<Infinity?('$'+fmt(_minEligDown)+' down'):(canCash?('$'+fmt(cashPrice)+' cash'):'more cash/credit needed');
+  const _cashNeedColor=(_minEligDown<Infinity||canCash)?'green':'red';
   const _finSummaryRows=[
-    ['📦 Asset','$'+fmt(cost)+' total cost',''],
+    ['💵 Cash you need NOW',_cashNeedVal,_cashNeedColor],
+    ['📦 Price',`$${fmt(cost)} — the bank finances the rest`,''],
     ['💰 Monthly CF',deal.cf>0?'+$'+fmt(deal.cf)+'/mo':'Capital gain only',_finCFColor],
-    ['🏦 Annual Gross',deal.cf>0?'$'+fmt(deal.cf*12)+'/yr':'—',deal.cf>0?'green':''],
   ];
   openModal({band:'green',title:'🏦 Financing — '+deal.name,
-    desc:`Cash: $${fmt(G.cash)} · Credit: ${score} (${tier.label})${(isFirstProp&&deal.type==='re')?' · 🏛 FHA eligible':''}${canCash?' · 💵 Cash option available':''}`,
+    desc:`You do NOT pay the full $${fmt(cost)} — just a down payment. Your cash: $${fmt(G.cash)} · Credit: ${score} (${tier.label})${(isFirstProp&&deal.type==='re')?' · 🏛 FHA eligible':''}`,
     rows:[..._finSummaryRows,['─────────','Loan Options ↓',''],...rows],actions
   });
 }
