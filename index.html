@@ -1812,7 +1812,7 @@ body{
       </div>
     </div>
     <div id="plays-tray" title="Power-up Plays — tap one to use it" style="display:none;align-items:center;gap:4px;flex-shrink:0"></div>
-    <div id="credit-chip" title="Credit Score" style="display:none;align-items:center;gap:6px;background:#3d2a5e;border:2px solid #6a4a96;border-radius:18px;padding:5px 12px;flex-shrink:0">
+    <div id="credit-chip" onclick="if(typeof G!=='undefined'&&G)openCreditCenter()" title="Credit Score — tap to open the Credit Center" style="display:none;align-items:center;gap:6px;background:#3d2a5e;border:2px solid #6a4a96;border-radius:18px;padding:5px 12px;flex-shrink:0;cursor:pointer">
       <span style="font-size:.85rem;line-height:1">💳</span>
       <span style="display:flex;flex-direction:column;line-height:1.15">
         <span id="pc-credit" style="font-size:.74rem;font-weight:900;font-family:Georgia,serif;color:#f0dc90">—</span>
@@ -2236,6 +2236,19 @@ const PROFS = [
   { id:'truck',     name:'Truck Driver',   icon:'🚛', age:30, salary:2900,  taxes:480,  mortgage:400,  school:0,    car:80,  cc:40,  retail:10, other:240,  children:0, ccDebt:2500,  carLoan:5000,  mortgage_d:30000,  schoolDebt:0,      savings:40,  desc:'Low overhead is your superpower. Small deals stack fast.' },
   { id:'secretary', name:'Secretary',      icon:'📋', age:24, salary:2500,  taxes:380,  mortgage:350,  school:0,    car:70,  cc:30,  retail:10, other:190,  children:0, ccDebt:2000,  carLoan:4000,  mortgage_d:25000,  schoolDebt:0,      savings:30,  desc:'One property can flip the entire game. Patience required.' },
   { id:'janitor',   name:'Janitor',        icon:'🧹', age:23, salary:1600,  taxes:190,  mortgage:300,  school:0,    car:60,  cc:30,  retail:10, other:140,  children:0, ccDebt:2000,  carLoan:3000,  mortgage_d:20000,  schoolDebt:0,      savings:20,  desc:'Legend difficulty. Your mentor himself started here. Every dollar counts.' },
+  // ── Blue-collar / working trades — no student debt, real skills, real money ──
+  { id:'mechanic',  name:'Auto Mechanic',  icon:'🔧', age:27, salary:4200,  taxes:760,  mortgage:640,  school:0,    car:150, cc:80,  retail:25, other:360,  children:0, ccDebt:4000,  carLoan:8000,  mortgage_d:60000,  schoolDebt:0,      savings:100, desc:'Skilled hands, steady demand. No degree, no debt — every dollar saved funds a deal.' },
+  { id:'plumber',   name:'Plumber',        icon:'🚿', age:30, salary:5400,  taxes:1020, mortgage:780,  school:0,    car:180, cc:100, retail:30, other:430,  children:0, ccDebt:4500,  carLoan:11000, mortgage_d:74000,  schoolDebt:0,      savings:130, desc:'Trades pay. People always need pipes. Stack the cash and buy assets, not toys.' },
+  { id:'welder',    name:'Welder',         icon:'🔩', age:28, salary:4600,  taxes:850,  mortgage:680,  school:0,    car:160, cc:90,  retail:25, other:390,  children:0, ccDebt:4000,  carLoan:9000,  mortgage_d:64000,  schoolDebt:0,      savings:110, desc:'A torch and a certification beat a diploma and a loan. Build with what you earn.' },
+  { id:'hvac',      name:'HVAC Tech',      icon:'❄️', age:28, salary:4400,  taxes:810,  mortgage:660,  school:0,    car:150, cc:85,  retail:25, other:380,  children:0, ccDebt:4200,  carLoan:8500,  mortgage_d:62000,  schoolDebt:0,      savings:100, desc:'Summers and winters keep you booked. Recession-resistant trade — invest the surplus.' },
+  { id:'carpenter', name:'Carpenter',      icon:'🔨', age:29, salary:4000,  taxes:720,  mortgage:620,  school:0,    car:140, cc:80,  retail:25, other:350,  children:0, ccDebt:3800,  carLoan:7500,  mortgage_d:56000,  schoolDebt:0,      savings:90,  desc:'You build others\' homes — now build your own portfolio. Real estate is your home turf.' },
+  { id:'fisherman', name:'Commercial Fisher',icon:'🎣',age:31, salary:3400,  taxes:560,  mortgage:520,  school:0,    car:120, cc:60,  retail:20, other:300,  children:0, ccDebt:3000,  carLoan:9000,  mortgage_d:42000,  schoolDebt:0,      savings:70,  desc:'Big hauls, lean months. Cash flow is your lifeline when the catch is slow.' },
+  { id:'farmer',    name:'Farmer',         icon:'🚜', age:34, salary:3000,  taxes:430,  mortgage:480,  school:0,    car:110, cc:60,  retail:20, other:280,  children:0, ccDebt:3500,  carLoan:12000, mortgage_d:50000,  schoolDebt:0,      savings:60,  desc:'Land rich, cash poor. Turn acres into income streams — you already own the asset.' },
+  { id:'hygienist', name:'Dental Hygienist',icon:'🦷',age:27, salary:5000,  taxes:950,  mortgage:740,  school:120,  car:170, cc:100, retail:30, other:410,  children:0, ccDebt:5000,  carLoan:9000,  mortgage_d:70000,  schoolDebt:14000,  savings:120, desc:'Clean income, modest debt. Steady hours leave room to build on the side.' },
+  { id:'barber',    name:'Barber/Stylist', icon:'💈', age:26, salary:3200,  taxes:480,  mortgage:500,  school:0,    car:100, cc:60,  retail:25, other:290,  children:0, ccDebt:2800,  carLoan:5000,  mortgage_d:40000,  schoolDebt:0,      savings:60,  desc:'You rent the chair today — own the shop tomorrow. Tips compound if you invest them.' },
+  { id:'busdriver', name:'Bus Driver',     icon:'🚍', age:32, salary:3100,  taxes:470,  mortgage:490,  school:0,    car:100, cc:55,  retail:20, other:280,  children:0, ccDebt:2600,  carLoan:5500,  mortgage_d:38000,  schoolDebt:0,      savings:55,  desc:'Pension and benefits, low ceiling. Passive income is the route out of the route.' },
+  { id:'landscaper',name:'Landscaper',     icon:'🌳', age:28, salary:2800,  taxes:400,  mortgage:450,  school:0,    car:100, cc:50,  retail:15, other:250,  children:0, ccDebt:2500,  carLoan:6000,  mortgage_d:34000,  schoolDebt:0,      savings:45,  desc:'A truck and a mower can become a crew. Reinvest before you upgrade your lifestyle.' },
+  { id:'warehouse', name:'Warehouse Lead', icon:'📦', age:26, salary:2600,  taxes:360,  mortgage:420,  school:0,    car:90,  cc:50,  retail:15, other:230,  children:0, ccDebt:2200,  carLoan:4500,  mortgage_d:28000,  schoolDebt:0,      savings:40,  desc:'Tight margins, hard work. One small property changes the entire equation.' },
   // ── New professions ─────────────────────────────────────────────────────────
   { id:'electrician',name:'Electrician',    icon:'⚡', age:28, salary:5200,  taxes:980,  mortgage:750,  school:0,    car:180, cc:100, retail:30, other:420,  children:0, ccDebt:4500,  carLoan:10000, mortgage_d:72000,  schoolDebt:0,      savings:120, desc:'Trades money with no student debt. Every dollar not spent is a deal funded.' },
   { id:'chef',       name:'Head Chef',      icon:'👨‍🍳',age:30, salary:4800,  taxes:880,  mortgage:700,  school:0,    car:150, cc:120, retail:50, other:480,  children:0, ccDebt:6000,  carLoan:8000,  mortgage_d:65000,  schoolDebt:0,      savings:90,  desc:'High spend temptation. Build assets outside the industry you work in.' },
@@ -3932,6 +3945,50 @@ function _creditToast(delta,reason){
   }catch(e){}
 }
 
+// ── CREDIT CENTER — consult a specialist when your score is hurting ──
+// Not a guarantee: paying a fee MAY raise your score (sometimes a lot,
+// sometimes barely). The reliable path is still paying down balances —
+// which now rewards credit on every payment, not just full payoffs.
+function openCreditCenter(){
+  if(!G||!G.creditScore)return;
+  const score=G.creditScore, tier=creditTier(score);
+  const fee=score<580?500:score<640?750:score<700?950:1200;
+  const used=(G._creditConsultYear===(G.gameYear||1));
+  const oddsTxt=score<580?'High — lots of room to climb':score<640?'Good':score<700?'Moderate':'Low — already strong';
+  const acts=[];
+  if(used)acts.push({label:'✓ Consulted this year — back next year',cls:'btn-tan',fn:()=>{}});
+  else acts.push({label:`🧑‍💼 Consult Specialist — $${fmt(fee)}`,cls:'btn-gold',fn:()=>consultCreditSpecialist(fee)});
+  acts.push({label:'💸 Pay Down Debt →',cls:'btn-tan',fn:()=>{try{openPayLoan();}catch(e){}}});
+  acts.push({label:'Close',cls:'btn-tan',fn:()=>{}});
+  openModal({band:'blue',title:'💳 Credit Center',
+    desc:`Score ${score} (${tier.label}) → loan rate ${Math.round(tier.rate*100)}%. A credit specialist can dispute errors and optimize your file. It MAY raise your score — no guarantee, but sometimes a big jump.`,
+    rows:[['Current Score',score+' ('+tier.label+')'],['Specialist Fee','$'+fmt(fee)],['Success Odds',oddsTxt],['Your Cash','$'+fmt(G.cash)],['Free boost','Pay down balances — every payment helps now']],
+    actions:acts});
+}
+function consultCreditSpecialist(fee){
+  if(typeof _mpLocked==='function'&&_mpLocked()){_mpLockToast();return;}
+  if(G.cash<fee){try{showToast('Not enough cash for the specialist fee.','#8b1a1a',3200,true);}catch(e){}return;}
+  G.cash-=fee; G._creditConsultYear=G.gameYear||1;
+  const score=G.creditScore||650;
+  const successChance=score<580?0.85:score<640?0.70:score<700?0.52:0.38;
+  let pts=0,msg='';
+  if(Math.random()<successChance){
+    const big=Math.random()<0.22;
+    pts=big?Math.round(40+Math.random()*35):Math.round(12+Math.random()*23); // big win 40-75, else 12-35
+    if(score>=700)pts=Math.round(pts*0.5); // less room when already strong
+    msg=big?'The specialist wiped several errors off your report — a major jump!':'The specialist disputed errors and optimized your utilization.';
+  }else{
+    pts=Math.round(Math.random()*5); // 0-5 marginal — still not a total waste
+    msg='Mostly a wash this round — a small bump at best. The big wins come from paying down balances. Try again next year.';
+  }
+  boostCredit(pts,'credit specialist');
+  openModal({band:pts>=12?'green':'red',title:pts>=12?'📈 Score Jumped!':(pts>0?'🔧 Small Bump':'😐 No Change'),
+    desc:msg,
+    rows:[['Points',(pts>0?'+':'')+pts],['New Score',G.creditScore+' ('+creditTier(G.creditScore).label+')'],['Fee Paid','$'+fmt(fee)],['Cash Left','$'+fmt(G.cash)]],
+    actions:[{label:'OK',cls:'btn-gold',fn:()=>{}}]});
+  updateUI();saveGame();
+}
+
 // ── SPINNER ──────────────────────────────────────────
 let isSpinning=false,spinChosen=null;
 
@@ -3948,12 +4005,15 @@ const ITEM_H=68; // px — must match .sp-item height
 // Mirrors reality, makes a Doctor roll feel like hitting a jackpot, and makes
 // the grind runs the badge of honor they deserve. Within a bucket it's fair.
 function _spinCareerLottery(){
-  const elite=PROFS.filter(p=>p.salary>=7000);          // Doctor, Lawyer, Engineer
-  const middle=PROFS.filter(p=>p.salary>=4500&&p.salary<7000);
-  const grind=PROFS.filter(p=>p.salary<4500);
-  const r=Math.random();
-  const bucket=r<0.22?elite:r<0.55?middle:grind;
-  return bucket[Math.floor(Math.random()*bucket.length)]||PROFS[0];
+  // Near-even odds across every career, with the mega-earners a touch rarer so
+  // landing a Doctor/Hedge Fund still feels like a lucky pull. Most blue-collar
+  // and middle careers share roughly equal weight.
+  const weighted=[];
+  for(const p of PROFS){
+    const w=p.salary>=14000?1:p.salary>=9000?2:3; // ultra-elite rare · high common-ish · everything else even
+    for(let i=0;i<w;i++)weighted.push(p);
+  }
+  return weighted[Math.floor(Math.random()*weighted.length)]||PROFS[0];
 }
 function doSpin(){
   if(isSpinning)return;
@@ -4951,6 +5011,9 @@ function ageOneYear(){
   recalcChildCosts(); // kids' monthly cost scales with their life stage
   addLog('🎂',`Year ${G.gameYear} — you're now ${G.identity.age}.`,'b');
   const chip=$('year-age-chip');if(chip)chip.textContent=`Yr ${G.gameYear} · Age ${G.identity.age}`;
+  // Reward a clean year: bills covered all year with no forced borrowing → credit climbs
+  try{if(!G._forcedLoanThisYear&&monthlyCF()>=0){boostCredit(3,'on-time payments');}}catch(e){}
+  G._forcedLoanThisYear=false;
   saveGame();
 }
 // Kid life stage from age in YEARS (school@8, teen@16, grad@22)
@@ -6690,6 +6753,7 @@ function ensureCash(needed,label){
     G.cash+=actualBorrow;G.bankLoan=(G.bankLoan||0)+actualBorrow;
     G.extraBankPmt=Math.round(G.bankLoan*rate);
     G._everBorrowed=true; // Phantom trophy tracker
+    G._forcedLoanThisYear=true; // breaks the year's on-time credit reward
     boostCredit(-3,'emergency borrowing');
     addLog('🏦',`Auto-borrowed $${fmt(actualBorrow)} for ${label||'payment'} — bank loan $${fmt(G.bankLoan)}`,'b');
     _forcedLoanNotice(label,actualBorrow,G.bankLoan,G.extraBankPmt); // make the WHY visible — players were confused why the loan kept rising
@@ -9162,7 +9226,7 @@ function payExactDebt(key,amt){
     G.cash-=p;G.bankLoan-=p;
     const rate=loanRate();
     G.extraBankPmt=G.bankLoan>0?Math.round(G.bankLoan*rate):0;
-    boostCredit(15);
+    boostCredit(G.bankLoan===0?20:Math.max(3,Math.round(p/2500)),G.bankLoan===0?'loan cleared':'paid down loan');
     addLog('💸',`Bank Loan: $${fmt(p)} paid${G.bankLoan===0?' — CLEARED!':' — $'+fmt(G.bankLoan)+' left'} | Credit: ${G.creditScore}`,G.bankLoan===0?'gold':'g');
     updateUI();checkWin();saveGame();
     if(G._outerBoard)obUpdateStats();
@@ -9181,8 +9245,8 @@ function payExactDebt(key,amt){
     if(ba){if(ba.mortgagePmt>0)ba.cf+=ba.mortgagePmt;ba.liability=0;ba.mortgagePmt=0;}
   }
   G.liabilities=G.liabilities.filter(x=>x.name!==key);
-  boostCredit(20);
-  addLog('💸',`Cleared ${key} — $${fmt(amt)} | Credit +20 → ${G.creditScore}`,'g');
+  boostCredit(28,'debt cleared');
+  addLog('💸',`Cleared ${key} — $${fmt(amt)} | Credit → ${G.creditScore}`,'g');
   updateUI();checkWin();saveGame();
   if(G._outerBoard)obUpdateStats();
   setTimeout(()=>celebrateDebtFree(key),300);
@@ -9191,7 +9255,7 @@ function payDebt(req){
   if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   let rem=Math.min(req,G.cash);if(rem<=0)return;
   let paid=0;const rate=loanRate();
-  if(G.bankLoan>0&&rem>0){const p=Math.min(rem,G.bankLoan);G.cash-=p;G.bankLoan-=p;rem-=p;paid+=p;G.extraBankPmt=G.bankLoan>0?Math.round(G.bankLoan*rate):0;if(G.bankLoan===0){boostCredit(12);setTimeout(()=>celebrateDebtFree('Bank Loan'),300);}}
+  if(G.bankLoan>0&&rem>0){const p=Math.min(rem,G.bankLoan);G.cash-=p;G.bankLoan-=p;rem-=p;paid+=p;G.extraBankPmt=G.bankLoan>0?Math.round(G.bankLoan*rate):0;if(G.bankLoan===0){boostCredit(20,'loan cleared');setTimeout(()=>celebrateDebtFree('Bank Loan'),300);}}
   for(const n of['Credit Cards','Car Loan','School Loan','Home Mortgage']){
     if(rem<=0)break;const l=G.liabilities.find(x=>x.name===n);if(!l||l.amt<=0)continue;
     const p=Math.min(rem,l.amt);G.cash-=p;l.amt-=p;rem-=p;paid+=p;
@@ -9200,11 +9264,11 @@ function payDebt(req){
       // Fix12c: same ghost-liability guard — clear primary home asset fields on payoff
       if(n==='Home Mortgage'){const homeA=G.assets.find(a=>a.isPrimaryHome);if(homeA){homeA.liability=0;homeA.mortgagePmt=0;}}
       G.liabilities=G.liabilities.filter(x=>x.name!==n);
-      boostCredit(12);
+      boostCredit(22,'debt cleared');
       setTimeout(()=>celebrateDebtFree(n),300);
     }
   }
-  if(paid>0){addLog('💸','Paid $'+fmt(paid)+' debt | Score: '+G.creditScore,'g');updateUI();checkWin();saveGame();}
+  if(paid>0){boostCredit(Math.max(1,Math.round(paid/3500)),'paid down debt');addLog('💸','Paid $'+fmt(paid)+' debt | Score: '+G.creditScore,'g');updateUI();checkWin();saveGame();}
 }
 
 function partialPayLiab(liabKey,amt){
@@ -9212,8 +9276,8 @@ function partialPayLiab(liabKey,amt){
   if(amt<=0||G.cash<amt)return;
   if(liabKey==='Bank Loan'){
     const p=Math.min(amt,G.bankLoan);G.cash-=p;G.bankLoan-=p;
-    if(G.bankLoan<=0){G.bankLoan=0;G.extraBankPmt=0;boostCredit(12);updateUI();checkWin();saveGame();setTimeout(()=>celebrateDebtFree('Bank Loan'),300);}
-    else{G.extraBankPmt=Math.round(G.bankLoan*loanRate());updateUI();saveGame();}
+    if(G.bankLoan<=0){G.bankLoan=0;G.extraBankPmt=0;boostCredit(20,'loan cleared');updateUI();checkWin();saveGame();setTimeout(()=>celebrateDebtFree('Bank Loan'),300);}
+    else{G.extraBankPmt=Math.round(G.bankLoan*loanRate());boostCredit(Math.max(1,Math.round(p/3500)),'paid down loan');updateUI();saveGame();}
     addLog('💸',`Paid $${fmt(p)} on Bank Loan | Remaining: $${fmt(Math.max(0,G.bankLoan))}`,'g');return;
   }
   const l=G.liabilities.find(x=>x.name===liabKey);if(!l)return;
@@ -9232,9 +9296,9 @@ function partialPayLiab(liabKey,amt){
       if(homeA){homeA.liability=0;homeA.mortgagePmt=0;}
     }
     G.liabilities=G.liabilities.filter(x=>x.name!==liabKey);
-    boostCredit(20);addLog('💸',`${liabKey} PAID OFF! Credit +20 → ${G.creditScore}`,'g');
+    boostCredit(28,'debt cleared');addLog('💸',`${liabKey} PAID OFF! Credit → ${G.creditScore}`,'g');
     updateUI();checkWin();saveGame();setTimeout(()=>celebrateDebtFree(liabKey),300);
-  }else{addLog('💸',`Paid $${fmt(p)} on ${liabKey} | Remaining: $${fmt(l.amt)}`,'g');updateUI();saveGame();}
+  }else{boostCredit(Math.max(1,Math.round(p/3500)),'paid down debt');addLog('💸',`Paid $${fmt(p)} on ${liabKey} | Remaining: $${fmt(l.amt)}`,'g');updateUI();saveGame();}
 }
 
 function fsPayModal(liabKey){
