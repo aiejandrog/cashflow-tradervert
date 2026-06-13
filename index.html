@@ -2946,6 +2946,21 @@ function _scenarioTick(){
   if(s.sched){for(const ev of s.sched){if(G.turn>=ev.turn&&!(G._scenDone&&G._scenDone[ev.turn])){(G._scenDone=G._scenDone||{})[ev.turn]=1;try{ev.fn();}catch(e){}}}}
   if(s.recurring){try{s.recurring(G.turn);}catch(e){}}
 }
+
+// ══ THREAT CLOCK — cost of living ramps the longer you take (punishes turtling) ══
+// Solo-only, difficulty-scaled. Drives the existing _inflationPct (applied in expenses()),
+// so it stacks with the normal inflation tick + scenarios. Stops once you escape.
+function _threatTick(){
+  if(PLAYERS.length>1)return;
+  if(G._winning||G._onFastTrack)return;
+  const every=diffCfg().threatEvery,mult=diffCfg().threatMult;
+  if(G.turn<6||G.turn%every!==0)return;
+  G._threatLevel=(G._threatLevel||0)+1;
+  const bump=Math.max(1,Math.round(2*mult));
+  G._inflationPct=(G._inflationPct||0)+bump;
+  addLog('🔥','Cost of living climbing — expenses +'+bump+'%. The clock is ticking; escape faster.','b');
+  try{if(typeof _haptic==='function')_haptic([20,35,20]);}catch(e){}
+}
 function recordWin(){
   // Guard: checkOuterWin re-runs on resume-after-win and in MP flows —
   // without this, every reload of the win screen farms +1 win into the profile.
@@ -5654,6 +5669,7 @@ function triggerSpace(sp){
     addLog('📈',`Inflation tick: living expenses +2% (total +${G._inflationPct}%)`, '');
   }
   try{_scenarioTick();}catch(e){} // run-scenario scheduled/recurring economy events (solo)
+  try{_threatTick();}catch(e){}   // threat clock — escalating cost pressure (solo, difficulty-scaled)
   // Audit payment plan tick
   if(G._auditPlanMonths>0){
     G._auditPlanMonths--;
