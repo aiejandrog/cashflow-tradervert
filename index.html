@@ -3565,17 +3565,14 @@ function fitBoard(){
   if(!area||!outer)return;
   const BOARD_PX=(OT_SZ*(OT_TN+2)); // 64 * 11 = 704
   // Available space = board-area minus 16px breathing room
-  const availW=area.clientWidth-8;
-  const availH=area.clientHeight-8;
+  const availW=area.clientWidth-14;
+  const availH=area.clientHeight-14;
   // Area hidden or not laid out yet (resize on splash/lobby) — retry once visible.
   // Without this guard the scale went NEGATIVE and exploded the board.
   if(availW<=0||availH<=0){setTimeout(fitBoard,250);return;}
-  // Rat-race mode: the outer Fast Track ring is decorative — let it bleed past the
-  // viewport edges (×1.18) so the PLAYABLE ring fills the screen. Fast Track mode
-  // plays ON that ring, so it must stay fully visible (no bleed).
-  const gEl=document.getElementById('game');
-  const bleed=(gEl&&gEl.classList.contains('ob-mode'))?1.0:1.18;
-  const scale=Math.max(0.2,Math.min(1.7,(availW*bleed)/BOARD_PX,(availH*bleed)/BOARD_PX));
+  // FIT THE WHOLE BOARD — fill the available space but never overflow (the ×1.18
+  // bleed cut the bottom row off-screen). Cap 1.5 keeps it big on wide monitors.
+  const scale=Math.max(0.2,Math.min(1.5,availW/BOARD_PX,availH/BOARD_PX));
   document.documentElement.style.setProperty('--board-scale',scale.toFixed(4));
 }
 // Self-healing fit: hammers fitBoard on animation frames until the board-area
