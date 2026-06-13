@@ -2474,13 +2474,17 @@ const BEATERS=[
 // public transit & rideshare charge a monthly fee. All flow into the expense
 // sheet's transport line (expenseOverrides.car) so it sits under Expenses.
 const STARTING_TRANSPORT=[
-  {id:'bike',    name:'Bicycle',         emoji:'🚲',  monthly:0,   owned:true,            weight:3, label:'Bike (no payment)',    note:'Two wheels, zero payment — pure cash flow.'},
+  {id:'bike',    name:'Bicycle',         emoji:'🚲',  monthly:0,   owned:true,            weight:3, label:'Bike (no payment)',    note:'Two wheels, zero payment — pure cash flow.',
+    names:['Trek FX 2','Specialized Sirrus','Cannondale Quick','Schwinn Cruiser','Giant Escape 3']},
   {id:'transit', name:'Public Transit',  emoji:'🚌',  monthly:120, owned:false,           weight:4, label:'Transit Pass',         note:'No car — a monthly bus/metro pass on your expense sheet.'},
   {id:'walk',    name:'Walk + Rideshare',emoji:'🚶',  monthly:70,  owned:false,           weight:2, label:'Rideshare',            note:'On foot, with the odd rideshare when it rains.'},
-  {id:'scooter', name:'Scooter',         emoji:'🛵',  monthly:60,  owned:true,            weight:2, label:'Scooter (gas+upkeep)', note:'Cheap to run and weaves through traffic.'},
-  {id:'moto',    name:'Motorcycle',      emoji:'🏍️', monthly:130, owned:true,            weight:2, label:'Motorcycle (gas+ins)', note:'Style and speed — gas, insurance, maintenance.'},
+  {id:'scooter', name:'Scooter',         emoji:'🛵',  monthly:60,  owned:true,            weight:2, label:'Scooter (gas+upkeep)', note:'Cheap to run and weaves through traffic.',
+    names:['Vespa Primavera','Honda Ruckus','Yamaha Zuma 125','Genuine Buddy 50']},
+  {id:'moto',    name:'Motorcycle',      emoji:'🏍️', monthly:130, owned:true,            weight:2, label:'Motorcycle (gas+ins)', note:'Style and speed — gas, insurance, maintenance.',
+    names:['Harley Sportster','Yamaha MT-07','Kawasaki Ninja 400','Honda Rebel 500','Ducati Monster','Royal Enfield 350','Triumph Bonneville']},
   {id:'beater',  name:'Used Car',        emoji:'🚗',  monthly:190, owned:true, beater:true,weight:4, label:'Car (beater)',         note:'A reliable-ish beater. It gets you there.'},
-  {id:'car',     name:'Decent Car',      emoji:'🚙',  monthly:290, owned:true,            weight:3, label:'Car Payment',          note:'A comfortable ride with a comfortable payment.'},
+  {id:'car',     name:'Decent Car',      emoji:'🚙',  monthly:290, owned:true,            weight:3, label:'Car Payment',          note:'A comfortable ride with a comfortable payment.',
+    names:['Honda Accord','Toyota Camry','Mazda CX-5','Subaru Outback','Hyundai Tucson','VW Jetta','Honda CR-V']},
 ];
 function _pickStartTransport(){
   const total=STARTING_TRANSPORT.reduce((s,t)=>s+(t.weight||1),0);
@@ -3836,6 +3840,7 @@ function initGame(prof, location) {
     const T=_pickStartTransport();
     let cName=T.name,cEmoji=T.emoji;
     if(T.beater){const b=BEATERS[Math.floor(Math.random()*BEATERS.length)];cName=b.name;cEmoji=b.emoji;}
+    else if(T.names&&T.names.length){cName=T.names[Math.floor(Math.random()*T.names.length)];}
     G.transport={id:T.id,name:cName,emoji:cEmoji,monthly:T.monthly,owned:!!T.owned,label:T.label,note:T.note};
     G.expenseOverrides=G.expenseOverrides||{};
     G.expenseOverrides.car=T.monthly; // transport cost on the expense sheet (replaces profession's base car line)
@@ -4361,28 +4366,35 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ══ BACKGROUND MUSIC ENGINE ══════════════════════════════════════════════
 // Synthesized looping tracks (no audio files, no licensing). Routed through a
 // dedicated low gain node so it sits UNDER the SFX — you always hear the game.
+// Warm, filtered synth tracks (no harsh square waves — those read as "pixelated").
+// Default = Synthwave Drive: neon retro-drive vibe to match the game.
 const MUSIC_TRACKS=[
-  {id:'synthwave',name:'🌆 Synthwave Drive',bpm:104,div:4,lead:'sawtooth',bassW:'square',pad:'sawtooth',drums:true,swing:0,
+  {id:'synthwave',name:'🌆 Synthwave Drive',bpm:104,div:4,lead:'sawtooth',bassW:'triangle',pad:'sawtooth',drums:true,swing:0,
     prog:[[57,60,64,67],[53,57,60,64],[55,59,62,65],[57,60,64,67]]},
+  {id:'neon',name:'🌃 Neon Nights',bpm:112,div:4,lead:'sawtooth',bassW:'triangle',pad:'sawtooth',drums:true,swing:0,
+    prog:[[57,60,64],[53,57,60],[60,64,67],[55,59,62]]},
   {id:'lofi',name:'🎧 Lo-Fi Hustle',bpm:80,div:4,lead:'sine',bassW:'sine',pad:'triangle',drums:true,swing:.16,
     prog:[[60,64,67,71],[57,60,64,67],[62,65,69,72],[55,59,62,67]]},
   {id:'jazz',name:'🎷 Jazzy Cashflow',bpm:122,div:4,lead:'triangle',bassW:'sine',pad:'triangle',drums:true,swing:.22,
     prog:[[62,65,69,72],[55,59,62,65],[60,64,67,71],[60,64,67,71]]},
-  {id:'chip',name:'🕹️ 8-Bit Grind',bpm:130,div:4,lead:'square',bassW:'square',pad:'square',drums:true,swing:0,
-    prog:[[57,60,64],[60,64,67],[53,57,60],[55,59,62]]},
+  {id:'funk',name:'🎩 Boardroom Funk',bpm:108,div:4,lead:'triangle',bassW:'triangle',pad:'triangle',drums:true,swing:.16,
+    prog:[[57,60,64,67],[50,53,57,60],[55,59,62,65],[57,60,64,67]]},
   {id:'ambient',name:'🧘 Ambient Focus',bpm:66,div:2,lead:'sine',bassW:'sine',pad:'sine',drums:false,swing:0,
     prog:[[57,64,67],[53,60,64],[55,62,65],[52,59,64]]},
-  {id:'ragtime',name:'🎩 Money Ragtime',bpm:126,div:4,lead:'triangle',bassW:'triangle',pad:'triangle',drums:true,swing:.3,
-    prog:[[60,64,67],[55,59,62,65],[60,64,67],[57,60,64,67]]},
 ];
 let _musIdx=-1,_musTimer=null,_musBeat=0,_musNextT=0,_musGainNode=null;
 function _musGetSel(){const s=localStorage.getItem('cf_music');return s===null?MUSIC_TRACKS[0].id:s;}
 function _mf(m){return 440*Math.pow(2,(m-69)/12);}
-function _musNote(ctx,m,when,dur,type,vol){
-  try{const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=_mf(m);
-   g.gain.setValueAtTime(.0001,when);g.gain.linearRampToValueAtTime(vol,when+.02);
+function _musNote(ctx,m,when,dur,type,vol,detune){
+  try{const g=ctx.createGain();
+   g.gain.setValueAtTime(.0001,when);g.gain.linearRampToValueAtTime(vol,when+.03); // softer attack = warmer
    g.gain.exponentialRampToValueAtTime(.0006,when+dur);
-   o.connect(g);g.connect(_musGainNode);o.start(when);o.stop(when+dur+.04);}catch(e){}
+   g.connect(_musGainNode);
+   const o=ctx.createOscillator();o.type=type;o.frequency.value=_mf(m);o.connect(g);o.start(when);o.stop(when+dur+.05);
+   if(detune){ // second slightly-detuned osc = lush chorus (kills the thin, bleepy edge)
+     const o2=ctx.createOscillator();o2.type=type;o2.frequency.value=_mf(m);o2.detune.value=detune;o2.connect(g);o2.start(when);o2.stop(when+dur+.05);
+   }
+  }catch(e){}
 }
 function _musKick(ctx,when){try{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';
    o.frequency.setValueAtTime(155,when);o.frequency.exponentialRampToValueAtTime(46,when+.12);
@@ -4395,16 +4407,28 @@ function _musHat(ctx,when){try{const n=ctx.createBuffer(1,ctx.sampleRate*.05,ctx
 function _musSchedule(){
   const ctx=_ctx(); // null when muted — pause; timing re-syncs on resume
   if(!ctx||window._muted||_musIdx<0)return;
-  if(!_musGainNode){_musGainNode=ctx.createGain();_musGainNode.gain.value=.13;_musGainNode.connect(ctx.destination);}
+  if(!_musGainNode){
+    // Warm bus: notes → master gain → lowpass (softens harsh highs) → out,
+    // with a feedback delay for tasteful space. This is what makes it sound
+    // like music instead of bleepy synths.
+    _musGainNode=ctx.createGain();_musGainNode.gain.value=.13;
+    const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;lp.Q.value=.6;
+    const dl=ctx.createDelay(1.0);dl.delayTime.value=.34;
+    const fb=ctx.createGain();fb.gain.value=.27;
+    const wet=ctx.createGain();wet.gain.value=.32;
+    _musGainNode.connect(lp);
+    lp.connect(ctx.destination);                          // dry
+    lp.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(wet);wet.connect(ctx.destination); // echo
+  }
   const tr=MUSIC_TRACKS[_musIdx];if(!tr)return;
   const spb=60/tr.bpm, subDur=spb/tr.div, subsPerBar=tr.div*4, arpEvery=Math.max(1,Math.floor(tr.div/2));
   if(_musNextT<ctx.currentTime)_musNextT=ctx.currentTime+.06;
   while(_musNextT<ctx.currentTime+0.2){
     const sub=_musBeat%subsPerBar, bar=Math.floor(_musBeat/subsPerBar)%tr.prog.length, chord=tr.prog[bar];
     const when=_musNextT+((tr.swing&&sub%2===1)?subDur*tr.swing:0);
-    if(sub%tr.div===0)_musNote(ctx,chord[0]-12,when,spb*0.92,tr.bassW,.30);        // bass (quarter)
-    if(sub===0)chord.forEach(m=>_musNote(ctx,m,when,spb*3.4,tr.pad,.075));          // pad chord (bar)
-    if(sub%arpEvery===0)_musNote(ctx,chord[Math.floor(_musBeat/arpEvery)%chord.length]+12,when,subDur*arpEvery*0.9,tr.lead,.10); // arp
+    if(sub%tr.div===0)_musNote(ctx,chord[0]-12,when,spb*0.92,tr.bassW,.28,6);       // bass (quarter) — slight detune
+    if(sub===0)chord.forEach(m=>_musNote(ctx,m,when,spb*3.4,tr.pad,.07,9));         // pad chord (bar) — lush
+    if(sub%arpEvery===0)_musNote(ctx,chord[Math.floor(_musBeat/arpEvery)%chord.length]+12,when,subDur*arpEvery*0.9,tr.lead,.10,8); // arp
     if(tr.drums){if(sub===0||sub===subsPerBar/2)_musKick(ctx,when); if(sub%tr.div===2)_musHat(ctx,when);}
     _musNextT+=subDur;_musBeat++;
   }
