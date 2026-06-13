@@ -409,6 +409,10 @@ body{
 .ot-ico{font-size:1rem;margin-bottom:2px;line-height:1}
 .ot-lbl{font-size:.31rem;text-transform:uppercase;letter-spacing:.3px;color:rgba(255,255,255,.85);
   font-weight:800;font-family:Arial,sans-serif;text-align:center;line-height:1.2}
+/* Fast Track: dream corners */
+.ot.ft-dream{background:radial-gradient(ellipse,rgba(200,160,40,.5),rgba(120,90,10,.35))!important;border:2px solid var(--gold2);box-shadow:0 0 16px rgba(240,192,32,.5) inset;animation:dreamPulse 2s ease-in-out infinite}
+.ot.ft-dream .ft-dream-star{font-size:1.5rem;line-height:1;filter:drop-shadow(0 0 6px rgba(240,192,32,.9))}
+.ot.ft-dream .ot-lbl,.ot.ft-dream .ot-ico{display:none}
 
 /* Inner board (felt) */
 #board-inner{
@@ -3608,6 +3612,7 @@ const OT_ICONS={deal:'🤝',bigdeal:'🏢',market:'📈',charity:'❤️',payday
 
 function makeOt(type,w,h){
   const d=document.createElement('div');d.className='ot';
+  d.dataset.ottype=type; // Fast Track reads this to drive landing behavior
   d.style.cssText=`width:${w}px;height:${h}px;background:${OT_COLORS[type]||'#3a2468'}`;
   const ico=OT_ICONS[type]||'';
   d.innerHTML=`${ico?`<span class="ot-ico">${ico}</span>`:''}${type!=='corner'?`<span class="ot-lbl">${type.toUpperCase()}</span>`:''}`;
@@ -3628,6 +3633,8 @@ function buildOuterTrack(){
   [...OT_TOP].reverse().forEach(t=>bot.appendChild(makeOt(t,OT_SZ,OT_SZ)));
   bot.appendChild(makeOt('corner',OT_SZ,OT_SZ));
   $('board-inner').style.cssText=`width:${IW}px;height:${IH}px`;
+  // If a Fast Track game rebuilt the perimeter, re-apply tile indices + dream corners
+  if(typeof G!=='undefined'&&G&&G._onFastTrack){try{_ftIndexPerimeter();_ftDecorateDreams(true);}catch(e){}}
 }
 
 // ── INNER BOARD ───────────────────────────────────────
@@ -3699,7 +3706,7 @@ setInterval(()=>{
     var b=document.getElementById('m-roll');
     if(innerWidth>620){if(b)b.classList.remove('on');return;}
     if(!b){b=document.createElement('button');b.id='m-roll';b.textContent='🎲 ROLL';
-      b.onclick=function(){var ob=document.getElementById('game')&&document.getElementById('game').classList.contains('ob-mode');if(ob){if(typeof obRoll==='function')obRoll();}else{rollDice();}};
+      b.onclick=function(){if(G&&G._onFastTrack){if(typeof ftRoll==='function')ftRoll();return;}var ob=document.getElementById('game')&&document.getElementById('game').classList.contains('ob-mode');if(ob){if(typeof obRoll==='function')obRoll();}else{rollDice();}};
       document.body.appendChild(b);}
     var ok = typeof _gameScreenActive==='function' && _gameScreenActive()
       && !window._mpPaused && typeof G!=='undefined' && G && !G.rolling
@@ -3745,6 +3752,7 @@ if(typeof ResizeObserver!=='undefined'){
 function placeToken(pos,anim=true){
   const{x,y}=getBXY(pos);
   const tok=$('player-token');
+  if(!(G&&G._onFastTrack))tok.style.display=''; // restore inner token unless on the Fast Track (which uses the perimeter token)
   tok.style.transition=anim?'left .32s cubic-bezier(.4,0,.2,1),top .32s cubic-bezier(.4,0,.2,1)':'none';
   tok.style.left=(x-11)+'px';tok.style.top=(y-11)+'px';
   tok.textContent=G?((G.identity&&G.identity.avatar)||G.prof.icon):'';
@@ -7334,7 +7342,7 @@ function showTurnDialog(){
   const row=document.createElement('div');row.className='btn-row';
   const roll=document.createElement('button');roll.className='btn-og btn-roll-big';roll.id='btn-roll-ev';
   roll.textContent='🎲  ROLL THE DICE';
-  roll.onclick=()=>{_resumeFn=null;closeEvPopup();rollDice();};
+  roll.onclick=()=>{_resumeFn=null;closeEvPopup();if(G&&G._onFastTrack){ftRoll();}else{rollDice();}};
   foot.appendChild(row);foot.appendChild(roll);
 }
 // showDealBrowser removed — it let players buy any affordable deal every turn
@@ -8799,17 +8807,17 @@ function closeModal(){
 function checkWin(){
   const pass=passiveIncome(),exp=expenses().total;
   const threshold=1.0;
-  if(exp>0&&pass>=exp*threshold&&!G._winning&&!G._outerBoard){
+  if(exp>0&&pass>=exp*threshold&&!G._winning&&!G._onFastTrack&&!G._outerBoard){
     // Multiplayer Fast Track (EXPERIMENTAL, flag window._mpFastTrack, default OFF):
-    // escaping moves YOU to the outer-ring Fast Track but the game CONTINUES — first
-    // to buy their dream wins. Default MP behavior (escape = win) is unchanged.
+    // escaping moves YOU to the Fast Track but the game CONTINUES. Default MP behavior
+    // (escape = win) is unchanged.
     if(PLAYERS.length>1){
-      if(window._mpFastTrack){mpEnterFastTrack(pass,exp);return;}
+      if(window._mpFastTrack){G._winning=true;mpEnterFastTrack(pass,exp);return;}
       G._winning=true;mpEscapeWin(pass,exp);return;
     }
-    // Solo: escaping the rat race IS the win — enter the Fast Track.
+    // Solo: escape -> Fast Track on the outer PERIMETER (same board, token goes outside).
     G._winning=true;
-    if(document.hidden){enterOuterBoard(pass,exp);}else{setTimeout(()=>enterOuterBoard(pass,exp),800);}
+    if(document.hidden){enterFastTrack(pass,exp);}else{setTimeout(()=>enterFastTrack(pass,exp),800);}
   }
 }
 
@@ -8904,6 +8912,8 @@ function replaySameProfession(){
   if(typeof forceFitBoard==='function')forceFitBoard(1200);
   const obp=$('ob-game-panel');if(obp)obp.style.display='none';
   if(typeof hideObToken==='function')hideObToken();
+  if(typeof _ftClearState==='function')_ftClearState(); // clear Fast Track token + dream stars
+  const _pt=$('player-token');if(_pt)_pt.style.display='';
   const bi=$('board-inner');if(bi)bi.style.cssText='';
   // Re-init with same profession + location, skip splash
   initGame(prof,loc);_prevCash=null;
@@ -9023,6 +9033,155 @@ const OUTER_BUSINESSES=[
   {name:'Apartment Complex',   icon:'🏘️', cost:1800000,down:360000,cf:22000,desc:'48-unit value-add. Force equity through NOI.'},
   {name:'Strip Center NNN',    icon:'🏪', cost:950000, down:190000,cf:13500,desc:'Tenants pay all expenses. You collect checks.'},
 ];
+
+// ════════════ FAST TRACK v2 — token rides the REAL outer perimeter ════════════
+// Per user: keep the Phase-1 board EXACTLY (normal center FREEDOM RACE + ROLL/dice +
+// turn dialog, inner ring, outer perimeter). On escape the token just moves around the
+// outer perimeter (the buildOuterTrack ring); roll with the SAME ROLL. The 4 empty
+// corners become ⭐ Dream tiles — land on one with enough cash to buy your dream & win.
+const FT_DREAM_CORNERS=[10,20,30]; // 3 of the 4 corners are Dreams (idx 0 = start corner)
+function _ftIndexPerimeter(){
+  const top=$('ot-top'),right=$('ot-right'),bot=$('ot-bot'),left=$('ot-left');
+  if(!top||!right||!bot||!left)return [];
+  const tiles=[];
+  [].slice.call(top.children).forEach(el=>tiles.push(el));            // top L→R
+  [].slice.call(right.children).forEach(el=>tiles.push(el));          // right T→B
+  [].slice.call(bot.children).reverse().forEach(el=>tiles.push(el));  // bottom R→L
+  [].slice.call(left.children).reverse().forEach(el=>tiles.push(el)); // left B→T
+  tiles.forEach((el,i)=>{el.id='ft-'+i;el.dataset.fti=i;});
+  window._ftTiles=tiles;return tiles;
+}
+function ftLen(){return (window._ftTiles&&window._ftTiles.length)||40;}
+function ftType(i){
+  if(FT_DREAM_CORNERS.indexOf(i)>=0)return 'dream';
+  const t=window._ftTiles&&window._ftTiles[i];return t?(t.dataset.ottype||'corner'):'corner';
+}
+function _ftDecorateDreams(on){
+  const tiles=window._ftTiles||[];
+  tiles.forEach((el,i)=>{
+    const star=el.querySelector('.ft-dream-star');
+    if(on&&FT_DREAM_CORNERS.indexOf(i)>=0){el.classList.add('ft-dream');if(!star){const dn=(G&&G.dream)?G.dream.name:'DREAM';el.insertAdjacentHTML('beforeend','<span class="ft-dream-star">⭐</span>');}}
+    else{el.classList.remove('ft-dream');if(star)star.remove();}
+  });
+}
+function positionFtToken(i,animate){
+  if(document.hidden)return;
+  const tile=document.getElementById('ft-'+i);
+  const t=(typeof ensureObToken==='function')?ensureObToken():document.getElementById('ob-token');
+  if(!tile||!t){if(t)t.style.display='none';return;}
+  const r=tile.getBoundingClientRect();if(!r.width){t.style.display='none';return;}
+  const size=Math.max(22,Math.min(44,Math.round(r.width*0.7)));
+  t.style.width=size+'px';t.style.height=size+'px';t.style.fontSize=Math.round(size*0.56)+'px';
+  const nx=Math.round(r.left+r.width/2-size/2),ny=Math.round(r.top+r.height/2-size/2);
+  t.style.display='flex';
+  if(animate&&t._lx!=null&&t.animate){const dx=t._lx-nx,dy=t._ly-ny;t.style.left=nx+'px';t.style.top=ny+'px';try{t.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:`translate(${dx/2}px,${dy/2-14}px) scale(1.18)`,offset:.5},{transform:'translate(0,0)'}],{duration:170,easing:'cubic-bezier(.3,.85,.4,1)'});}catch(e){}}
+  else{t.style.left=nx+'px';t.style.top=ny+'px';}
+  t._lx=nx;t._ly=ny;
+}
+function _ftClearState(){const t=document.getElementById('ob-token');if(t)t.style.display='none';_ftDecorateDreams(false);}
+
+// Solo escape → Fast Track on the perimeter (NO panel, NO themed ring — same board)
+function enterFastTrack(pass,exp){
+  G._onFastTrack=true;G._ftPos=0;G.rolling=false;G._winning=true;G._outerBoard=false;
+  // Ensure the REAL 40-tile perimeter is in place (not a leftover 16-tile ob ring):
+  // clear any legacy ob-mode/panel, then (re)build the perimeter before indexing.
+  const _g=$('game');if(_g)_g.classList.remove('ob-mode');
+  const _obp=$('ob-game-panel');if(_obp)_obp.style.display='none';
+  try{buildOuterTrack();}catch(e){}
+  // same cleanup as the legacy enterOuterBoard (inner-board timers don't tick out here)
+  if((G._recessionTurns||0)>0){if(G._recessionSalCut){G.salaryBoost=(G.salaryBoost||0)+G._recessionSalCut;delete G._recessionSalCut;}G.assets.forEach(a=>{if(a._preRecessionCF!==undefined){a.cf=Math.max(0,a._preRecessionCF-(a._crashCutCF||0));delete a._preRecessionCF;}});G._recessionTurns=0;G._recessionExpSpike=0;}
+  if(G._layoffSalCut){G.salaryBoost=(G.salaryBoost||0)+G._layoffSalCut;delete G._layoffSalCut;}
+  if(G._disabilitySalCut){G.salaryBoost=(G.salaryBoost||0)+G._disabilitySalCut;delete G._disabilitySalCut;}
+  G.skipTurns=0;
+  if((G._auditPlanMonths||0)>0){if(G._auditPlanAmt){G.expenseOverrides=G.expenseOverrides||{};G.expenseOverrides.other=Math.max(0,(G.expenseOverrides.other||G.prof.other)-G._auditPlanAmt);delete G._auditPlanAmt;}G._auditPlanMonths=0;}
+  // hide the inner-board token (you've left the rat race); your piece rides the perimeter
+  const pt=$('player-token');if(pt)pt.style.display='none';
+  _ftIndexPerimeter();_ftDecorateDreams(true);
+  if(typeof ensureObToken==='function')ensureObToken();
+  positionFtToken(0,false);setTimeout(()=>positionFtToken(0,false),500);
+  addLog('🏁','ESCAPED THE RAT RACE → Fast Track! Roll around the outside — land on a ⭐ corner with enough cash to buy your dream and WIN.','gold');
+  try{if(typeof spawnWinConfetti==='function')spawnWinConfetti();}catch(e){}
+  try{if(typeof _haptic==='function')_haptic([40,30,40,30,90]);}catch(e){}
+  saveGame();
+  if(document.hidden){showTurnDialog();}else{setTimeout(()=>showTurnDialog(),400);}
+}
+function ftRoll(){
+  if(typeof _mpLocked==='function'&&_mpLocked()){if(typeof _mpLockToast==='function')_mpLockToast();return;}
+  if(!G||G.rolling)return;
+  G.rolling=true;
+  try{if(typeof sfxDiceRoll==='function')sfxDiceRoll();}catch(e){}
+  try{if(typeof _haptic==='function')_haptic(12);}catch(e){}
+  try{closeEvPopup();}catch(e){}
+  const fp=$('fs-panel');if(fp)fp.classList.remove('open');
+  const d1=$('die-1'),d2=$('die-2');
+  const v1=Math.ceil(Math.random()*6),v2=Math.ceil(Math.random()*6),roll=v1+v2;
+  const bm=$('board-msg');if(bm)bm.textContent='Rolling...';
+  if(document.hidden||!d1||!d2){ftMove(roll);return;}
+  d1.classList.add('roll');d2.classList.remove('die-locked');d2.classList.add('roll');d2.style.display='';
+  let ticks=0;const tm=setInterval(()=>{setDieVal(d1,Math.ceil(Math.random()*6));setDieVal(d2,Math.ceil(Math.random()*6));if(++ticks>=9){clearInterval(tm);d1.classList.remove('roll');d2.classList.remove('roll');setDieVal(d1,v1);setDieVal(d2,v2);d1.classList.add('land-glow');d2.classList.add('land-glow');setTimeout(()=>{d1.classList.remove('land-glow');d2.classList.remove('land-glow');},500);setTimeout(()=>ftMove(roll),200);}},70);
+}
+function ftMove(steps){
+  const n=ftLen();let moved=0;
+  if(document.hidden){for(let k=0;k<steps;k++){G._ftPos=(G._ftPos+1)%n;if(k<steps-1&&ftType(G._ftPos)==='payday'){try{collectPassByPayday();}catch(e){}}}positionFtToken(G._ftPos,false);ftLand();return;}
+  (function step(){
+    if(moved>=steps){positionFtToken(G._ftPos,false);ftLand();return;}
+    G._ftPos=(G._ftPos+1)%n;moved++;
+    try{if(typeof playClick==='function')playClick();}catch(e){}
+    positionFtToken(G._ftPos,true);
+    if(moved<steps&&ftType(G._ftPos)==='payday'){try{collectPassByPayday();}catch(e){}}
+    saveGame();
+    setTimeout(step,180);
+  })();
+}
+function ftLand(){
+  const type=ftType(G._ftPos);
+  const tile=document.getElementById('ft-'+G._ftPos);
+  if(tile&&!document.hidden&&tile.animate){try{tile.animate([{transform:'scale(1)'},{transform:'scale(1.2)',offset:.4},{transform:'scale(1)'}],{duration:440,easing:'ease-out'});}catch(e){}}
+  G.rolling=false;
+  // dream near-miss tension
+  if(type!=='dream'){
+    let near=99;FT_DREAM_CORNERS.forEach(d=>{const dist=(d-G._ftPos+ftLen())%ftLen();if(dist<near)near=dist;});
+    if(near>=1&&near<=2){addLog('⭐',`SO CLOSE — a ⭐ dream corner is ${near} space${near!==1?'s':''} away!`,'gold');try{if(typeof _haptic==='function')_haptic([15,40,15]);}catch(e){}}
+  }
+  switch(type){
+    case'dream':ftDreamLand();return;
+    case'payday':try{collectPassByPayday();}catch(e){}try{if(typeof sfxCash==='function')sfxCash();spawnCoinBurst&&spawnCoinBurst(false);}catch(e){}_ftEndRoll('💰 Cashflow Day — passive income collected!');return;
+    case'charity':try{if(typeof boostCredit==='function')boostCredit(5,'charity on the Fast Track');}catch(e){}_ftEndRoll('❤️ Charity — credit +5, goodwill banked.');return;
+    case'deal':_ftEndRoll('🤝 Deal space — scouting opportunities (bigger Fast Track deals coming soon).');return;
+    case'market':_ftEndRoll('📈 Market space — portfolio holds steady.');return;
+    default:_ftEndRoll('');return; // neutral corner
+  }
+}
+function _ftEndRoll(msg){
+  if(msg)addLog('📍',msg,'');
+  try{updateUI();}catch(e){}
+  saveGame();
+  if(PLAYERS.length>1&&window._mpFastTrack){ // MP: one roll then pass the device
+    try{PLAYERS[ACTIVE_PLAYER_IDX].G=JSON.parse(JSON.stringify(G));}catch(e){}
+    if(typeof mpAdvanceTurn==='function'){mpAdvanceTurn();return;}
+  }
+  if(document.hidden){showTurnDialog();}else{setTimeout(()=>showTurnDialog(),350);}
+}
+function ftDreamLand(){
+  const dream=G.dream||DREAMS[0];const cost=dream.cost||400000;
+  const tile=document.getElementById('ft-'+G._ftPos);
+  if(tile&&!document.hidden&&typeof _emojiPopAtEl==='function'){try{_emojiPopAtEl(tile,['⭐','✨','🌟']);}catch(e){}}
+  if(G.cash>=cost){
+    try{if(typeof sfxWinSting==='function')sfxWinSting();spawnWinConfetti&&spawnWinConfetti();}catch(e){}
+    try{if(typeof _haptic==='function')_haptic([60,40,60,40,140]);}catch(e){}
+    openModal({band:'dream',title:`⭐ ${dream.icon} ${dream.name} — BUY IT & WIN`,
+      desc:`${dream.desc} Sign here for $${fmt(cost)} and you've won the game.`,
+      rows:[['Dream Price','$'+fmt(cost),'gold'],['Your Cash','$'+fmt(G.cash),'green'],['Cash After','$'+fmt(G.cash-cost),'']],
+      actions:[{label:`⭐ BUY YOUR DREAM — $${fmt(cost)}`,cls:'btn-gold',fn:()=>{G.cash-=cost;G._dreamWon=true;saveGame();if(typeof checkOuterWin==='function'){checkOuterWin();}}},
+               {label:'Not yet — keep rolling',cls:'btn-tan',fn:()=>{_ftEndRoll('');}}],_noFS:true});
+  }else{
+    try{if(typeof _haptic==='function')_haptic([15,40,15,40,15]);}catch(e){}
+    openModal({band:'gray',title:`⭐ ${dream.name} — SO CLOSE`,
+      desc:`You landed on your dream but need $${fmt(cost-G.cash)} more. Keep rolling, stack cash, and come back to claim it.`,
+      rows:[['Dream Price','$'+fmt(cost),'gold'],['Your Cash','$'+fmt(G.cash),''],['Still Need','$'+fmt(cost-G.cash),'red']],
+      actions:[{label:'Keep Rolling →',cls:'btn-gold',fn:()=>{_ftEndRoll('');}}],_noFS:true});
+  }
+}
 
 // MP Fast Track (EXPERIMENTAL, flag window._mpFastTrack): escaping moves this player
 // to the outer-ring Fast Track WITHOUT ending the game. Board mode is applied per-turn
@@ -10680,8 +10839,9 @@ document.addEventListener('keydown',function(e){
   if(ho&&ho.style.display==='flex'){e.preventDefault();mpDismissHandoff();return;}
   if(!_spaceCanRoll()) return;
   e.preventDefault(); // prevent page scroll
-  // Fast Track outer board uses obRoll(); inner board uses rollDice()
-  if($('game')&&$('game').classList.contains('ob-mode')) obRoll();
+  // Fast Track (perimeter) uses ftRoll(); legacy outer board obRoll(); inner board rollDice()
+  if(G&&G._onFastTrack) ftRoll();
+  else if($('game')&&$('game').classList.contains('ob-mode')) obRoll();
   else rollDice();
 },{passive:false});
 function scheduleCloseFS(){
@@ -10779,6 +10939,7 @@ function showScreen(id){
     const gEl=$('game');if(gEl)gEl.classList.remove('ob-mode');
     const obPanel=$('ob-game-panel');if(obPanel)obPanel.style.display='none';
     if(typeof hideObToken==='function')hideObToken();
+    if(typeof _ftClearState==='function')_ftClearState();
   }
   // FS panel only makes sense during gameplay — fully hide it on start/win/other non-game screens
   const fsEl=$('fs-panel');
