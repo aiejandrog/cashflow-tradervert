@@ -7564,9 +7564,10 @@ function endTurn(){
   updateUI();checkWin();checkMilestones();
   checkBankruptcy();
   if(G._bankrupt)return; // stop — bankruptcy overlay takes over
-  // MP: a player who just escaped is handled by mpEscapeWin (win screen + host notify) — stop here.
-  // Host learns via the player-won message (joiner) or its own mpMarkPlayerWon (local/host player).
-  if(PLAYERS.length>1&&G._winning&&!G._outerBoard){return;}
+  // MP: a player who escaped via the LEGACY win path (mpEscapeWin, flag OFF) ends here.
+  // New Fast Track (window._mpFastTrack, sets G._onFastTrack) keeps playing → fall through
+  // to mpAdvanceTurn so the device passes to the next player.
+  if(PLAYERS.length>1&&G._winning&&!G._outerBoard&&!G._onFastTrack){return;}
   // BC Joiner: send turn-done to host instead of local advance
   if(_bcRole==='joiner'){
     PLAYERS[_bcMyIdx].G=JSON.parse(JSON.stringify(G));
@@ -9358,8 +9359,11 @@ function ftDreamLand(){
 // the turn end normally (endTurn -> mpAdvanceTurn passes the device). HOTSEAT-verifiable;
 // the networked cross-device render of an opponent on the ring is a separate follow-up.
 function mpEnterFastTrack(pass,exp){
-  G._outerPos=0;G._outerRolling=false;G._outerBoard=true;G._mpFtRollUsed=false;
-  // Same cleanup as enterOuterBoard — inner-board timers don't tick on the ring.
+  // NEW perimeter system (same as solo): set _onFastTrack; the turn ends normally
+  // (endTurn -> mpAdvanceTurn) and this player's NEXT turn renders the perimeter via
+  // _syncBoardModeForActive. Other players keep playing the inner board.
+  G._onFastTrack=true;G._ftPos=0;G.rolling=false;
+  // Same cleanup as enterFastTrack — inner-board timers don't tick on the ring.
   if((G._recessionTurns||0)>0){
     if(G._recessionSalCut){G.salaryBoost=(G.salaryBoost||0)+G._recessionSalCut;delete G._recessionSalCut;}
     G.assets.forEach(a=>{if(a._preRecessionCF!==undefined){a.cf=Math.max(0,a._preRecessionCF-(a._crashCutCF||0));delete a._preRecessionCF;}});
@@ -9373,10 +9377,8 @@ function mpEnterFastTrack(pass,exp){
     G._auditPlanMonths=0;
   }
   G.rolling=false;
-  addLog('🏁','ESCAPED THE RAT RACE → Fast Track! Land on your ⭐ dream and buy it to win.','gold');
+  addLog('🏁','ESCAPED THE RAT RACE → Fast Track! On your turns, ride the outer ring. Land on a ⭐ dream corner with enough cash to WIN.','gold');
   try{if(typeof _haptic==='function')_haptic([40,30,40,30,90]);}catch(e){}
-  // No cutscene/launch here — endTurn will pass the device, and this player's NEXT
-  // turn renders the Fast Track via mpAdvanceTurn -> _syncBoardModeForActive.
 }
 
 function enterOuterBoard(pass,exp){
@@ -11493,27 +11495,23 @@ function mpLaunchGame(){
   }
 }
 
-// Render the board for whoever is now active: a Fast-Track (escaped) player sees the
-// outer ring + ob-panel + their token; everyone else sees the normal inner board.
-// Flag-OFF / no-escaped-players => identical to a plain buildBoard() (ob-mode never on).
+// Render the board for whoever is now active. NEW perimeter system: an escaped player
+// (G._onFastTrack) keeps the SAME Phase-1 board but their token rides the outer perimeter;
+// everyone else plays the normal inner board. ob-mode/panel are never used here anymore.
 function _syncBoardModeForActive(){
   const gEl=$('game');if(!gEl)return;
-  if(G&&G._outerBoard){
-    gEl.classList.add('ob-mode');
-    buildBoard();          // inner board stays visible (decorative); buildOuterTrack self-skips in ob-mode
-    if(typeof buildOuterBoard==='function')buildOuterBoard();
-    const p=$('ob-game-panel');if(p)p.style.display='flex';
-    const dream=G.dream||DREAMS[0];const badge=$('ob-dream-badge');if(badge)badge.textContent=`🎯 Dream: ${dream.icon} ${dream.name}`;
-    if(typeof obUpdateStats==='function')obUpdateStats();
-    if(typeof ensureObToken==='function'){ensureObToken();positionObToken(false);setTimeout(()=>positionObToken(false),650);}
-    G._mpFtRollUsed=false; // fresh Fast-Track turn — one roll allowed
-    const et=$('ob-endturn-btn');if(et)et.style.display='none';
-    const rb=$('ob-roll-btn');if(rb)rb.disabled=false;
+  gEl.classList.remove('ob-mode'); // new Fast Track keeps the clean Phase-1 board
+  const p=$('ob-game-panel');if(p)p.style.display='none';
+  buildBoard(); // builds inner ring + perimeter; buildOuterTrack re-applies FT index/dreams when active player is _onFastTrack
+  if(G&&G._onFastTrack){
+    const pt=$('player-token');if(pt)pt.style.display='none'; // escaped — token rides the perimeter
+    try{_ftIndexPerimeter();_ftDecorateDreams(true);}catch(e){}
+    if(typeof ensureObToken==='function')ensureObToken();
+    try{positionFtToken(G._ftPos||0,false);setTimeout(()=>{try{positionFtToken(G._ftPos||0,false);}catch(e){}},650);}catch(e){}
   } else {
-    gEl.classList.remove('ob-mode');
+    const pt=$('player-token');if(pt)pt.style.display=''; // inner-board player
+    try{_ftDecorateDreams(false);}catch(e){}
     if(typeof hideObToken==='function')hideObToken();
-    const p=$('ob-game-panel');if(p)p.style.display='none';
-    buildBoard();
   }
 }
 
