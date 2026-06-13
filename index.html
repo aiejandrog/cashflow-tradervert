@@ -7291,6 +7291,7 @@ function endTurn(){
   if(window._chainAfterCard){const f=window._chainAfterCard;window._chainAfterCard=null;f();return;}
   G.rolling=false;
   _resumeFn=null;
+  try{G._escapeProg=Math.max(0,Math.min(1,passiveIncome()/Math.max(1,expenses().total)));}catch(e){} // race-to-freedom % for MP leaderboard
   driftStocks();
   // Track net worth history for sparkline
   if(!G._netWorthHistory)G._netWorthHistory=[];
@@ -11382,7 +11383,8 @@ function bcStartGameHeartbeat(){
         const _own=(i===_bcMyIdx&&typeof G!=='undefined'&&G);
         return {cash:_own?G.cash:(p.G?p.G.cash||0:0),
           pass:_own?passiveIncome():(p.G?((typeof p.G._livePass==='number')?p.G._livePass:(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0)):0),
-          turn:_own?(G.turn||0):(p.G?p.G.turn||0:0),won:!!p.won};
+          turn:_own?(G.turn||0):(p.G?p.G.turn||0:0),won:!!p.won,
+          prog:_own?Math.max(0,Math.min(1,passiveIncome()/Math.max(1,expenses().total))):(p.G&&typeof p.G._escapeProg==='number'?p.G._escapeProg:0)};
       }),
       activeIdx:ACTIVE_PLAYER_IDX,lobbyPhase:false});
     bcHostCheckPresence();
@@ -11851,7 +11853,7 @@ function bcJoinerHandleAlive(msg){
   if(msg.scores)msg.scores.forEach((sc,i)=>{
     if(i===_bcMyIdx||!PLAYERS[i])return;
     PLAYERS[i].won=!!sc.won;
-    PLAYERS[i].G={cash:sc.cash||0,assets:[{cf:sc.pass||0}],turn:sc.turn||0};
+    PLAYERS[i].G={cash:sc.cash||0,assets:[{cf:sc.pass||0}],turn:sc.turn||0,_escapeProg:(typeof sc.prog==='number'?sc.prog:0)};
   });
   mpUpdateStrip();
   if($('mp-wait').style.display==='flex')bcRefreshWaitScores();
@@ -11933,10 +11935,14 @@ function bcRefreshWaitScores(){
     const isActive=i===ACTIVE_PLAYER_IDX,isMe=i===_bcMyIdx;
     const cash=p.G?p.G.cash||0:0;
     const pass=p.G?((typeof p.G._livePass==='number')?p.G._livePass:(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0)):0;
+    const prog=p.won?1:(p.G&&typeof p.G._escapeProg==='number'?p.G._escapeProg:(i===_bcMyIdx?(function(){try{return Math.max(0,Math.min(1,passiveIncome()/Math.max(1,expenses().total)))}catch(e){return 0}})():0));
+    const pct=Math.round(prog*100);
     return`<div class="mp-ho-score" style="${isActive?'border:1.5px solid '+p.color:isMe?'border:1.5px solid rgba(255,255,255,.3)':''}">
       <span style="color:${p.color};font-size:.63rem">● ${p.name}${p.won?' 🏆':''}${isMe?' (you)':''}</span>
       <strong>$${fmt(cash)}</strong>
       <span style="color:rgba(200,175,120,.55);font-size:.58rem">$${fmt(pass)}/mo</span>
+      <div style="margin-top:3px;height:5px;width:100%;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${prog>=1?'#7ee0a0':p.color};border-radius:3px;transition:width .5s ease"></div></div>
+      <span style="color:${prog>=1?'#7ee0a0':'rgba(255,255,255,.5)'};font-size:.55rem;font-weight:800">${prog>=1?'🏁 FREE!':pct+'% to freedom'}</span>
     </div>`;
   }).join('');
 }
