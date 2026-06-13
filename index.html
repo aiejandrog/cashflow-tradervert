@@ -5707,7 +5707,7 @@ function buyCarFinance(car,down,principal,pmt,apr,fromBoard){
     `You drive off in a ${car.name}. $${fmt(down)} down, $${fmt(pmt)}/mo for 60 months, due on day ${dueDay}. Insurance adds $${fmt(car.ins)}/mo. Miss a payday and this loan goes delinquent.`,
     'A financed car is a liability wearing an asset costume. It takes money OUT of your pocket every month — buy the asset first, let the asset buy the car.',
     [['New Loan','$'+fmt(principal),'red'],['Monthly (pmt+ins)','$'+fmt(pmt+car.ins)+'/mo','red'],['Cash Left','$'+fmt(G.cash),'gold']],
-    [{label:'Vroom 🚗',cls:'btn-gold',fn:fromBoard?endTurn:()=>{}}]);
+    [{label:'Vroom 🚗',cls:'btn-gold',fn:fromBoard?endTurn:()=>{}}],!fromBoard);
   updateUI();
 }
 function buyCarCash(car,fromBoard){
@@ -5729,7 +5729,7 @@ function buyCarCash(car,fromBoard){
     `${car.name}, no lender, no payment — just $${fmt(car.ins)}/mo insurance. The title sits in YOUR drawer.`,
     'Paying cash for depreciating assets only makes sense when the cash is surplus. The wealthy finance appreciating assets and pay cash for toys — after the assets pay for them.',
     [['Paid','$'+fmt(car.price),'red'],['Monthly Payment','$0 ✅','green'],['Cash Left','$'+fmt(G.cash),'gold']],
-    [{label:'Debt-free ride 😎',cls:'btn-gold',fn:fromBoard?endTurn:()=>{}}]);
+    [{label:'Debt-free ride 😎',cls:'btn-gold',fn:fromBoard?endTurn:()=>{}}],!fromBoard);
   updateUI();
 }
 
@@ -5870,7 +5870,7 @@ function buyHome(h,price,down,equity,cashNeeded,principal,pmt){
     `The keys to your ${h.name} are in your hand. $${fmt(cashNeeded)} cash to close, $${fmt(pmt)}/mo mortgage + $${fmt(h.upkeep)}/mo upkeep. ${G.expenseOverrides.mortgage<expenses().total*0.3?'Comfortably within your means.':'Stretch purchase — keep the income growing.'}`,
     'A primary home is shelter first, asset second. The win: fixed payment while your income climbs — and equity you can house-hack or borrow against later.',
     [['Cash to Close','$'+fmt(cashNeeded),'red'],['Housing/mo','$'+fmt(pmt+h.upkeep),'red'],['Cash Left','$'+fmt(G.cash),'gold'],['Credit','+5 → '+G.creditScore,'green']],
-    [{label:'Home sweet home 🏡',cls:'btn-gold',fn:()=>{}}]);
+    [{label:'Home sweet home 🏡',cls:'btn-gold',fn:()=>{}}],true);
   updateUI();
 }
 
@@ -8067,12 +8067,15 @@ function _popIcon(bandCls,txt){
   if(!k)k={payday:'banknote',opportunity:'up','big-opp':'up',setback:'alert',market:'up',life:'heart',charity:'heart',tip:'bulb',gray:'info',green:'up',red:'alert',gold:'trophy'}[bandCls]||'info';
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+_POP_SVGS[k]+'</svg>';
 }
-function showEventCard(bandCls,label,story,tip,numbers,actions){
+function showEventCard(bandCls,label,story,tip,numbers,actions,keepResume){
   // 40% of setbacks get a comedy quip stitched under the lesson
   if(bandCls==='setback'&&tip&&Math.random()<0.4){
     tip=tip+' '+SETBACK_QUIPS[Math.floor(Math.random()*SETBACK_QUIPS.length)];
   }
-  _resumeFn=()=>showEventCard(bandCls,label,story,tip,numbers,actions);
+  // Facility/management cards (car/home purchase from the top bar) pass keepResume
+  // so they DON'T hijack the turn's resume function. Without this, after buying
+  // mid-turn, ROLL/Finish-Turn would re-open the purchase card forever (stuck turn).
+  if(!keepResume)_resumeFn=()=>showEventCard(bandCls,label,story,tip,numbers,actions);
   openFS();
   $('ecm-band').className='ecm-band '+bandCls;
   $('ecm-band').textContent=label;
@@ -8214,9 +8217,16 @@ function _checkStuckTurn(){
 }
 setInterval(_checkStuckTurn,500);
 // Manual escape hatch — resume the pending card if one exists, else end the turn
+let _forceFinishTries=0,_forceFinishAt=0;
 function forceFinishTurn(){
   const btn=$('finish-turn-btn');if(btn)btn.style.display='none';
   _stuckSince=0;
+  // Loop guard: if Finish is pressed repeatedly within a few seconds (a resume that
+  // keeps re-opening the same card — e.g. a hijacked _resumeFn), force the turn to END.
+  const now=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
+  if(now-_forceFinishAt<6000)_forceFinishTries++;else _forceFinishTries=1;
+  _forceFinishAt=now;
+  if(_forceFinishTries>=2){_forceFinishTries=0;_resumeFn=null;if(G&&G.rolling)endTurn();return;}
   if(G&&G.rolling&&_resumeFn){_resumeFn();return;} // re-open the card they lost
   if(G&&G.rolling){endTurn();return;}              // genuinely orphaned — just end it
 }
