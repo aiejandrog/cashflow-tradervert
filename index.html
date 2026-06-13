@@ -413,6 +413,9 @@ body{
 .ot.ft-dream{background:radial-gradient(ellipse,rgba(200,160,40,.5),rgba(120,90,10,.35))!important;border:2px solid var(--gold2);box-shadow:0 0 16px rgba(240,192,32,.5) inset;animation:dreamPulse 2s ease-in-out infinite}
 .ot.ft-dream .ft-dream-star{font-size:1.5rem;line-height:1;filter:drop-shadow(0 0 6px rgba(240,192,32,.9))}
 .ot.ft-dream .ot-lbl,.ot.ft-dream .ot-ico{display:none}
+.ot.ft-payday-corner{background:radial-gradient(ellipse,rgba(34,160,90,.5),rgba(10,80,40,.4))!important;border:2px solid #34c87a;box-shadow:0 0 14px rgba(52,200,122,.45) inset}
+.ot.ft-payday-corner .ft-pay-mark{font-size:1.4rem;line-height:1;filter:drop-shadow(0 0 5px rgba(52,200,122,.9))}
+.ot.ft-payday-corner .ot-lbl,.ot.ft-payday-corner .ot-ico{display:none}
 
 /* Inner board (felt) */
 #board-inner{
@@ -3605,8 +3608,8 @@ const IW=OT_SZ*OT_TN, IH=OT_SZ*OT_SN;       // inner: 576 × 576 (square)
 const CX=IW/2, CY=IH/2, R=260;              // 32-space ring: 2πR/32 ≈ 51px spacing > 46px tile = clean gaps
 
 // ── OUTER TRACK ───────────────────────────────────────
-const OT_TOP=['market','deal','charity','payday','market','deal','market','deal','charity']; // 9
-const OT_SIDE=['deal','market','payday','market','deal','market','deal','payday','market']; // 9
+const OT_TOP=['market','deal','charity','payday','market','deal','market','deal','charity']; // 9 (1 payday → 2 on ring: top+bottom)
+const OT_SIDE=['deal','market','payday','market','deal','market','deal','charity','market']; // 9 (1 payday → 2 on ring: left+right) = 4 paydays total on the Fast Track
 const OT_COLORS={deal:'#3d7a34',bigdeal:'#1e4a18',market:'#1e5a6e',charity:'#4a7a10',payday:'#c97308',corner:'#2d1a4e'};
 const OT_ICONS={deal:'🤝',bigdeal:'🏢',market:'📈',charity:'❤️',payday:'🌾',corner:''};
 
@@ -9039,7 +9042,7 @@ const OUTER_BUSINESSES=[
 // turn dialog, inner ring, outer perimeter). On escape the token just moves around the
 // outer perimeter (the buildOuterTrack ring); roll with the SAME ROLL. The 4 empty
 // corners become ⭐ Dream tiles — land on one with enough cash to buy your dream & win.
-const FT_DREAM_CORNERS=[10,20,30]; // 3 of the 4 corners are Dreams (idx 0 = start corner)
+const FT_DREAM_CORNERS=[20];        // ONE Dream tile (bottom-right corner, opposite start)
 function _ftIndexPerimeter(){
   const top=$('ot-top'),right=$('ot-right'),bot=$('ot-bot'),left=$('ot-left');
   if(!top||!right||!bot||!left)return [];
@@ -9059,9 +9062,9 @@ function ftType(i){
 function _ftDecorateDreams(on){
   const tiles=window._ftTiles||[];
   tiles.forEach((el,i)=>{
-    const star=el.querySelector('.ft-dream-star');
-    if(on&&FT_DREAM_CORNERS.indexOf(i)>=0){el.classList.add('ft-dream');if(!star){const dn=(G&&G.dream)?G.dream.name:'DREAM';el.insertAdjacentHTML('beforeend','<span class="ft-dream-star">⭐</span>');}}
-    else{el.classList.remove('ft-dream');if(star)star.remove();}
+    el.classList.remove('ft-dream');
+    const star=el.querySelector('.ft-dream-star');if(star)star.remove();
+    if(on&&FT_DREAM_CORNERS.indexOf(i)>=0){el.classList.add('ft-dream');el.insertAdjacentHTML('beforeend','<span class="ft-dream-star">⭐</span>');}
   });
 }
 function positionFtToken(i,animate){
