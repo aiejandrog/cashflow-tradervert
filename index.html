@@ -5760,10 +5760,12 @@ function openRealtyOffice(){
     };
   });
   const reOwned=(G.assets||[]).filter(a=>a.type==='re'&&!a.isPrimaryHome).length;
-  actions.push({label:`🏘️ Investment Properties (buy rentals)${reOwned?' · own '+reOwned:''} →`,cls:'btn-tan',fn:()=>openRentalsBrowser()});
-  actions.push({label:'Close',cls:'btn-gold',fn:()=>{}});
+  // Investment Properties FIRST + prominent — this is how you OWN MULTIPLE properties.
+  // (The homes below are your ONE residence — a new home REPLACES it, by design.)
+  actions.unshift({label:`🏘️ Investment Properties — buy MANY rentals${reOwned?' (own '+reOwned+')':''} →`,cls:'btn-gold',fn:()=>openRentalsBrowser()});
+  actions.push({label:'Close',cls:'btn-tan',fn:()=>{}});
   openModal({band:'green',title:'🏡 Realty Office — '+(G.location?G.location.name:''),
-    desc:`Currently: ${curDesc}. Your credit (${G.creditScore} ${tier.label}) gets a ${(loanRate()*100).toFixed(0)}% mortgage with ${Math.round(HOME_DOWN_PCT[tier.label]*100)}% down. ${cur?'A new HOME sells your current one (equity rolls in) — but rentals stack: buy as many as you want.':'A home is where you live; rentals build passive income — buy as many rentals as you can afford.'} Prices reflect ${G.location?G.location.name+' ('+G.location.re+'×)':'your market'}.`,
+    desc:`TWO things here: 🏘️ Investment Properties = rentals you can STACK (own as many as you want). 🏠 The homes listed below are your ONE residence — buying a new home SELLS your current one. To build a portfolio, use Investment Properties. ${cur?'You currently own '+cur.home.name+'.':'You\'re currently '+(hs==='family'?'with family':'renting')+'.'}`,
     rows:[['Your Cash','$'+fmt(G.cash),'gold'],...(cur?[['Current Home Equity','+$'+fmt(cur.equity),'green']]:[]),['Rentals Owned',String(reOwned),''],['Mortgage Rate',(loanRate()*100).toFixed(0)+'%','']],
     actions});
 }
@@ -5863,11 +5865,26 @@ function showHomeDetail(h){
       ['New Housing Cost','$'+fmt(totalMo)+'/mo',totalMo<=curHousingCost?'green':'red'],
     ],
     actions:[
-      {label:`Buy — $${fmt(cashNeeded)} cash to close`,cls:'btn-gold',locked:!canBuy,fn:()=>buyHome(h,price,down,equity,cashNeeded,principal,pmt)},
+      cur
+        ?{label:`⚠️ Replace my home with ${h.name}`,cls:'btn-gold',locked:!canBuy,fn:()=>confirmReplaceHome(h,price,down,equity,cashNeeded,principal,pmt,cur)}
+        :{label:`Buy — $${fmt(cashNeeded)} cash to close`,cls:'btn-gold',locked:!canBuy,fn:()=>buyHome(h,price,down,equity,cashNeeded,principal,pmt)},
+      ...(cur?[{label:'🏘️ Own MULTIPLE? Buy Rentals instead',cls:'btn-tan',fn:()=>openRentalsBrowser()}]:[]),
       {label:'← Listings',cls:'btn-tan',fn:openRealtyOffice},
     ]});
   // cartoon curb appeal — injected above the copy (openModal sets desc via textContent)
   try{$('mb-desc').insertAdjacentHTML('afterbegin','<div style="text-align:center;margin-bottom:8px">'+_homeArtSVG(h)+'</div>');}catch(e){}
+}
+// Confirm before a home purchase REPLACES the current residence — the #1 confusion:
+// players expect homes to stack like rentals (they don't — you have one residence).
+function confirmReplaceHome(h,price,down,equity,cashNeeded,principal,pmt,cur){
+  openModal({band:'gray',title:'⚠️ This Replaces Your Home',
+    desc:`A home is your RESIDENCE — you only have one. Buying ${h.name} will SELL your current ${cur.home.name} (you keep its $${fmt(cur.equity)} equity). It does NOT add a second property. To OWN MULTIPLE income properties, use 🏘️ Investment Properties instead.`,
+    rows:[['Sells',cur.home.name,'red'],['Buys',h.name,''],['Equity Applied','+$'+fmt(cur.equity),'green'],['Cash to Close','$'+fmt(cashNeeded),'red']],
+    actions:[
+      {label:'🏘️ Buy Rentals instead (own multiple)',cls:'btn-gold',fn:()=>openRentalsBrowser()},
+      {label:`Yes, replace my home`,cls:'btn-tan',fn:()=>buyHome(h,price,down,equity,cashNeeded,principal,pmt)},
+      {label:'← Cancel',cls:'btn-tan',fn:()=>showHomeDetail(h)},
+    ]});
 }
 function buyHome(h,price,down,equity,cashNeeded,principal,pmt){
   if(_mpLocked()){_mpLockToast();return;}
