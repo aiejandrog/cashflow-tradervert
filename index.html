@@ -2898,8 +2898,11 @@ function showRivalPick(){
   ov.style.cssText='position:fixed;inset:0;z-index:9300;background:radial-gradient(ellipse at 50% 18%,rgba(60,30,110,.6),rgba(6,3,16,.97));display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;overflow-y:auto;font-family:Georgia,serif;animation:fadeIn .3s';
   const cards=RIVALS.map(r=>rivalCardHTML(r.id,r.av,r.name,r.blurb,r.color,r.escTurns)).join('')
     +rivalCardHTML('ghost','🏁','Your Ghost',(loadProfile().bestOverall?('Race your best run'):'Race your own pace'),'#9ad8ff',loadProfile().bestOverall||26);
+  const sc=(G&&G._scenario&&G._scenario.id!=='calm')?G._scenario:null;
+  const scLine=sc?'<div style="font-size:.74rem;color:#f0dc90;margin-bottom:10px;text-align:center;max-width:460px;background:rgba(240,192,32,.1);border:1px solid rgba(240,192,32,.3);border-radius:10px;padding:7px 12px">This run: '+sc.icon+' <b>'+sc.name+'</b> — '+sc.desc+'</div>':'';
   ov.innerHTML='<div style="font-size:1.4rem;font-weight:900;color:#f0dc90;margin-bottom:2px">🏁 Choose Your Rival</div>'
-    +'<div style="font-size:.72rem;color:rgba(220,200,255,.72);margin-bottom:14px;text-align:center;max-width:440px">Beat them to financial freedom — or they win the game. <b style="color:'+DIFF[getDifficulty()].col+'">'+DIFF[getDifficulty()].label+'</b> difficulty.</div>'
+    +'<div style="font-size:.72rem;color:rgba(220,200,255,.72);margin-bottom:10px;text-align:center;max-width:440px">Beat them to financial freedom — or they win the game. <b style="color:'+DIFF[getDifficulty()].col+'">'+DIFF[getDifficulty()].label+'</b> difficulty.</div>'
+    +scLine
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;max-width:560px;width:100%">'+cards+'</div>'
     +'<button onclick="_chooseRival(RIVALS[Math.floor(Math.random()*RIVALS.length)].id)" style="margin-top:14px;padding:9px 22px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:rgba(255,255,255,.75);font-size:.78rem;font-weight:700;cursor:pointer;font-family:Georgia,serif">🎲 Surprise Me</button>';
   document.body.appendChild(ov);
@@ -2913,6 +2916,35 @@ function _chooseRival(id){
 function _rivalGameStart(){
   if(PLAYERS.length>1){const row=$('rival-row');if(row)row.style.display='none';return;} // no rival in MP
   showRivalPick();
+}
+
+// ══ SCENARIOS — each solo run rolls an economy modifier (run-to-run variance) ══
+const SCENARIOS=[
+  {id:'calm',name:'Calm Market',icon:'🌤️',desc:'A steady economy — just you versus your rival.',weight:3},
+  {id:'boom',name:'Boomtown',icon:'🚀',desc:'Red-hot economy — cash flow surges in waves. Ride them.',weight:2,recurring(t){if(t>0&&t%6===0){G._boomMult=1.35;G._boomTurns=3;addLog('🚀','Boomtown wave — cash flow +35% for 3 turns!','g');}}},
+  {id:'crash',name:'Black Monday',icon:'📉',desc:'A market crash hits around turn 25 — build a cushion before it lands.',weight:2,sched:[{turn:25,fn(){G._recLiteMult=0.5;G._recLiteTurns=4;addLog('📉','BLACK MONDAY — markets crash! Cash flow HALVED for 4 turns.','r');try{if(typeof sfxDownturn==='function')sfxDownturn();if(typeof _haptic==='function')_haptic([80,60,80,60,120]);if(typeof obShake==='function')obShake();}catch(e){}}}]},
+  {id:'stag',name:'Stagflation',icon:'🥵',desc:'Prices will not stop climbing — inflation ramps fast. Out-earn it.',weight:2,recurring(t){if(t>0&&t%5===0){G._inflationPct=(G._inflationPct||0)+3;addLog('🥵','Stagflation — living costs creep +3%.','b');}}},
+  {id:'medical',name:'Medical Debt Start',icon:'🏥',desc:'You start under a hospital bill. Dig out, then build.',weight:1,onStart(){G.cash=Math.max(5,Math.round((G.cash||0)*0.55));G.liabilities=G.liabilities||[];G.liabilities.push({name:'Medical Debt',amt:8000,type:'cc'});}},
+  {id:'bull',name:'Bull Market',icon:'🐂',desc:'Cash flows fat all game long — strike while it is hot.',weight:2,onStart(){G._boomMult=1.2;G._boomTurns=9999;}},
+];
+function _pickScenario(){
+  if(Math.random()>diffCfg().scenarioChance)return SCENARIOS.find(s=>s.id==='calm');
+  const pool=SCENARIOS.filter(s=>s.id!=='calm');
+  let tot=pool.reduce((a,s)=>a+(s.weight||1),0),r=Math.random()*tot;
+  for(const s of pool){r-=(s.weight||1);if(r<=0)return s;}
+  return pool[0];
+}
+function applyScenario(){
+  if(PLAYERS.length>1)return; // solo only
+  const s=_pickScenario();
+  G._scenario={id:s.id,name:s.name,icon:s.icon,desc:s.desc};G._scenDone={};
+  try{if(s.onStart)s.onStart();}catch(e){}
+}
+function scenDef(){return (G&&G._scenario)?SCENARIOS.find(s=>s.id===G._scenario.id):null;}
+function _scenarioTick(){
+  if(PLAYERS.length>1)return;const s=scenDef();if(!s)return;
+  if(s.sched){for(const ev of s.sched){if(G.turn>=ev.turn&&!(G._scenDone&&G._scenDone[ev.turn])){(G._scenDone=G._scenDone||{})[ev.turn]=1;try{ev.fn();}catch(e){}}}}
+  if(s.recurring){try{s.recurring(G.turn);}catch(e){}}
 }
 function recordWin(){
   // Guard: checkOuterWin re-runs on resume-after-win and in MP flows —
@@ -5621,6 +5653,7 @@ function triggerSpace(sp){
     G._inflationPct=(G._inflationPct||0)+2;
     addLog('📈',`Inflation tick: living expenses +2% (total +${G._inflationPct}%)`, '');
   }
+  try{_scenarioTick();}catch(e){} // run-scenario scheduled/recurring economy events (solo)
   // Audit payment plan tick
   if(G._auditPlanMonths>0){
     G._auditPlanMonths--;
@@ -11389,6 +11422,7 @@ function startGame(prof,loc){
   SAVE_KEY=_freeSlot()||SAVE_KEY; // every new life gets its own slot (max 5 — doSpin guards the overflow)
   try{sessionStorage.setItem('cf_in_game',SAVE_KEY);}catch(e){} // refresh returns straight into THIS run
   initGame(prof,loc);_prevCash=null;
+  applyScenario(); // SOLO: roll a run modifier (economy/start) — no-op in MP
   // Hide bankruptcy overlay in case player is starting fresh after going bankrupt
   const bkOv=$('bankruptcy-overlay');if(bkOv)bkOv.style.display='none';
   showScreen('game');buildBoard();updateUI();forceFitBoard(3000);
