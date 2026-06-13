@@ -1139,7 +1139,13 @@ body{
   #fs-freedom-panel{grid-column:1!important;grid-row:auto!important}
   #lh-profile,#lh-loans-wrap,#fs-summ{grid-column:1!important}
   #ev-popup{bottom:0;left:0;right:0;top:auto;transform:none;border-radius:12px 12px 0 0;max-width:100%;width:100%}
-  #chat-log{bottom:0;left:0!important;right:0;width:100%!important;border-radius:12px 12px 0 0;position:fixed;transform:none}
+  /* Mobile: dock the Life Feed as a CAPPED bottom sheet above the floating ROLL
+     button. The base rule sets top:calc(50%-170px); the old mobile rule added
+     bottom:0 but never unset top, so the panel stretched the WHOLE lower screen
+     (h~576px) and swallowed the board. top:auto + max-height fixes it. !important
+     also defeats any inline left/top left behind by the desktop drag-to-move. */
+  #chat-log{top:auto!important;bottom:100px!important;left:6px!important;right:6px!important;width:auto!important;max-height:32vh;border-radius:12px;position:fixed;transform:none!important}
+  #chat-log #cl-rows{max-height:22vh}
   .cl-row{font-size:.72rem}
   #win-view{padding:16px 10px}
   .win-grid{grid-template-columns:1fr 1fr;gap:8px}
