@@ -3965,6 +3965,14 @@ function sfxOminous(){ _tone(110,.85,'sawtooth',.10,0,82);_noiseBurst(.1,'lowpas
 function sfxDownturn(){ _tone(440,.22,'sine',.14,0,392);_tone(392,.22,'sine',.14,.22,349);_tone(349,.4,'sine',.15,.44,262); }
 function sfxAlarm(){ for(let i=0;i<3;i++){_tone(820,.10,'square',.11,i*.24);_tone(620,.10,'square',.11,i*.24+.12);} }
 function sfxEngine(){ _tone(70,.65,'sawtooth',.16,0,240);_noiseBurst(.5,'bandpass',900,.12,.05); }
+// Mobile haptics — feature-detected (no-op on desktop / unsupported browsers),
+// silenced by the same mute toggle as sound. Patterns are short and tasteful.
+function _haptic(pattern){
+  try{
+    if(window._muted)return;
+    if(navigator&&typeof navigator.vibrate==='function')navigator.vibrate(pattern);
+  }catch(e){}
+}
 function sfxSwipe(){ _noiseBurst(.18,'bandpass',2600,.18,0);_tone(1046,.12,'sine',.12,.22); }
 function sfxMystery(){ const pent=[523,587,659,784,880];for(let i=0;i<4;i++)_tone(pent[Math.floor(Math.random()*5)],.14,'triangle',.10,i*.10); }
 function sfxMagic(){ _tone(420,.5,'sine',.13,0,1680);_tone(840,.4,'sine',.07,.1,2200); }
@@ -4131,7 +4139,7 @@ function rollDice(){
   // It comes back automatically with whatever card you land on (openFS in showEventCard/openModal).
   $('fs-panel').classList.remove('open');
   ['event-modal','event-modal-bg','modal','modal-bg'].forEach(id=>{const el=$(id);if(el)el.style.paddingLeft='';});
-  sfxDiceRoll();
+  sfxDiceRoll();_haptic(12); // light tap when the dice fly (mobile)
   updateUI(); // refresh HUD/FS to the latest player state on every roll
   // Cancel any still-running gift animation from a previous doubles roll
   if(window._giftTimer){clearTimeout(window._giftTimer);window._giftTimer=null;}
@@ -5670,7 +5678,7 @@ function showLifeEvent(){
 
 function onPayday(){
   const cf=monthlyCF(),pass=passiveIncome();
-  if(cf>=0){sfxCash();sfxCoins(9);spawnCoinBurst(true);}
+  if(cf>=0){sfxCash();sfxCoins(9);spawnCoinBurst(true);_haptic([18,45,18]);}
   let bonus=0;
   if(G._charityBonus){bonus=Math.round(Math.max(0,cf)*0.5);G._charityBonus=false;}
   // Mystery Box: expense waiver gives back the expense total this payday
@@ -8886,6 +8894,7 @@ function enterFastTrack(){
 }
 
 function spawnWinConfetti(){
+  _haptic([60,40,60,40,140]); // celebratory buzz (win / dream-car garage)
   const colors=['#f0c020','#ff6b6b','#4ecdc4','#a8e6cf','#fff','#ffb347','#c77dff','#4CAF50','#FF69B4'];
   for(let i=0;i<90;i++){
     const el=document.createElement('div');
@@ -9917,7 +9926,7 @@ function updateUI(){
       }
       // Motivational toast on 25/50/75% crossings (100% = escape cutscene handles it).
       // Guard initial setup: only toast when we had a real prior tier (not first updateUI).
-      if(tier>=1&&tier<=3&&G._freedomTierInit)_freedomMilestoneToast(tier);
+      if(tier>=1&&tier<=3&&G._freedomTierInit){_freedomMilestoneToast(tier);_haptic([25,50,25,50,40]);}
     }
     G._lastFreedomTier=tier;G._freedomTierInit=true;
   })();
