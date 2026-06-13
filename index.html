@@ -8570,15 +8570,13 @@ function openSettings(){
 
 // ── MODAL ─────────────────────────────────────────────
 function openModal({band,title,desc,rows,actions,customInput,_noFS}){
-  // Side-action detection: if a turn card is already showing, this modal is a
-  // detour (FS Sell/Refi/Manage/etc). Preserve the card's resume so pressing
-  // ROLL/space after the detour continues the turn instead of re-opening this.
-  const _cardActive=$('event-modal')&&$('event-modal').classList.contains('vis');
-  if(_cardActive){
-    if(window._sideResumeSaved===undefined)window._sideResumeSaved=_resumeFn;
-  }else{
-    _resumeFn=()=>openModal({band,title,desc,rows,actions,customInput,_noFS});
-  }
+  // ALWAYS preserve the turn's resume. openModal dialogs are side-trips (FS
+  // Sell/Refi/Manage/Pay, board events, Leisure, etc.) — _resumeFn is set to
+  // re-show THIS modal only while it's open, and closeModal restores the prior
+  // value. Without this, opening Manage/Refi/Sell during a turn left _resumeFn
+  // pointing at the dialog, so ROLL/Finish kept re-opening it (stuck turn).
+  if(window._sideResumeSaved===undefined)window._sideResumeSaved=_resumeFn;
+  _resumeFn=()=>openModal({band,title,desc,rows,actions,customInput,_noFS});
   if(!_noFS)openFS();
   $('mb-band').textContent=title;
   $('mb-band').className='mbox-band '+(band||'gray');
