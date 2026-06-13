@@ -1651,7 +1651,10 @@ body{
         <button class="btn-og btn-tan" onclick="charRandomize()" style="padding:0 16px;border-radius:12px;font-size:.8rem;flex-shrink:0">🎲<br>Surprise<br>Me</button>
       </div>
     </div>
-    <button class="btn-og btn-gold" id="btn-char-go" style="margin-top:10px;font-size:.9rem;padding:11px;border-radius:9px;flex-shrink:0">Where Do You Live? →</button>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-shrink:0">
+      <button class="btn-og btn-tan" onclick="setupBack('splash')" style="flex:0 0 auto;padding:11px 16px;border-radius:9px;font-size:.82rem">← Back</button>
+      <button class="btn-og btn-gold" id="btn-char-go" style="flex:1;font-size:.9rem;padding:11px;border-radius:9px">Where Do You Live? →</button>
+    </div>
   </div>
 </div>
 
@@ -1663,6 +1666,7 @@ body{
     <div class="loc-grid" id="loc-grid"></div>
     <div class="loc-detail" id="loc-detail">← Pick a city to see how it affects your numbers.</div>
     <div style="display:flex;gap:10px;margin-top:8px;flex-shrink:0">
+      <button class="btn-og btn-tan" onclick="setupBack('character')" style="flex:0 0 auto;padding:10px 14px;border-radius:8px;font-size:.82rem">← Back</button>
       <button class="btn-og btn-tan" id="btn-loc-random" style="flex:0 0 auto;padding:10px 16px;border-radius:8px;font-size:.82rem">🎲 Random</button>
       <button class="btn-og btn-gold" id="btn-loc-go" disabled style="flex:1;font-size:.9rem;padding:10px;border-radius:8px;opacity:.5">Choose Your Dream →</button>
     </div>
@@ -1686,6 +1690,7 @@ body{
       </div>
     </div>
     <div style="display:flex;gap:10px;flex-shrink:0">
+      <button class="btn-og btn-tan" onclick="setupBack('location')" style="flex:0 0 auto;padding:10px 14px;border-radius:8px;font-size:.82rem">← Back</button>
       <button class="btn-og btn-tan" id="btn-dream-random" style="flex:0 0 auto;padding:10px 16px;border-radius:8px;font-size:.82rem">🎲 Random</button>
       <button class="btn-og btn-gold" id="btn-dream-go" disabled style="opacity:.45;flex:1">Begin Game →</button>
     </div>
@@ -10176,6 +10181,20 @@ function _nagWatch(id){
 ['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(_nagScreen)_nagArm();},{passive:true,capture:true}));
 // boot lands on the splash without a showScreen() call — arm the heckler there too
 document.addEventListener('DOMContentLoaded',()=>{const s=document.querySelector('.screen.active');if(s)_nagWatch(s.id);});
+// ── ← BACK through the setup flow — every choice is kept (globals), only the
+// career itself stays locked (one spin per life). Splash restores the reveal.
+function setupBack(to){
+  if(to==='splash'){
+    showScreen('splash');
+    try{
+      const pend=JSON.parse(localStorage.getItem('cf_pending_spin')||'null');
+      if(pend&&pend.profId){const p=PROFS.find(x=>x.id===pend.profId);if(p)revealProf(p);}
+    }catch(e){}
+    return;
+  }
+  if(to==='location'&&typeof buildLocGrid==='function')buildLocGrid();
+  showScreen(to);
+}
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   $(id).classList.add('active');
