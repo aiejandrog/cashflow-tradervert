@@ -2181,7 +2181,7 @@ const BOARD_SPACES = [
   {type:'tip',     label:'MENTOR\nTIP',    color:'#2a5a3a', icon:'📖'},
   {type:'payday',  label:'CASHFLOW\nDAY',  color:'#c97308', icon:'🌾'},  // payday #3
   {type:'layoff',  label:'LAYOFF',         color:'#8b1a1a', icon:'💀'},
-  {type:'deal',    label:'SMALL\nDEAL',    color:'#3d7a34', icon:'🤝'},
+  {type:'career',  label:'CAREER\nCHANGE', color:'#3a5fa0', icon:'🎰'},  // pull the lever, gamble your paycheck
   {type:'audit',   label:'IRS\nAUDIT',     color:'#5a1a6e', icon:'🏛️'},
   {type:'wildcard',label:'MYSTERY\nBOX',   color:'#7a106e', icon:'🎁'},  // mystery box on the ring
   {type:'recession',label:'RECESSION',     color:'#4a2200', icon:'📉'},
@@ -5182,9 +5182,133 @@ function dispatchSpace(sp){
     case'credit':  showCreditBureauEvent();break;
     case'lifeevent':showLifeEvent();break;
     case'wildcard':showMysteryBox(0,endTurn);break;
+    case'career':  showCareerChange();break;
     case'start':   endTurn();break;
     default:       endTurn();
   }
+}
+
+// ── 🎰 CAREER CHANGE space — pull the lever, the job market spins, then YOU
+// decide: chase the new offer or keep the life you know. Salary + tax bracket
+// swap; your debts, home and lifestyle stay (you changed jobs, not lives).
+function _careerApply(np){
+  const op=G.prof;
+  G.prof={...op,id:np.id,name:np.name,icon:np.icon,salary:np.salary,taxes:np.taxes};
+  const fee=Math.min(500,Math.max(0,G.cash));
+  if(fee>0)G.cash-=fee;
+  addLog('🎰',`CAREER CHANGE: ${op.name} → ${np.name}. Salary $${fmt(op.salary)} → $${fmt(np.salary)}/mo${fee>0?' (transition costs -$'+fmt(fee)+')':''}`,np.salary>=op.salary?'gold':'r');
+  updateUI();saveGame();
+}
+function _careerCompareCard(np,viaMachine){
+  const op=G.prof;
+  const dSal=np.salary-op.salary;
+  const dTax=np.taxes-op.taxes;
+  const dNet=dSal-dTax;
+  if(np.id===op.id){
+    showEventCard('life','🎰 The Machine Has Jokes',
+      `The reels spin… and land on ${np.icon} ${np.name}. Your EXACT job. The universe just offered you your own chair.`,
+      'Sometimes the grass is greener right where you\'re standing.',
+      [['Offer',np.icon+' '+np.name,''],['Your Job',op.icon+' '+op.name,''],['Verdict','Same chair, same paycheck','']],
+      [{label:'…cool. Cool cool cool.',cls:'btn-tan',fn:endTurn}]);
+    return;
+  }
+  showEventCard(dNet>=0?'opportunity':'setback','🎰 Job Offer — '+np.icon+' '+np.name,
+    `A recruiter slides an offer across the table: ${np.name}. ${dNet>=0?'It pays MORE. But change always carries risk — and a $500 transition cost.':'It pays LESS. But hey — maybe you hate your boss enough to consider it anyway.'}`,
+    'Your salary is rented. Your assets are owned. Either way — keep buying assets.',
+    [['Current',op.icon+' '+op.name+' — $'+fmt(op.salary)+'/mo',''],
+     ['Offer',np.icon+' '+np.name+' — $'+fmt(np.salary)+'/mo',dSal>=0?'green':'red'],
+     ['Salary Δ',(dSal>=0?'+':'-')+'$'+fmt(Math.abs(dSal))+'/mo',dSal>=0?'green':'red'],
+     ['Taxes Δ',(dTax>=0?'+':'-')+'$'+fmt(Math.abs(dTax))+'/mo',dTax<=0?'green':'red'],
+     ['Net Monthly Δ',(dNet>=0?'+':'-')+'$'+fmt(Math.abs(dNet))+'/mo',dNet>=0?'green':'red'],
+     ['Switch Cost','$500 one-time','red']],
+    [{label:'💼 Take the New Career',cls:dNet>=0?'btn-gold':'btn-tan',fn:()=>{_careerApply(np);endTurn();}},
+     {label:'🪑 Stay '+op.name,cls:dNet>=0?'btn-tan':'btn-gold',fn:()=>{addLog('🪑','Turned down the '+np.name+' offer — devil you know.','');endTurn();}}]);
+}
+function showCareerChange(){
+  const np=_spinCareerLottery();
+  if(document.hidden){_careerCompareCard(np,false);return;} // stress/background path: straight to the choice
+  // ── the machine ──
+  let ov=document.getElementById('career-machine');if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='career-machine';
+  ov.style.cssText='position:fixed;inset:0;z-index:9560;display:flex;align-items:center;justify-content:center;background:rgba(5,2,14,.82);backdrop-filter:blur(3px)';
+  const ROW=46;
+  ov.innerHTML=`
+   <div style="background:linear-gradient(165deg,#2a1330,#140820);border:2px solid rgba(240,192,32,.55);border-radius:18px;padding:20px 22px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 18px 60px rgba(0,0,0,.7)">
+    <div style="font-family:'Arial Black',Arial,sans-serif;font-weight:900;color:#f0dc90;font-size:1rem;letter-spacing:2px">🎰 CAREER CHANGE</div>
+    <div style="font-size:.66rem;color:rgba(220,200,255,.6);font-style:italic">Drag the lever ALL the way down — the job market decides.</div>
+    <div style="display:flex;align-items:center;gap:18px">
+      <div style="width:210px;height:${ROW*3}px;overflow:hidden;border-radius:12px;border:2px solid rgba(240,192,32,.4);background:#0c0618;position:relative">
+        <div id="cm-reel" style="will-change:transform"></div>
+        <div style="position:absolute;left:0;right:0;top:${ROW}px;height:${ROW}px;border-top:2px solid rgba(240,192,32,.75);border-bottom:2px solid rgba(240,192,32,.75);box-shadow:0 0 18px rgba(240,192,32,.25) inset;pointer-events:none"></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,6,24,.9),transparent 30%,transparent 70%,rgba(12,6,24,.9));pointer-events:none"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div style="width:10px;height:120px;border-radius:5px;background:linear-gradient(180deg,#777,#3a3a44);position:relative">
+          <div id="cm-knob" style="position:absolute;left:50%;top:0;transform:translate(-50%,0);width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff8888,#c01818 60%,#7a0a0a);border:2px solid #5a0808;cursor:grab;touch-action:none;box-shadow:0 4px 12px rgba(0,0,0,.6)"></div>
+        </div>
+        <div id="cm-hint" style="font-size:.56rem;color:rgba(255,255,255,.45);margin-top:8px;font-family:Arial,sans-serif;font-weight:700">PULL ⬇</div>
+      </div>
+    </div>
+    <button id="cm-walk" class="btn-og btn-tan" style="padding:8px 18px;font-size:.74rem">🚶 Walk past the machine</button>
+   </div>`;
+  document.body.appendChild(ov);
+  // reel content: shuffled professions ×4 copies, the LAST landing row = np
+  const reel=ov.querySelector('#cm-reel');
+  const pool=[];
+  for(let i=0;i<4;i++)PROFS.slice().sort(()=>Math.random()-.5).forEach(p=>pool.push(p));
+  pool.push(np); // landing row
+  reel.innerHTML=pool.map(p=>`<div style="height:${ROW}px;display:flex;align-items:center;gap:10px;padding:0 12px;font-family:Georgia,serif;color:#ead8ff;font-weight:800;font-size:.82rem;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:1.3rem">${p.icon}</span>${p.name}</div>`).join('');
+  let spun=false;
+  const spin=()=>{
+    if(spun)return;spun=true;
+    ov.querySelector('#cm-hint').textContent='SPINNING…';
+    ov.querySelector('#cm-walk').style.visibility='hidden';
+    if(!window._muted)try{sfxDiceRoll&&sfxDiceRoll();}catch(e){}
+    const targetY=(pool.length-2)*ROW; // landing row centered in the window
+    let tick=-1,landed=false;
+    const finishSpin=()=>{
+      if(landed)return;landed=true;
+      reel.style.transform='translateY(-'+targetY+'px)';
+      if(!window._muted)try{_tone(880,.2,'triangle',.18,0,1320);}catch(e){}
+      setTimeout(()=>{ov.remove();_careerCompareCard(np,true);},650);
+    };
+    const t0=performance.now(),D=2400;
+    (function frame(now){
+      if(landed)return;
+      const pr=Math.min(1,(now-t0)/D);
+      const ease=1-Math.pow(1-pr,3);
+      const y=targetY*ease;
+      reel.style.transform='translateY(-'+y+'px)';
+      const idx=Math.floor(y/ROW);
+      if(idx!==tick){tick=idx;if(!window._muted&&pr<0.97)try{sfxSpinTick(pr);}catch(e){}}
+      if(pr<1){requestAnimationFrame(frame);return;}
+      finishSpin();
+    })(t0);
+    setTimeout(finishSpin,D+900); // rAF stalls in background tabs — the spin always resolves
+  };
+  // lever drag: pull ≥80% of the track and it fires (even mid-hold), springs back
+  const knob=ov.querySelector('#cm-knob');
+  const TRACK=86;
+  let drag=null;
+  knob.addEventListener('pointerdown',e=>{drag={y:e.clientY};try{knob.setPointerCapture(e.pointerId);}catch(err){}knob.style.cursor='grabbing';});
+  knob.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    const dy=Math.max(0,Math.min(TRACK,e.clientY-drag.y));
+    knob.style.top=dy+'px';
+    if(dy>=TRACK*0.8&&!spun){
+      spin();
+      knob.animate([{top:dy+'px'},{top:'0px'}],{duration:420,easing:'cubic-bezier(.2,1.6,.4,1)'}).onfinish=()=>{knob.style.top='0px';};
+      drag=null;
+    }
+  });
+  const release=()=>{
+    if(!drag)return;drag=null;knob.style.cursor='grab';
+    knob.animate([{top:knob.style.top||'0px'},{top:'0px'}],{duration:300,easing:'cubic-bezier(.2,1.4,.4,1)'}).onfinish=()=>{knob.style.top='0px';};
+  };
+  knob.addEventListener('pointerup',release);
+  knob.addEventListener('pointercancel',release);
+  ov.querySelector('#cm-walk').onclick=()=>{ov.remove();addLog('🚶','Walked past the career machine — no thanks.','');endTurn();};
 }
 
 // ── CREDIT BUREAU space — your report gets pulled, things move ──
