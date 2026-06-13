@@ -4124,6 +4124,7 @@ function _mpLockToast(){
   addLog('⏳','Not your turn — you can look, not touch.','');
 }
 function rollDice(){
+  if(G&&G._bankrupt){return;} // dead game — block any chained/doubles roll under the bankruptcy overlay
   if(window._mpPaused){return;} // game paused for a dropped player — nobody rolls
   if(_mpLocked()){_mpLockToast();return;}
   if(!G||G.rolling){
@@ -5161,6 +5162,7 @@ function showDelinquencyCard(d,onClose){
 }
 
 function collectPassByPayday(){
+  if(G&&G._bankrupt)return; // dead game — never accrue more debt under the bankruptcy overlay
   const cf=monthlyCF();
   // Honor 'next payday' tokens here too — most paydays are PASSED, not landed on,
   // so without this the Mystery Box 'Expenses Waived' / charity bonus never fired.
@@ -5677,6 +5679,7 @@ function showLifeEvent(){
 }
 
 function onPayday(){
+  if(G&&G._bankrupt)return; // dead game — no payday processing under the bankruptcy overlay
   const cf=monthlyCF(),pass=passiveIncome();
   if(cf>=0){sfxCash();sfxCoins(9);spawnCoinBurst(true);_haptic([18,45,18]);}
   let bonus=0;
