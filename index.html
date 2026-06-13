@@ -161,6 +161,9 @@ body{
 }
 .sp-options-row>div{margin:0!important;padding:0!important;background:none!important;border:none!important}
 .sp-express-row{display:flex;align-items:center;gap:10px}
+.sp-diff-btn{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.14);border-radius:20px;color:rgba(255,255,255,.6);font-size:.66rem;font-weight:800;padding:5px 12px;cursor:pointer;font-family:Georgia,serif;transition:all .15s}
+.sp-diff-btn:hover{border-color:rgba(240,192,32,.5);color:rgba(255,255,255,.85)}
+.sp-diff-btn.on{background:linear-gradient(135deg,rgba(200,145,12,.3),rgba(240,192,32,.18));border-color:var(--diff-col,#f0c040);color:#fff;box-shadow:0 0 12px var(--diff-glow,rgba(240,192,32,.4))}
 #btn-express{
   flex:0 0 auto;font-size:.7rem;padding:6px 14px;border-radius:6px;
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
@@ -1618,6 +1621,13 @@ body{
       <div id="spin-reel"></div>
     </div>
     <button class="btn-spin" id="btn-spin">🎯 Spin to Pick Your Path</button>
+    <!-- Difficulty selector — bundles rival pace + threat ramp + scenario frequency -->
+    <div id="sp-diff-row" style="display:flex;gap:6px;justify-content:center;align-items:center;margin:9px 0 2px;flex-wrap:wrap">
+      <span style="font-size:.6rem;color:rgba(240,220,144,.55);font-family:Arial,sans-serif;font-weight:800;letter-spacing:1px">DIFFICULTY</span>
+      <button class="sp-diff-btn" data-diff="easy"   onclick="setDifficulty('easy')">😌 Easy</button>
+      <button class="sp-diff-btn" data-diff="normal" onclick="setDifficulty('normal')">🎯 Normal</button>
+      <button class="sp-diff-btn" data-diff="hard"   onclick="setDifficulty('hard')">🔥 Hard</button>
+    </div>
     <!-- Secondary options: one quiet row — Spin stays the only hero action -->
     <div class="sp-options-row">
       <div class="sp-express-row">
@@ -2779,10 +2789,28 @@ function loadProfile(){
   try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'{}');
     return{games:p.games||0,wins:p.wins||0,winStreak:p.winStreak||0,bestOverall:p.bestOverall||null,bestByProf:p.bestByProf||{},daily:p.daily||{},trophies:p.trophies||[],
       credits:p.credits||0,objCredited:p.objCredited||[],lastIdentity:p.lastIdentity||null,
-      owned:p.owned||[],equipped:p.equipped||{}};
-  }catch(e){return{games:0,wins:0,winStreak:0,bestOverall:null,bestByProf:{},daily:{},trophies:[],credits:0,objCredited:[],lastIdentity:null,owned:[],equipped:{}};}
+      owned:p.owned||[],equipped:p.equipped||{},difficulty:p.difficulty||'normal',plays:p.plays||[]};
+  }catch(e){return{games:0,wins:0,winStreak:0,bestOverall:null,bestByProf:{},daily:{},trophies:[],credits:0,objCredited:[],lastIdentity:null,owned:[],equipped:{},difficulty:'normal',plays:[]};}
 }
 function saveProfile(p){try{localStorage.setItem(PROFILE_KEY,JSON.stringify(p));cloudPushProfile();}catch(e){}}
+
+// ══ DIFFICULTY — one knob bundling rival pace + threat-clock ramp + scenario frequency ══
+const DIFF={
+  easy:  {label:'Easy',  col:'#86efac',glow:'rgba(134,239,172,.4)', rivalPaceMult:0.65,threatMult:0.45,threatEvery:7,scenarioChance:0.30,tauntFreq:0.4},
+  normal:{label:'Normal',col:'#f0c040',glow:'rgba(240,192,32,.4)',  rivalPaceMult:1.0, threatMult:1.0, threatEvery:5,scenarioChance:0.65,tauntFreq:0.7},
+  hard:  {label:'Hard',  col:'#ff6a6a',glow:'rgba(255,106,106,.45)',rivalPaceMult:1.4, threatMult:1.7, threatEvery:4,scenarioChance:0.92,tauntFreq:1.0},
+};
+function getDifficulty(){const d=loadProfile().difficulty;return DIFF[d]?d:'normal';}
+function diffCfg(){return DIFF[(typeof G!=='undefined'&&G&&G._difficulty)||getDifficulty()]||DIFF.normal;}
+function setDifficulty(d){if(!DIFF[d])return;const p=loadProfile();p.difficulty=d;saveProfile(p);_renderDiffPicker();}
+function _renderDiffPicker(){
+  const cur=getDifficulty();
+  document.querySelectorAll('.sp-diff-btn').forEach(b=>{
+    const on=b.dataset.diff===cur;b.classList.toggle('on',on);
+    if(on){b.style.setProperty('--diff-col',DIFF[cur].col);b.style.setProperty('--diff-glow',DIFF[cur].glow);}
+  });
+}
+document.addEventListener('DOMContentLoaded',()=>{try{_renderDiffPicker();}catch(e){}});
 function recordWin(){
   // Guard: checkOuterWin re-runs on resume-after-win and in MP flows —
   // without this, every reload of the win screen farms +1 win into the profile.
@@ -3438,7 +3466,7 @@ function initGame(prof, location) {
   const isOwner=housingSituation==='owner';
   const isRenting=!isOwner; // back-compat: non-owners = no mortgage liability
   G={
-    prof:scaledProf, location:loc, turn:0, position:0,
+    prof:scaledProf, location:loc, turn:0, position:0, _difficulty:getDifficulty(),
     cash:(()=>{const m=[.12,.25,.4,.6,.8,1,1,1.25][Math.floor(Math.random()*8)];return Math.max(5,Math.round(scaledProf.savings*m));})(),
     assets:[],
     housingSituation, isRenting, _propState:{},
