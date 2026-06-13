@@ -1612,7 +1612,7 @@ body{
     <div class="rev-cf" id="rev-cf2"></div>
     <div class="rev-desc" id="rev-desc"></div>
     <div class="rev-btns">
-      <button class="btn-og btn-tan" id="btn-again" style="display:none">← Spin Again</button>
+      <button class="btn-og btn-tan" id="btn-change-prof" style="display:none" onclick="changeProfession()">🔄 Change Path</button>
       <button class="btn-og btn-gold" id="btn-begin" style="display:none">CHOOSE ›</button>
     </div>
   </div>
@@ -3064,15 +3064,23 @@ function _trophyTipHide(){
   if(!el||el.style.display==='none')return;
   el.animate([{opacity:1},{opacity:0}],{duration:120,fill:'forwards'}).onfinish=()=>{el.style.display='none';};
 }
+let _curTipTid=null;
 document.addEventListener('mouseover',e=>{
   const item=e.target.closest&&e.target.closest('[data-tid]');
-  if(item){_trophyTipShow(item.getAttribute('data-tid'),item);}
+  if(!item)return;
+  const tid=item.getAttribute('data-tid');
+  if(tid===_curTipTid)return; // same trophy — don't re-animate (was the flicker)
+  _curTipTid=tid;
+  _trophyTipShow(tid,item);
 });
 document.addEventListener('mouseout',e=>{
   const item=e.target.closest&&e.target.closest('[data-tid]');
-  if(item&&!(e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('[data-tid]')===item))_trophyTipHide();
+  if(!item)return;
+  const to=e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('[data-tid]');
+  if(to===item)return; // moving within the same trophy — keep it shown
+  _curTipTid=null;_trophyTipHide();
 });
-document.addEventListener('scroll',_trophyTipHide,true);
+document.addEventListener('scroll',()=>{_curTipTid=null;_trophyTipHide();},true);
 function openTrophyWall(){
   const p=loadProfile();
   let el=document.getElementById('trophy-wall');
@@ -3473,6 +3481,19 @@ function doSpin(){
   requestAnimationFrame(frame);
 }
 
+const CHANGE_PROF_COST=150;
+function changeProfession(){
+  const p=loadProfile();
+  if((p.credits||0)<CHANGE_PROF_COST){
+    alert('Not enough ✦ to change your path — need '+CHANGE_PROF_COST+', you have '+fmt(p.credits||0)+'. Earn ✦ from goals, trophies and wins. (Or hit ← to go back and play solo with this career.)');
+    return;
+  }
+  p.credits-=CHANGE_PROF_COST;saveProfile(p);
+  try{_renderCreditChips();}catch(e){}
+  try{localStorage.removeItem('cf_pending_spin');}catch(e){} // lift the one-spin lock for this paid re-roll
+  resetToSpin();
+  setTimeout(()=>{try{doSpin();}catch(e){}},140);
+}
 function revealProf(p){
   selectedProf=p;
   const exp=p.taxes+p.mortgage+p.school+p.car+p.cc+p.retail+p.other+p.children;
@@ -3483,6 +3504,15 @@ function revealProf(p){
   $('rev-cf2').textContent=`Monthly CF: ${cf>=0?'+':''}$${fmt(cf)} · Escape: $${fmt(exp)}/mo passive`;
   $('rev-desc').textContent=p.desc;
   $('btn-begin').style.display='inline-block';
+  // Paid re-roll — one spin per life is free; changing your mind costs ✦ credits.
+  const _cp=$('btn-change-prof');
+  if(_cp){
+    const cr=(loadProfile().credits||0);
+    _cp.style.display='inline-block';
+    _cp.textContent=`🔄 Change Path — ✦${CHANGE_PROF_COST}`;
+    _cp.style.opacity=cr>=CHANGE_PROF_COST?'1':'.5';
+    _cp.title=cr>=CHANGE_PROF_COST?`Spend ✦${CHANGE_PROF_COST} to spin a new profession`:`Need ✦${CHANGE_PROF_COST} (you have ✦${fmt(cr)})`;
+  }
   // ONE SPIN PER LIFE — the career you roll is the life you live. No re-spins.
   // Swap: hide spin card, show reveal card
   const spCard=document.querySelector('.sp-card'),revCard=$('rev-card');
