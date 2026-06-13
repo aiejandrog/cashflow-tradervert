@@ -29,11 +29,7 @@
 @media (min-height:1000px){:root{--board-scale:0.92}}
 *{box-sizing:border-box;margin:0;padding:0}
 body{
-  background:var(--wood);
-  background-image:
-    repeating-linear-gradient(88deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 3px),
-    repeating-linear-gradient(0deg,transparent,transparent 22px,rgba(0,0,0,.02) 22px,rgba(0,0,0,.02) 23px),
-    linear-gradient(175deg,#d4a050 0%,#b87830 100%);
+  background:#0a0312; /* dark base — any resize gap/overscroll shows this, not the gold table */
   font-family:Georgia,'Times New Roman',serif;
   min-height:100vh; overflow:hidden;
 }
@@ -239,7 +235,13 @@ body{
 }
 
 /* ── GAME ── */
-#game{flex-direction:column;height:100vh;height:100dvh;overflow:hidden;position:relative}
+#game{flex-direction:column;height:100vh;height:100dvh;overflow:hidden;position:relative;
+  background:var(--wood);
+  background-image:
+    repeating-linear-gradient(88deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 3px),
+    repeating-linear-gradient(0deg,transparent,transparent 22px,rgba(0,0,0,.02) 22px,rgba(0,0,0,.02) 23px),
+    linear-gradient(175deg,#d4a050 0%,#b87830 100%);
+}
 
 /* Top bar */
 #top-bar{
