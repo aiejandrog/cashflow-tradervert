@@ -1147,6 +1147,9 @@ body{
   #chat-log{top:auto!important;bottom:100px!important;left:6px!important;right:6px!important;width:auto!important;max-height:32vh;border-radius:12px;position:fixed;transform:none!important}
   #chat-log #cl-rows{max-height:22vh}
   .cl-row{font-size:.72rem}
+  /* Fast Track panel stays centered in the board (absolute) at all sizes; just
+     give it a bit more width on small screens so the controls stay tappable. */
+  #ob-game-panel{width:92%!important;max-width:none!important}
   #win-view{padding:16px 10px}
   .win-grid{grid-template-columns:1fr 1fr;gap:8px}
   .win-box{padding:10px 8px}
@@ -1518,18 +1521,22 @@ body{
 .ob-roll-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 24px rgba(200,145,12,.6)}
 .ob-roll-btn:disabled{opacity:.5;cursor:default}
 .ob-log{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px;font-size:.62rem;color:rgba(255,255,255,.6);font-family:Arial,sans-serif;max-height:120px;overflow-y:auto;line-height:1.8}
-/* ── OUTER BOARD MODE (on #game screen) ── */
-#game.ob-mode #board-spaces,#game.ob-mode #player-token,#game.ob-mode #board-svg{opacity:0;pointer-events:none}
-#game.ob-mode .bc-logo,#game.ob-mode #dice-row,#game.ob-mode #die2-hint,
+/* ── FAST TRACK (Phase 2) — SAME board as Phase 1 ──
+   The escaped player moves to the OUTER RING; the inner rat-race board STAYS
+   visible (just dimmed so the active ring draws the eye). This keeps the Phase-1
+   look and lets MP players still see the inner board while one player runs the
+   Fast Track. The Fast Track controls live in a docked card (#ob-game-panel),
+   not a circular cover over the board. */
+#game.ob-mode #board-spaces,#game.ob-mode #board-svg{opacity:.42;pointer-events:none;filter:saturate(.8)}
+#game.ob-mode #player-token{display:none} /* you left the rat race — your token rides the outer ring now */
+#game.ob-mode #dice-row,#game.ob-mode #die2-hint,
 #game.ob-mode #roll-total,#game.ob-mode #board-msg,#game.ob-mode #board-turn-bar,
 #game.ob-mode #panic-bar{display:none!important}
+#game.ob-mode .bc-logo{opacity:.5}
+#game.ob-mode #center-roll-btn{display:none!important} /* Fast Track rolls from the panel's own ROLL */
 #ob-game-panel{pointer-events:auto}
 /* ob-space tiles inside the outer ring in ob-mode */
 #game.ob-mode .ot-row .ob-space,#game.ob-mode .ot-col .ob-space{flex-shrink:0}
-#game.ob-mode #board-inner{
-  background:radial-gradient(ellipse at 50% 50%,#1e1040 0%,#0e0820 55%,#06040f 100%);
-}
-#game.ob-mode #board-inner::before{display:none}/* hide green felt crosshatch in Fast Track */
 </style>
 </head>
 <body>
@@ -1816,7 +1823,7 @@ body{
               </div>
             </div>
           <!-- ⚡ Fast Track overlay — shown when player escapes Rat Race -->
-          <div id="ob-game-panel" style="display:none;position:absolute;inset:0;z-index:25;background:rgba(5,15,8,.9);border-radius:50%;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:5px;overflow:hidden;pointer-events:auto">
+          <div id="ob-game-panel" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;max-width:300px;max-height:90%;z-index:40;background:linear-gradient(160deg,rgba(10,20,14,.97),rgba(6,12,9,.97));border:2px solid rgba(240,192,32,.5);border-radius:50%;box-shadow:0 14px 44px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.05) inset;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:5px;overflow:hidden;pointer-events:auto">
             <div id="ob-dream-badge" class="ob-dream-badge" style="margin-bottom:2px;text-align:center">🎯 Dream: —</div>
             <div style="width:100%;max-width:270px">
               <div style="display:flex;justify-content:space-between;font-size:.52rem;color:rgba(255,255,255,.55);font-family:Arial,sans-serif;margin-bottom:2px">
