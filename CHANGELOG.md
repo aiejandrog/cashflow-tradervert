@@ -4,6 +4,10 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.15.1 — 2026-06-14 — Pet name plate + inline rename (user request)
+- Removed the `#pet-live` "● LIVE" indicator (+ its `petLive` keyframe).
+- Added `#pet-namebar` under the pet-cam: the pet's name in smooth **gold gradient** lettering (`-webkit-background-clip:text`), tappable to rename **inline** (`startRenamePet`/`commitRenamePet` swap a styled `#pet-name-inp`; Enter or blur commits, double-commit guarded). `_petDisplayName()` shows a custom name as-is or the preset's first word ("Scout"). New name stored on `G.pet.name` + `G.pet.named` flag (persists; old saves default to first-word display). Verified: LIVE gone, name shows, rename Scout→Rex persists.
+
 ## v1.15.0 — 2026-06-14 — Resign button, bankruptcy fix, MP Quick Match fix, rainbow loader
 - **Resign (user request):** ⚙️ Settings "Abandon Run" relabeled to **🏳️ Resign Game (end this run)** — clear concede that ends the run and returns to the menu (✦/trophies safe).
 - **Bankruptcy fix (user-reported):** a maxed-out, $0-cash, –$152k account limped forever. ROOT CAUSE: `checkBankruptcy` required `cf < -expenses*0.5` (e.g. CF needed to be worse than –$7.4k when expenses were $14.7k), so a –$4.7k CF never qualified. Rewrote the debt trigger to `loanRoom<=0 && cf<0 && cash<=0` (bank maxed, no borrowing room, bleeding, broke = unrecoverable). Verified it fires.

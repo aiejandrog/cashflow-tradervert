@@ -1990,12 +1990,15 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
   <!-- 🐾 Interactive pet-cam companion (bottom-left). Lives inside #game so it auto-hides off-screen. -->
   <div id="pet-panel" style="display:none">
     <div id="pet-cam">
-      <span id="pet-live">● LIVE</span>
       <div id="pet-bubble"></div>
       <div id="pet-stage">
         <div id="pet-face">🐶</div>
         <div id="pet-lids"></div>
       </div>
+    </div>
+    <div id="pet-namebar">
+      <span id="pet-name" onclick="if(typeof G!=='undefined'&&G)startRenamePet()" title="Tap to name your pet">Scout</span>
+      <input id="pet-name-inp" type="text" maxlength="14" placeholder="name…" onkeydown="if(event.key==='Enter'){event.preventDefault();commitRenamePet();}" onblur="commitRenamePet()" style="display:none">
     </div>
     <div id="pet-happy-wrap"><div id="pet-happy-bar"></div></div>
     <div id="pet-happy-lbl">Happy 60%</div>
@@ -2013,9 +2016,14 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
   #pet-cam{position:relative;height:104px;border-radius:11px;overflow:hidden;
     background:radial-gradient(ellipse at 50% 40%,#2a1a4d 0%,#15092b 70%,#0a0418 100%);
     border:1px solid rgba(120,70,190,.3)}
-  #pet-live{position:absolute;top:5px;right:7px;font-size:.46rem;font-weight:700;letter-spacing:.5px;
-    color:#ff5d5d;font-family:Arial,sans-serif;text-shadow:0 0 6px rgba(255,93,93,.6);z-index:5;animation:petLive 2s infinite}
-  @keyframes petLive{0%,70%{opacity:1}85%{opacity:.25}100%{opacity:1}}
+  #pet-namebar{text-align:center;margin:5px 2px 1px;min-height:17px;line-height:1}
+  #pet-name{display:inline-block;max-width:100%;font-family:Georgia,serif;font-weight:800;font-size:.84rem;letter-spacing:.4px;cursor:pointer;
+    background:linear-gradient(180deg,#ffe89a,#f0c020 58%,#d79a14);-webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 1px 6px rgba(240,192,32,.22);transition:filter .15s ease,transform .1s ease;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+  #pet-name:hover{filter:brightness(1.18)}
+  #pet-name:active{transform:scale(.95)}
+  #pet-name-inp{width:118px;max-width:100%;text-align:center;background:rgba(0,0,0,.45);border:1px solid rgba(240,192,32,.55);
+    border-radius:7px;color:#ffe89a;font-family:Georgia,serif;font-weight:800;font-size:.8rem;padding:2px 6px;outline:none}
   #pet-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
   #pet-face{font-size:3.1rem;line-height:1;filter:drop-shadow(0 3px 7px rgba(0,0,0,.5));will-change:transform;transform-origin:50% 78%}
   #pet-lids{position:absolute;left:50%;top:34%;transform:translateX(-50%);width:46px;height:7px;
@@ -2747,8 +2755,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.15.0';
+const GAME_VERSION='1.15.1';
 const CHANGELOG=[
+  {v:'1.15.1', date:'2026-06-14', notes:[
+    '🐶 Name your pet! The "LIVE" tag is gone — your companion\'s name now sits under the pet-cam in smooth gold lettering. Tap it anytime to rename your buddy.',
+  ]},
   {v:'1.15.0', date:'2026-06-14', notes:[
     '🏳️ New "Resign Game" button in Settings — end a run anytime and head back to the menu.',
     '💀 Fixed bankruptcy: a maxed-out, broke, deep-negative game now actually ends instead of dragging on forever.',
@@ -9883,11 +9894,35 @@ function petReact(kind){
     try{if(!window._muted)_tone(660,.07,'triangle',.06,0,990);}catch(e){}
   }
 }
+function _petDisplayName(){ // custom name as-is, else the preset's first word ("Scout", "Buddy"…)
+  if(!G||!G.pet)return'Pet';
+  return G.pet.named?(G.pet.name||'Pet'):((G.pet.name||'Pet').split(' ')[0]);
+}
+function startRenamePet(){ // inline edit in the panel — smooth, no popup
+  if(!G||!G.pet)return;
+  const span=document.getElementById('pet-name'),inp=document.getElementById('pet-name-inp');
+  if(!span||!inp)return;
+  inp.value=_petDisplayName().slice(0,14);
+  span.style.display='none';inp.style.display='inline-block';
+  inp.focus();try{inp.select();}catch(e){}
+}
+function commitRenamePet(){
+  if(!G||!G.pet)return;
+  const span=document.getElementById('pet-name'),inp=document.getElementById('pet-name-inp');
+  if(!inp||inp.style.display==='none')return; // guard double-commit (Enter then blur)
+  const v=(inp.value||'').trim().slice(0,14);
+  if(v){G.pet.name=v;G.pet.named=true;}
+  inp.style.display='none';if(span)span.style.display='';
+  renderPetPanel();try{saveGame();}catch(e){}
+  if(v){try{_petBubble('I\'m '+v+'!');}catch(e){}}
+}
 function renderPetPanel(){
   const panel=document.getElementById('pet-panel');if(!panel)return;
   if(!G||!G.pet){panel.style.display='none';return;}
   panel.style.display='';
   const face=document.getElementById('pet-face');if(face&&face.textContent!==G.pet.icon)face.textContent=G.pet.icon;
+  const nm=document.getElementById('pet-name'),nmInp=document.getElementById('pet-name-inp');
+  if(nm&&(!nmInp||nmInp.style.display==='none'))nm.textContent=_petDisplayName(); // don't clobber while editing
   const h=typeof G.petHappy==='number'?G.petHappy:60;
   const bar=document.getElementById('pet-happy-bar');
   if(bar){bar.style.width=h+'%';bar.style.background=h>=85?'linear-gradient(90deg,#f0c020,#fde68a)':h>=50?'linear-gradient(90deg,#16a34a,#5fd07a)':h>=25?'linear-gradient(90deg,#ca8a04,#fde68a)':'linear-gradient(90deg,#b91c1c,#fca5a5)';}
