@@ -1972,7 +1972,7 @@ body{
           <span id="lh-sub" style="font-size:.62rem;color:#6b5535;font-style:italic">Age 25 · Year 1</span>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:3px">
-          <span id="lh-car-chip" style="font-size:.58rem;background:rgba(45,74,122,.12);border:1px solid rgba(45,74,122,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#2d4a7a">🚙 Beater</span>
+          <span id="lh-car-chip" onclick="if(typeof G!=='undefined'&&G)openGarage()" title="Open your Garage — view & sell your vehicles" style="font-size:.58rem;background:rgba(45,74,122,.12);border:1px solid rgba(45,74,122,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#2d4a7a;cursor:pointer">🚙 Beater</span>
           <span id="lh-credit-chip" style="font-size:.58rem;background:rgba(107,63,168,.12);border:1px solid rgba(107,63,168,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#6b3fa8">💳 —</span>
           <span id="lh-delinq-chip" style="display:none;font-size:.58rem;background:rgba(180,30,30,.15);border:1px solid rgba(180,30,30,.4);border-radius:10px;padding:1px 8px;font-weight:900;color:#8b1a1a">🚨 DELINQUENT</span>
           <span id="lh-rel-chip" style="font-size:.58rem;background:rgba(180,60,120,.12);border:1px solid rgba(180,60,120,.3);border-radius:10px;padding:1px 8px;font-weight:700;color:#a83c78">Single</span>
@@ -5535,6 +5535,51 @@ function showSellCarDetail(saleVal,loanBal,fromBoard){
       {label:net>=0?`💰 Sell — get $${fmt(net)}`:`Sell — pay $${fmt(-net)}`,cls:'btn-gold',locked:net<0&&G.cash<-net,fn:()=>sellCurrentCar(saleVal,loanBal,fromBoard)},
       {label:'Keep it',cls:'btn-tan',fn:()=>{if(fromBoard)endTurn();}},
     ]});
+}
+// ── GARAGE — tap the Life Hub vehicle chip to see your ride(s) + sell ──────
+// Handles every state safely: no vehicle (transit/walk), unsellable starter
+// rides (bike/scooter/moto/beater — no resale model), a real financed car
+// (shows loan payoff + net), and underwater sells (locked if you can't cover).
+function openGarage(){
+  if(!G)return;
+  const car=G.carOwned, tp=G.transport;
+  const loanBal=(G.liabilities||[]).filter(l=>l.type==='carfin'||l.name==='Car Loan').reduce((s,l)=>s+(l.amt||0),0);
+  // No vehicle at all (public transit / rideshare / walk)
+  if(!car){
+    openModal({band:'gray',title:'🚙 Your Garage',
+      desc:`No vehicle in the garage right now${tp&&!tp.owned?` — you ride ${tp.emoji||''} ${tp.name} ($${fmt(tp.monthly||0)}/mo).`:'.'} Head to the Dealer to buy one — better credit, better financing.`,
+      rows:[['Vehicles owned','0',''],...(tp?[['Current transport',(tp.emoji||'')+' '+tp.name,''],['Monthly','$'+fmt(tp.monthly||0)+'/mo','']]:[])],
+      actions:[{label:'🚗 Visit the Dealer',cls:'btn-gold',fn:()=>{try{openCarDealership(false);}catch(e){}}},{label:'Close',cls:'btn-tan',fn:()=>{}}]});
+    return;
+  }
+  const sellable=!car.beater&&(car.price>0);            // dealership cars have a price/segment; starter rides don't
+  const saleVal=sellable?carResaleValue(car):0;
+  const net=saleVal-loanBal;
+  const tr=sellable?carValueTrend(car):null;
+  const yrsHeld=Math.max(0,((G.turn||0)-(car.purchaseTurn!=null?car.purchaseTurn:(G.turn||0)))/4);
+  const rows=[['🚗 Your Ride',`${car.emoji||'🚗'} ${car.name}`,'']];
+  if(sellable){
+    rows.push(['Paid','$'+fmt(car.price||0),'']);
+    rows.push(['Held',yrsHeld<0.3?'just bought':yrsHeld.toFixed(1)+' yrs','']);
+    rows.push(['Market Value','$'+fmt(saleVal),tr.color]);
+    rows.push(['Trend',tr.icon+' '+tr.label,tr.color]);
+    if(loanBal>0)rows.push(['Loan Balance','-$'+fmt(loanBal),'red']);
+    rows.push([net>=0?'Sell nets you':'Sell costs you',(net>=0?'+$':'-$')+fmt(Math.abs(net)),net>=0?'green':'red']);
+  }else{
+    rows.push(['Type','Starter ride','']);
+    if(loanBal>0)rows.push(['Loan Balance','-$'+fmt(loanBal),'red']);
+    rows.push(['Resale','No resale value — trade up at the Dealer','']);
+  }
+  const actions=[];
+  if(sellable){
+    const cantAfford=net<0&&G.cash<-net;
+    actions.push({label:cantAfford?`Sell — need $${fmt(-net)} to clear loan`:(net>=0?`💰 Sell ${car.name} — get $${fmt(net)}`:`Sell ${car.name} — pay $${fmt(-net)}`),cls:'btn-gold',locked:cantAfford,fn:()=>showSellCarDetail(saleVal,loanBal,false)});
+  }
+  actions.push({label:'🚗 Dealer — trade up / buy',cls:'btn-tan',fn:()=>{try{openCarDealership(false);}catch(e){}}});
+  actions.push({label:'Close',cls:'btn-tan',fn:()=>{}});
+  openModal({band:sellable&&tr&&tr.color==='green'?'gold':'green',title:'🚙 Your Garage',
+    desc:`Your vehicle, what it's worth, and your sell options.`,
+    rows,actions});
 }
 function openCarDealership(fromBoard){
   if(typeof _mpLocked==="function"&&_mpLocked()){_mpLockToast();return;} // out-of-turn players cannot spend on the active player's file
