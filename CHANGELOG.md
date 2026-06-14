@@ -4,6 +4,12 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.15.0 — 2026-06-14 — Resign button, bankruptcy fix, MP Quick Match fix, rainbow loader
+- **Resign (user request):** ⚙️ Settings "Abandon Run" relabeled to **🏳️ Resign Game (end this run)** — clear concede that ends the run and returns to the menu (✦/trophies safe).
+- **Bankruptcy fix (user-reported):** a maxed-out, $0-cash, –$152k account limped forever. ROOT CAUSE: `checkBankruptcy` required `cf < -expenses*0.5` (e.g. CF needed to be worse than –$7.4k when expenses were $14.7k), so a –$4.7k CF never qualified. Rewrote the debt trigger to `loanRoom<=0 && cf<0 && cash<=0` (bank maxed, no borrowing room, bleeding, broke = unrecoverable). Verified it fires.
+- **MP Quick Match fix (user-reported):** selecting 2-4 players then Quick Match dropped you into SOLO. `startQuickMatch` always called `startGame()` ignoring `_mpCount`. Now if `_mpCount>1` it sets `window._mpQuick`, randomizes the host's picks, and opens room setup; `mpConfirmRoomSetup` sees the flag and jumps straight to `mpAfterDreamGo()` (the lobby). Verified: 2 players → MP lobby, not solo. `mpCancelRoomSetup` clears the flag.
+- **Rainbow loader:** boot screen `.boot-bar-fill` is now a moving 8-stop rainbow (`background-size:200%` + `bootRainbow` keyframe) alongside the fill animation.
+
 ## v1.14.1 — 2026-06-14 — Pet reaction fix (no more glitch)
 - **Fixed (user-reported): the pet glitched/jittered when you pressed Pet.** Two causes: (1) `_petFaceAnim` called `element.animate()` without cancelling in-flight anims, so a Pet click colliding with the idle loop (or a fast 2nd click) stacked WAAPI animations → jump. Now it `getAnimations().forEach(cancel)` first (verified: exactly 1 animation at all times, even on rapid clicks). (2) `_petEyesClose` flashed two `#pet-lids` box-shadow bars over the face that didn't align with the eyes → read as a glitch; replaced with a clean scaleY blink. Also: Pet now plays ONE composite squash→stretch→tail-wag→settle (springy easing, `transform-origin:50% 78%`), scaled hearts, and varied reactions (sound / ♥ / 🐾 / *happy wiggle*); `window.__petBusy` makes the idle loop yield ~1.1s so it can't fight a fresh interaction.
 

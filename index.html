@@ -1701,8 +1701,12 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
 @keyframes bootShimmer{0%,100%{filter:drop-shadow(0 3px 14px rgba(240,192,32,.22)) brightness(1)}50%{filter:drop-shadow(0 3px 22px rgba(240,192,32,.5)) brightness(1.12)}}
 #boot-screen .boot-sub{font-family:Arial,sans-serif;font-size:.8rem;letter-spacing:5px;text-transform:uppercase;color:rgba(210,190,255,.7);margin-top:4px}
 #boot-screen .boot-bar{position:relative;z-index:2;width:min(220px,54vw);height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;animation:bootIn .9s .15s both}
-#boot-screen .boot-bar-fill{height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,#6b3fa8,#22d3ee 60%,#f0c020);animation:bootFill 1.5s ease-out forwards}
+#boot-screen .boot-bar-fill{height:100%;width:0;border-radius:4px;
+  background:linear-gradient(90deg,#ff3b3b,#ff9f1c,#f0e130,#3bff6a,#22d3ee,#6b8bff,#c77dff,#ff3b3b);
+  background-size:200% 100%;
+  animation:bootFill 1.5s ease-out forwards, bootRainbow 1.1s linear infinite}
 @keyframes bootFill{from{width:0}to{width:100%}}
+@keyframes bootRainbow{from{background-position:0% 0}to{background-position:200% 0}}
 #boot-screen .boot-skip{position:absolute;bottom:22px;font-family:Arial,sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.3);animation:bootSkipPulse 2.2s ease-in-out infinite}
 @keyframes bootSkipPulse{0%,100%{opacity:.25}50%{opacity:.6}}
 @media(max-width:620px){#boot-screen .boot-sub{font-size:.66rem;letter-spacing:3px}}
@@ -2743,8 +2747,14 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.14.1';
+const GAME_VERSION='1.15.0';
 const CHANGELOG=[
+  {v:'1.15.0', date:'2026-06-14', notes:[
+    '🏳️ New "Resign Game" button in Settings — end a run anytime and head back to the menu.',
+    '💀 Fixed bankruptcy: a maxed-out, broke, deep-negative game now actually ends instead of dragging on forever.',
+    '👥 Fixed Quick Match in multiplayer — picking 2-4 players then Quick Match now opens the multiplayer lobby instead of dropping you into a solo game.',
+    '🌈 The loading screen bar is now a moving rainbow.',
+  ]},
   {v:'1.14.1', date:'2026-06-14', notes:[
     '🐶 Petting your companion feels way better — fixed the glitchy jitter and gave it a bouncy squash-and-wag reaction with hearts and varied responses.',
   ]},
@@ -4200,6 +4210,14 @@ function startQuickMatch(){
   selectedIdentity={name:p.name,avatar:_presetAvatar(p),ethnicityLabel:p.eth,toneLabel:CHAR_TONES[p.ti].label,gender:p.g,ageStart:p.age,_typedName:true};
   window._nameQuipDone=true;                    // no quiz — speed is the point
   try{localStorage.removeItem('cf_pending_spin');}catch(e){} // not a spin — clear any stale lock
+  // MULTIPLAYER: if 2-4 players are selected, Quick Match must stay on the MP route —
+  // keep the random host picks, then go to room setup → lobby (NOT a solo game).
+  if((typeof _mpCount==='number'?_mpCount:1)>1){
+    window._mpQuick=true;
+    try{showToast('🎲 Quick Match (Multiplayer): random character ready — name your room to open the lobby','linear-gradient(135deg,#3a1d6b,#6b3fa8)',3000);}catch(e){}
+    try{mpShowRoomSetup();}catch(e){}
+    return;
+  }
   clearSave();
   startGame(selectedProf,selectedLocation);
   try{showToast('🎲 Quick Match: '+selectedProf.icon+' '+selectedProf.name+' in '+selectedLocation.name,'linear-gradient(135deg,#3a1d6b,#6b3fa8)',2800);}catch(e){}
@@ -7446,9 +7464,14 @@ const BANKRUPTCY_CASH_FLOOR=-3000;
 function checkBankruptcy(){
   if(!G||G._bankrupt||G._winning)return;
   const cf=monthlyCF();
-  // Trigger: cash deep negative (bank maxed) OR bank loan hit the cap AND CF is catastrophic
+  // Trigger when the spiral is genuinely unrecoverable:
+  //  • cash deep negative, OR
+  //  • bank loan maxed (no borrowing room left) AND bleeding (CF<0) AND out of cash.
+  // The old rule required CF worse than HALF of expenses, so a maxed-out, $0-cash,
+  // -$150k-net-worth account could limp forever (CF -$4.7k vs a -$7.4k threshold).
   const cashCrisis=G.cash<BANKRUPTCY_CASH_FLOOR;
-  const loanMaxed=(G.bankLoan||0)>=MAX_BANK_LOAN&&cf<-expenses().total*0.5;
+  const loanRoom=Math.max(0,MAX_BANK_LOAN-(G.bankLoan||0));
+  const loanMaxed=(loanRoom<=0)&&cf<0&&(G.cash||0)<=0;
   if(cashCrisis||loanMaxed){
     triggerBankruptcy(cashCrisis?'cash':'debt');
   }
@@ -10400,8 +10423,8 @@ function openSettings(){
         try{sessionStorage.removeItem('cf_in_game');}catch(e){}
         location.reload();
       }},
-      {label:'🗑 Abandon Run (delete save)',cls:'btn-tan',fn:()=>{
-        if(confirm('Delete this run permanently? Your ✦ credits and trophies are safe — only the run dies.')){
+      {label:'🏳️ Resign Game (end this run)',cls:'btn-tan',fn:()=>{
+        if(confirm('Resign this game and return to the menu? This run ends for good — but your ✦ credits and trophies are safe.')){
           clearSave();
           try{sessionStorage.removeItem('cf_in_game');}catch(e){}
           location.reload();
@@ -13035,10 +13058,14 @@ function mpConfirmRoomSetup(){
   PLAYERS=[]; // fresh setup ALWAYS starts a fresh roster — re-running setup used to append duplicates
   const hdr=$('mp-setup-hdr');if(hdr)hdr.style.display='';
   mpRefreshSetupHdr();
+  // Quick Match (MP): host picks are already randomized — skip the manual prof/city/dream
+  // screens and open the lobby right away.
+  if(window._mpQuick){window._mpQuick=false;try{mpAfterDreamGo();}catch(e){}}
 }
 
 function mpCancelRoomSetup(){
   const rs=$('mp-room-setup');if(rs)rs.style.display='none';
+  window._mpQuick=false; // clear any pending Quick-Match-MP intent
   // revert to single player
   _mpCount=1;
   [1,2,3,4].forEach(i=>{const b=$('mp-btn-'+i);if(b)b.classList.toggle('active',i===1);});
