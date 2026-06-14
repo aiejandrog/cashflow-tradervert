@@ -2767,8 +2767,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.17.2';
+const GAME_VERSION='1.17.3';
 const CHANGELOG=[
+  {v:'1.17.3', date:'2026-06-14', notes:[
+    '🎧 The DJ Booth is now FREE for everyone — no unlock needed. Open the music menu, paste a YouTube link, and play a song for the whole room anytime.',
+  ]},
   {v:'1.17.2', date:'2026-06-14', notes:[
     '🐦 New "Post on X" button on the win screen — brag about your run in one tap.',
     '🔗 Fixed the Follow / Support links (they pointed at an old page) so they reach the right spot now.',
@@ -3723,8 +3726,6 @@ const RARITY={
 };
 const RARITY_ORDER=['common','rare','epic','legendary','mythic'];
 const SHOP_ITEMS=[
-  // ── Perks (gameplay unlocks, not cosmetic) ──
-  {id:'dj', cat:'Perks', icon:'🎧', name:'DJ Booth', cost:1500, rarity:'epic', type:'perk', desc:'Paste a YouTube link in the music menu to play a song for the whole room.'},
   // ── Board felt themes ──
   {id:'th_midnight',cat:'Board Themes',icon:'🌌',name:'Midnight Felt', cost:500, rarity:'common',type:'theme',vals:{f1:'#1a2550',f2:'#0e1530',f3:'#070a18'}},
   {id:'th_crimson', cat:'Board Themes',icon:'🟥',name:'Crimson Felt',  cost:750, rarity:'rare',  type:'theme',vals:{f1:'#4d1a22',f2:'#2d0e14',f3:'#1a0808'}},
@@ -5001,7 +5002,7 @@ function _musMenuHTML(){
   // 🎧 DJ Booth perk — paste a YouTube link to play a song for the whole room
   let jukebox='';
   try{
-    const owned=loadProfile().owned.includes('dj');
+    const owned=true; // 🎧 DJ jukebox is free for everyone now
     if(owned){
       jukebox='<div style="border-top:1px solid rgba(160,120,255,.18);margin-top:6px;padding-top:5px">'
         +'<div onclick="jukeboxPrompt()" style="cursor:pointer;padding:8px 10px;border-radius:8px;background:linear-gradient(135deg,rgba(58,29,107,.55),rgba(107,63,168,.45));border:1px solid rgba(160,120,255,.5);color:#fff;font-size:.78rem;font-weight:800">🎵 Play a Song (YouTube)</div>'
@@ -5065,7 +5066,6 @@ function jukeboxStop(broadcast){
   try{_refreshMusicMenu();}catch(e){}
 }
 function jukeboxPrompt(){
-  if(!loadProfile().owned.includes('dj')){try{showToast('🎧 Unlock the DJ Booth in the Shop to play YouTube songs','#3a1d6b',3200,true);}catch(e){}return;}
   const u=prompt('Paste a YouTube link to play for the room:');if(u===null)return;
   const id=_ytParseId(u);
   if(!id){try{showToast('🎵 Couldn\'t read that link — paste a full YouTube URL','#7a1f1f',3200,true);}catch(e){}return;}

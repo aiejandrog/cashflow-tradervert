@@ -4,6 +4,10 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.17.3 — 2026-06-14 — DJ Booth free for everyone (+ full feature test)
+- **DJ jukebox un-gated:** removed the `dj` perk requirement — the YouTube jukebox is now free for all players (removed the Shop item, `_musMenuHTML` always shows "Play a Song", `jukeboxPrompt` no longer checks ownership). Reason: maximize interaction (the original ✦1500 gate kept most players from ever using it).
+- **Full feature test (verified live in-browser):** 8-roll core loop + payday (0 errors); all menus open (Dealer/Realty/Leisure/School/Settings/Shop); pets pet/feed/shop/inventory; **DJ jukebox played a real YouTube video end-to-end** — IFrame API loaded, player reached state PLAYING, `toggleMute` muted it, `jukeboxStop` cued/stopped it (the immediate post-command getters read stale state — YT API is async via postMessage — but settle correctly after ~1s). 0 console errors throughout.
+
 ## v1.17.2 — 2026-06-14 — Viral fixes: dead Follow/Support links + Post-on-X
 - **BUG (engagement leak):** 5 `freedomrace.itch.io` links (Follow/Support on the win screen, the level-up menu, and main Settings) pointed at the OLD account URL (renamed to `tradervert`). Fixed all → `tradervert.itch.io` / `tradervert.itch.io/freedom-race`. `copyWinResults` already shares `location.href` (correct, no change).
 - **Engagement add:** win screen gains a 🐦 **Post on X** button → `shareWinToX()` opens a tweet intent with a brag line (turns + grade + dream) + the game link + #FreedomRace — a one-tap desktop viral path alongside the native-share "Share Score". Verified: buttons render, intent URL valid, no stale links remain.
