@@ -9824,6 +9824,7 @@ function openSettings(){
     actions:[
       {label:"✨ What's New",cls:'btn-tan',fn:()=>{try{showChangelog();}catch(e){}}},
       {label:muted?'🔊 Unmute Sound':'🔇 Mute Sound',cls:'btn-tan',fn:()=>{toggleMute();openSettings();}},
+      {label:'🎵 Music',cls:'btn-tan',fn:()=>{try{toggleMusicMenu();}catch(e){}}},
       {label:'📖 Replay Tutorial',cls:'btn-tan',fn:()=>{try{startTutorial();}catch(e){}}},
       {label:'🔄 Restart Run (same career)',cls:'btn-tan',fn:()=>{
         if(confirm('Restart from Turn 0 as '+G.prof.name+'? Current progress is lost.'))replaySameProfession();
