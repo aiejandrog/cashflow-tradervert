@@ -1768,6 +1768,9 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     <div class="loc-title">🪪 Create Your Character</div>
     <div class="loc-sub">Who are you in this life? Pick your look, name, and starting age.</div>
     <div id="char-scroll">
+      <div class="char-sec-hdr" style="margin-top:0"><span class="char-step-num">⚡</span>Quick Pick <span style="opacity:.5;text-transform:none;letter-spacing:0;font-style:italic">— tap a ready-made character to skip ahead</span></div>
+      <div id="char-preset-row" style="display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;-webkit-overflow-scrolling:touch"></div>
+      <div class="char-sec-hdr"><span class="char-step-num">✎</span>…or build your own</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div>
           <div class="char-sec-hdr"><span class="char-step-num">1</span>Your Name</div>
@@ -2566,8 +2569,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.3.0';
+const GAME_VERSION='1.4.0';
 const CHANGELOG=[
+  {v:'1.4.0', date:'2026-06-14', notes:[
+    '⚡ NEW: Quick Pick characters — tap a ready-made character on the create screen to skip straight to picking your city. No more building one from scratch if you don\'t want to.',
+    '🧑‍🤝‍🧑 10 diverse presets to choose from (or still build your own, as always).',
+  ]},
   {v:'1.3.0', date:'2026-06-14', notes:[
     '🔮 The name guesser got a HUGE upgrade — it now recognizes 78 characters from shows, anime, games, movies, music & memes (Stranger Things, One Piece, Zelda, Taylor Swift, Gigachad & more).',
     '🌍 Smarter origin guessing across 16 regions with way better data — and fixed the old bugs (it no longer thinks "Charlie" is Chinese or "Mason" is Scandinavian).',
@@ -13931,8 +13938,44 @@ function _charDefaultIdentity(){
   const seedAge=Math.min(40,Math.max(18,(selectedProf&&selectedProf.age)||25));
   return{name:'',avatar:'\u{1F9D1}\u{1F3FD}',ethnicityLabel:'',toneLabel:'Medium',ageStart:seedAge};
 }
+// ── Preset characters — one tap to skip the whole creator. si/ti index CHAR_STYLES/CHAR_TONES. ──
+const PRESET_CHARS=[
+  {name:'Marcus', si:1, ti:2, g:'m', eth:'Latino / Hispanic',            age:24},
+  {name:'Sofia',  si:2, ti:0, g:'f', eth:'White / European',             age:22},
+  {name:'Amara',  si:4, ti:4, g:'f', eth:'Black / African American',     age:28},
+  {name:'Jack',   si:6, ti:0, g:'m', eth:'White / European',             age:35},
+  {name:'Priya',  si:2, ti:3, g:'f', eth:'South Asian',                  age:26},
+  {name:'Walter', si:8, ti:1, g:'m', eth:'White / European',             age:40},
+  {name:'DeShawn',si:7, ti:4, g:'m', eth:'Black / African American',     age:30},
+  {name:'Mei',    si:2, ti:0, g:'f', eth:'East Asian',                   age:21},
+  {name:'Layla',  si:9, ti:2, g:'f', eth:'Middle Eastern / North African',age:23},
+  {name:'Sam',    si:0, ti:2, g:'n', eth:'',                             age:27},
+];
+function _presetAvatar(p){try{return CHAR_STYLES[p.si].build(CHAR_TONES[p.ti].mod);}catch(e){return '\u{1F9D1}';}}
+function renderPresetChars(){
+  const row=document.getElementById('char-preset-row'); if(!row)return;
+  row.innerHTML=PRESET_CHARS.map((p,i)=>{
+    const av=_presetAvatar(p);
+    return '<div onclick="applyPreset('+i+')" title="Play as '+p.name+', age '+p.age+' — skip straight to picking your city" '+
+      'style="flex:0 0 auto;width:82px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.14);border-radius:12px;transition:all .14s" '+
+      'onmouseenter="this.style.borderColor=\'#f0c020\';this.style.background=\'rgba(240,192,32,.12)\';this.style.transform=\'translateY(-2px)\'" '+
+      'onmouseleave="this.style.borderColor=\'rgba(255,255,255,.14)\';this.style.background=\'rgba(255,255,255,.05)\';this.style.transform=\'\'">'+
+      '<div style="font-size:1.95rem;line-height:1">'+av+'</div>'+
+      '<div style="font-size:.72rem;font-weight:800;color:#f0dc90;font-family:Georgia,serif;white-space:nowrap">'+p.name+'</div>'+
+      '<div style="font-size:.56rem;color:rgba(200,175,120,.7)">Age '+p.age+'</div>'+
+      '</div>';
+  }).join('');
+}
+function applyPreset(i){
+  const p=PRESET_CHARS[i]; if(!p)return;
+  selectedIdentity={name:p.name,avatar:_presetAvatar(p),ethnicityLabel:p.eth,toneLabel:CHAR_TONES[p.ti].label,gender:p.g,ageStart:p.age,_typedName:true};
+  window._nameQuipDone=true; // quick-pick skips the name-guess quip — speed is the whole point
+  try{playClick&&playClick();}catch(e){}
+  const btn=document.getElementById('btn-char-go'); if(btn)btn.click(); // reuse the real proceed path (solo + MP)
+}
 function buildCharacterScreen(){
   if(!selectedIdentity)selectedIdentity=_charDefaultIdentity();
+  try{renderPresetChars();}catch(e){}
   const grid=$('char-avatar-grid');grid.innerHTML='';
   CHAR_STYLES.forEach(style=>{
     CHAR_TONES.forEach(tone=>{

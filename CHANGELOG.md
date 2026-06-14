@@ -4,6 +4,10 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.4.0 — 2026-06-14 — Quick Pick characters
+- **Preset characters**: a "⚡ Quick Pick" row at the top of the create screen with 10 ready-made, diverse characters (`PRESET_CHARS`, built from `CHAR_STYLES`/`CHAR_TONES`). Tapping one fills `selectedIdentity` fully and reuses the real `btn-char-go` proceed path (works solo + MP), skipping the manual creator and the name-guess quip → straight to the city screen. The manual builder is unchanged below ("…or build your own").
+- Verified: 10 cards render with correct avatars/names/ages; applyPreset sets identity + advances to location; identity flows into a started game (G.identity correct).
+
 ## v1.3.0 — 2026-06-14 — Name guesser overhaul
 - **Pop-culture name radar** `_FAMOUS_NAMES` expanded 37→78 entries: added TV (Stranger Things, Mandalorian, Squid Game, Wednesday, TLOU, Sopranos, Peaky Blinders, Better Call Saul, Money Heist, Friends, Seinfeld, South Park, Family Guy), anime (Avatar, One Piece, AoT, Demon Slayer, MHA), games (Minecraft, Zelda, Sonic, GTA, Halo, GoW), movies (Matrix, Titanic, Pixar, Disney, DC, Marvel, Despicable Me, Barbie, Oppenheimer), music (BTS, Taylor Swift, Bad Bunny, hip-hop), memes & history. Anchored regexes to avoid false hits on real names.
 - **Origin guesser** `_guessNameOrigin` rewritten: exact first-name lookup (`_NAME_ORIGINS`/`_NAME_FIRST`, 16 regions, ~400 names) + anchored surname-pattern fallbacks (`_NAME_PATTERNS`). Fixes the loose-substring bugs (Charlie→China via "li", Mason/Jason→Scandinavia via "son"). Verified across 16 region samples + false-positive regression set.
