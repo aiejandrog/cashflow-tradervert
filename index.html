@@ -2566,8 +2566,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.2.2';
+const GAME_VERSION='1.3.0';
 const CHANGELOG=[
+  {v:'1.3.0', date:'2026-06-14', notes:[
+    '🔮 The name guesser got a HUGE upgrade — it now recognizes 78 characters from shows, anime, games, movies, music & memes (Stranger Things, One Piece, Zelda, Taylor Swift, Gigachad & more).',
+    '🌍 Smarter origin guessing across 16 regions with way better data — and fixed the old bugs (it no longer thinks "Charlie" is Chinese or "Mason" is Scandinavian).',
+  ]},
   {v:'1.2.2', date:'2026-06-14', notes:[
     '✨ Polish pass: every button now depresses when you tap it (satisfying press feedback).',
     '🔘 Unified the top-bar status chips and rounded button corners for a cleaner, more consistent look.',
@@ -14025,17 +14029,45 @@ function _charSyncPreview(){
 }
 // ── NAME ORIGIN GUESS — one-shot icebreaker after naming your character.
 // Pure pattern-matching for fun; the answers earn you a witty reply either way.
+// Region → common FIRST names (space-separated). Matched on the EXACT first token
+// (no loose substrings — that's what made "Charlie"→China and "Mason"→Scandinavia).
+// Order = tie-break priority when a name appears in two regions.
+const _NAME_ORIGINS=[
+ ['Latin America or Spain','jose juan carlos luis miguel jorge pedro diego javier alejandro alejandra antonio manuel francisco rafael fernando ricardo eduardo roberto sergio andres pablo mateo santiago sebastian emiliano matias benjamin maria sofia isabella valentina camila lucia elena carmen rosa ana gabriela daniela mariana valeria ximena guadalupe alejandra paola lorena rocio'],
+ ['Italy','giovanni giuseppe marco luca matteo francesco alessandro lorenzo leonardo gabriele mattia riccardo salvatore vincenzo angelo enzo stefano paolo giulia francesca chiara martina alessia federico fabio gianni rocco bruno'],
+ ['France','pierre jean jacques michel claude antoine louis hugo jules gabriel raphael arthur nathan francois philippe thierry laurent sebastien remy etienne marie sophie camille chloe manon lea emma ines juliette amelie celine margaux elodie'],
+ ['Germany','hans fritz klaus jurgen wolfgang dieter gunther helmut heinrich otto kurt horst manfred lukas jonas leon finn felix maximilian moritz mathias greta heidi ingrid ursula helga gisela petra sabine brigitte'],
+ ['Eastern Europe','vladimir dmitri ivan sergei alexei mikhail nikolai boris yuri oleg igor anton pavel viktor natasha olga svetlana irina ekaterina anastasia tatiana nadia piotr krzysztof tomasz andrzej wojciech agnieszka katarzyna'],
+ ['Scandinavia','erik lars sven bjorn gunnar magnus anders nils henrik ole leif olaf freya astrid sigrid solveig britt soren mads rasmus'],
+ ['Ireland or Scotland','sean liam conor cian declan ronan fionn oisin niall padraig aoife siobhan niamh saoirse ciara roisin fiona bridget hamish angus duncan callum ewan fergus lachlan'],
+ ['England','oliver harry george jack charlie thomas william henry edward alfie archie freddie alice amelia poppy evie daisy florence edith nigel trevor clive graham colin derek gary barry malcolm'],
+ ['South Asia (India)','raj ravi amit anil vijay sanjay rahul arjun rohan aditya vikram deepak suresh ramesh ganesh krishna arun ashok priya neha pooja anjali sunita kavya ananya aishwarya divya meera lakshmi harpreet gurpreet simran'],
+ ['China','wei ming jun hao lei feng yang chen liu yan xin jing mei ling hui fang hong xiaoming jianguo'],
+ ['Japan','hiroshi takeshi kenji akira satoshi yuki haruki daiki ren sora haru riku yuto hana sakura yui aoi rin emi naoki kaito kenta'],
+ ['Korea','minjun seojun doyun jiho hyun jisoo jiwoo seoyeon jimin jungkook taehyung minho jihoon eunwoo soyeon'],
+ ['the Middle East','mohammed muhammad ahmed ali omar hassan hussein khaled tariq yusuf ibrahim mahmoud samir karim rashid amir bilal hamza abdul fatima aisha layla zainab mariam noor yasmin'],
+ ['Greece','nikos yannis dimitris georgios kostas christos vasilis panagiotis stavros eleni katerina despina ioanna athina'],
+ ['West Africa','chidi chinedu emeka obi adebayo oluwaseun olu kwame kofi kojo abena nia amara zola ngozi chioma adaeze femi tunde segun bola folake'],
+ ['Portugal or Brazil','joao tiago rui nuno bruno rodrigo gustavo thiago mateus vinicius joaquim beatriz catarina leonor matilde'],
+];
+const _NAME_FIRST=(()=>{const m=new Map();for(const [region,s] of _NAME_ORIGINS){for(const nm of s.split(' '))if(nm&&!m.has(nm))m.set(nm,region);}return m;})();
+// Anchored surname/ending fallbacks (applied to the full name) — far fewer false
+// positives than the old loose substrings.
+const _NAME_PATTERNS=[
+  [/^(mc|mac|o')/,'Ireland or Scotland'],
+  [/(ovich|ovna|enko|ovsky|evsky|sky|ski|wski|czyk|czak|escu|eanu)$/,'Eastern Europe'],
+  [/(sson|sen|berg|strom|quist|gaard|stad)$/,'Scandinavia'],
+  [/(opoulos|akis|idis|akos)$/,'Greece'],
+  [/(zadeh|pour|abadi)$/,'the Middle East'],
+  [/(ese|ini|etti|otti|ino|elli)$/,'Italy'],
+  [/(eau|oux|aux)$/,'France'],
+  [/(eke|ola|chukwu|nna)$/,'West Africa'],
+];
 function _guessNameOrigin(name){
-  const n=(name||'').toLowerCase();
-  if(/(ez|az|os|ito|ita|cia|jo)$|^(jose|juan|maria|carlos|luis|alej|pedro|diego|sofia|valent)/.test(n))return 'Latin America or Spain';
-  if(/(ov|ova|ev|sky|ski|enko|mir)$|^(vlad|dmit|olg|nat|ivan|serg)/.test(n))return 'Eastern Europe';
-  if(/^(mc|mac|o')|(agh|aith)$/.test(n))return 'Ireland or Scotland';
-  if(/(son|sen|berg|strom)$/.test(n))return 'Scandinavia';
-  if(/(preet|deep|esh|raj|av|ya)$|^(arj|ravi|priya|anil|sanj)/.test(n))return 'South Asia';
-  if(/(ko|ito|aki|umi|hiro)$|^(yuki|kenji|saku|hana)/.test(n))return 'Japan';
-  if(/(chen|wang|li|zhang|wei|ming)/.test(n))return 'China';
-  if(/^(ade|olu|chi|ngo|kwa)|(ade|ola|emi|chukwu)$/.test(n))return 'West Africa';
-  if(/(ed|elle|ette|eau)$|^(pierre|claude|marie|jean)/.test(n))return 'France';
+  const full=(name||'').trim().toLowerCase();
+  const first=full.split(/\s+/)[0]||full;
+  if(_NAME_FIRST.has(first))return _NAME_FIRST.get(first);
+  for(const [re,region] of _NAME_PATTERNS){if(re.test(full))return region;}
   return 'the good ol\' USA';
 }
 // Pop-culture name radar — checked BEFORE the country guesser. Each entry:
@@ -14077,6 +14109,54 @@ const _FAMOUS_NAMES=[
   [/john\s*cena/, 'WWE', 'Is it? I literally can\'t see you. 🤚'],
   [/pikachu|pokemon|charizard/, 'Pokémon', 'Gotta catch all the income streams. ⚡'],
   [/deadpool|wade\s*wilson/, 'Deadpool', 'Maximum effort on those mortgage payments. 💀'],
+  // ── TV shows ──
+  [/eleven|hawkins|dustin\s*henderson|mike\s*wheeler|\bdemogorgon\b/, 'Stranger Things', 'Run up the stairs — and up the savings. 🧇'],
+  [/grogu|mandalorian|\bmando\b|baby\s*yoda/, 'The Mandalorian', 'This is the way… to compound interest. 👶'],
+  [/squid\s*game|gi-?hun|player\s*456/, 'Squid Game', 'Win the game, dodge the debt. Green light on assets. 🦑'],
+  [/wednesday\s*addams/, 'Wednesday', 'Two snaps for diversified income. 🖤'],
+  [/joel\s*miller|\bellie\b|last\s*of\s*us/, 'The Last of Us', 'Endure, survive, and reinvest. 🍄'],
+  [/tony\s*soprano|sopranos/, 'The Sopranos', 'Waste management pays — index funds pay quieter. 🦆'],
+  [/tommy\s*shelby|peaky\s*blind/, 'Peaky Blinders', 'By order of the Peaky f***in’ Portfolio. 🎩'],
+  [/saul\s*goodman|jimmy\s*mcgill/, 'Better Call Saul', 'Better call… your financial advisor. ⚖️'],
+  [/money\s*heist|la\s*casa\s*de\s*papel/, 'Money Heist', 'Bella ciao to bad debt. 🎭'],
+  [/ross\s*geller|rachel\s*green|joey\s*tribbiani|chandler\s*bing|monica\s*geller|phoebe\s*buffay/, 'Friends', 'Could you BE any more financially free? ☕'],
+  [/seinfeld|cosmo\s*kramer|george\s*costanza/, 'Seinfeld', 'A show about nothing — keep your fees that way too. 🥨'],
+  [/cartman|kenny\s*mccormick|kyle\s*broflovski|stan\s*marsh/, 'South Park', 'Respect mah… budget. 🚌'],
+  [/peter\s*griffin|stewie\s*griffin|brian\s*griffin/, 'Family Guy', 'Freakin’ sweet returns. Giggity. 👶'],
+  [/walter\s*hartwell|\bjesse\s*pinkman\b/, 'Breaking Bad', 'Yeah science — the science of dollar-cost averaging. 🧪'],
+  // ── Anime ──
+  [/\baang\b|\bkorra\b|zuko|katara|\btoph\b|airbender/, 'Avatar: The Last Airbender', 'Master all four: earnings, equity, assets, exit. 🌊'],
+  [/luffy|\bzoro\b|one\s*piece/, 'One Piece', 'The real treasure was the portfolio we built. 🏴‍☠️'],
+  [/\beren\b|mikasa|levi\s*ackerman|attack\s*on\s*titan/, 'Attack on Titan', 'Tear down the walls between you and freedom. ⚔️'],
+  [/tanjiro|nezuko|demon\s*slayer/, 'Demon Slayer', 'Breathing technique: inhale income, exhale debt. 🌬️'],
+  [/\bdeku\b|bakugo|all\s*might|my\s*hero/, 'My Hero Academia', 'Plus Ultra those savings. 💥'],
+  // ── Video games ──
+  [/minecraft|creeper|herobrine|enderman|\bsteve\b\s*and\s*alex/, 'Minecraft', 'Mine the income, craft the freedom. Mind the creepers (fees). 🟩'],
+  [/\blink\b\s*(of\s*)?hyrule|zelda|\bganon\b|hyrule/, 'The Legend of Zelda', 'It’s dangerous to go alone — take this rental. 🗡️'],
+  [/\bsonic\b|tails\s*the|knuckles\s*the/, 'Sonic the Hedgehog', 'Gotta go fast — but invest slow. 💍'],
+  [/grand\s*theft|trevor\s*phillips|niko\s*bellic|franklin\s*clinton|\bgta\b/, 'GTA', 'Ah s***, here we go again — legally, with index funds. 💸'],
+  [/master\s*chief|halo\s*spartan/, 'Halo', 'Finish the fight — then the mortgage. 🪖'],
+  [/kratos|atreus/, 'God of War', 'BOY. Diversify. 🪓'],
+  // ── Movies ──
+  [/\bneo\b\s|morpheus|matrix/, 'The Matrix', 'Take the red pill: passive income is real. 💊'],
+  [/jack\s*dawson|rose\s*dewitt/, 'Titanic', 'There WAS room on that door — and in that emergency fund. 🚢'],
+  [/buzz\s*lightyear|woody\s*the|lightning\s*mcqueen|wall-?e/, 'Pixar', 'To infinity… and beyond your savings goal. 🚀'],
+  [/moana|\bariel\b|mulan|rapunzel|pocahontas|\btiana\b/, 'Disney', 'Someday your dividends will come. 👑'],
+  [/\bjoker\b|harley\s*quinn|superman|clark\s*kent|wonder\s*woman|aquaman/, 'DC', 'Why so serious? About your credit score. 🃏'],
+  [/\bthor\b|\bhulk\b|\bloki\b|thanos|\bgroot\b|captain\s*america|black\s*panther|scarlet\s*witch|doctor\s*strange/, 'Marvel', 'Avengers… assemble a portfolio. 🛡️'],
+  [/\bgru\b|minion|despicable/, 'Despicable Me', 'Steal the market returns, not the moon. 🌙'],
+  [/\bbarbie\b/, 'Barbie', 'She’s everything. He’s just… over-leveraged. 💖'],
+  [/oppenheimer/, 'Oppenheimer', 'Now I am become Wealth, builder of portfolios. 💥'],
+  // ── Music ──
+  [/\bbts\b|jungkook|jimin|\bsuga\b|taehyung/, 'BTS', 'Dynamite returns. 💜'],
+  [/taylor\s*swift|swiftie/, 'Taylor Swift', 'Shake off the bad debt. Current era: Financial Freedom. 🎶'],
+  [/bad\s*bunny|benito/, 'Bad Bunny', 'Yo perreo solo… con mis inversiones. 🐰'],
+  [/kanye|yeezy|kendrick|travis\s*scott/, 'hip-hop royalty', 'Own the masters. Literally — own master rights. 🎤'],
+  // ── Memes & legends ──
+  [/gigachad|\bchad\b/, 'meme royalty', 'Yes. He buys assets. Simple as. 🗿'],
+  [/\bkaren\b/, 'meme royalty', 'Can I speak to your… compound interest? 💁'],
+  [/\bdoge\b|much\s*wow|such\s*wow/, 'meme royalty', 'Much income. Very freedom. Wow. 🐕'],
+  [/napoleon|julius\s*caesar|cleopatra|genghis\s*khan/, 'the history books', 'Conquer markets, not nations. 👑'],
 ];
 function _famousName(name){
   const n=(name||'').toLowerCase();
