@@ -10023,7 +10023,8 @@ function enterFastTrack(pass,exp){
   _ftIndexPerimeter();_ftDecorateDreams(true);
   if(typeof ensureObToken==='function')ensureObToken();
   positionFtToken(0,false);setTimeout(()=>positionFtToken(0,false),500);
-  addLog('🏁','ESCAPED THE RAT RACE → Fast Track! Roll around the outside — land on a ⭐ corner with enough cash to buy your dream and WIN.','gold');
+  {const _d=G.dream||DREAMS[0];addLog('🏁',`ESCAPED THE RAT RACE → Fast Track! Reach a ⭐ corner with $${fmt(_d.cost||400000)} to buy your dream (${_d.icon} ${_d.name}) and WIN. You have $${fmt(G.cash)}.`,'gold');
+  if(!document.hidden)try{showToast(`🏁 Fast Track! Target: ${_d.icon} ${_d.name} — $${fmt(_d.cost||400000)} on a ⭐ corner`,'#7a5a01',5000,true);}catch(e){}}
   try{if(typeof spawnWinConfetti==='function')spawnWinConfetti();}catch(e){}
   try{if(typeof _haptic==='function')_haptic([40,30,40,30,90]);}catch(e){}
   saveGame();
@@ -10173,7 +10174,7 @@ function mpEnterFastTrack(pass,exp){
     G._auditPlanMonths=0;
   }
   G.rolling=false;
-  addLog('🏁','ESCAPED THE RAT RACE → Fast Track! On your turns, ride the outer ring. Land on a ⭐ dream corner with enough cash to WIN.','gold');
+  {const _d=G.dream||DREAMS[0];addLog('🏁',`ESCAPED THE RAT RACE → Fast Track! Ride the outer ring; reach a ⭐ corner with $${fmt(_d.cost||400000)} for your dream (${_d.icon} ${_d.name}) to WIN.`,'gold');}
   try{if(typeof _haptic==='function')_haptic([40,30,40,30,90]);}catch(e){}
 }
 
