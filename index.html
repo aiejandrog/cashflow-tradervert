@@ -2756,8 +2756,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.16.0';
+const GAME_VERSION='1.17.0';
 const CHANGELOG=[
+  {v:'1.17.0', date:'2026-06-14', notes:[
+    '🐶 12 NEW pets! Husky, Pit Bull, Rottweiler, Chihuahua, Corgi, Poodle, Black Cat, Kitten, Rabbit, Fox & a Tiger Cub — adopt them in the new 🛍 Pet Shop.',
+    '🎒 Pet INVENTORY — own as many pets as you want and swap which one rides in the pet-cam from "My Pets". Only your active pet\'s income bonus applies.',
+  ]},
   {v:'1.16.0', date:'2026-06-14', notes:[
     '🎧 NEW: DJ Booth! Unlock it in the Shop, then paste any YouTube link in the music menu to play a song for everyone in the room. Anyone can mute it with the 🔊 button.',
     '🛠 Fixed the LIFE FEED — it can no longer be dragged off-screen above the top bar, and you can double-click its header (or tap ⤢) to snap it back into place.',
@@ -3184,6 +3188,18 @@ const PETS = [
   {id:'parrot',  name:'Captain the Parrot',  icon:'🦜',adopt:1400, bonus:140, sound:'Buy assets!',treat:'🥜',blurb:'Repeats "buy assets" until it sticks. Best financial advisor you\'ll own.'},
   {id:'dog',     name:'Buddy the Dog',       icon:'🐕',adopt:1800, bonus:190, sound:'Woof!',  treat:'🦴',blurb:'Unconditional love + forced morning walks = happier, richer you.'},
   {id:'dragon',  name:'Smaug the Dragon',    icon:'🐉',adopt:50000,bonus:2200,sound:'RAWR!',  treat:'🍖',blurb:'Hoards gold professionally. The ultimate flex pet — if you can afford the vet.'},
+  // ── Exotic dog breeds, cats & wild cards (added by user request — get creative) ──
+  {id:'chihuahua',name:'Peanut the Chihuahua',icon:'🐶',adopt:500,  bonus:55,  sound:'Yip yip!',treat:'🦴',blurb:'Tiny, loud, convinced it\'s a Rottweiler. Big attitude, small vet bills.'},
+  {id:'kitten',  name:'Mochi the Kitten',    icon:'🐱',adopt:700,  bonus:80,  sound:'mew!',   treat:'🐟',blurb:'A ball of chaos and purrs. Naps directly on your spreadsheets.'},
+  {id:'rabbit',  name:'Hops the Rabbit',     icon:'🐰',adopt:1000, bonus:110, sound:'*sniff*',treat:'🥕',blurb:'Multiplies your joy (and only your joy). Pure zen-garden energy.'},
+  {id:'corgi',   name:'Biscuit the Corgi',   icon:'🐕',adopt:1200, bonus:125, sound:'Borf!',  treat:'🦴',blurb:'Short legs, long loyalty. Herds you toward good decisions.'},
+  {id:'poodle',  name:'Coco the Poodle',     icon:'🐩',adopt:1500, bonus:150, sound:'Yap!',   treat:'🦴',blurb:'High-maintenance hair, low-maintenance love. Looks like money.'},
+  {id:'blackcat',name:'Shadow the Black Cat',icon:'🐈‍⬛',adopt:1700,bonus:175, sound:'Mrrow.', treat:'🐟',blurb:'Bad luck for everyone but you. Curls up on the cash pile.'},
+  {id:'husky',   name:'Loki the Husky',      icon:'🐺',adopt:2400, bonus:250, sound:'Awooo!', treat:'🦴',blurb:'Dramatic, talkative, gorgeous. Will argue with you about walkies.'},
+  {id:'pitbull', name:'Bruno the Pit Bull',  icon:'🐕‍🦺',adopt:2800,bonus:290, sound:'WOOF!',  treat:'🦴',blurb:'All muscle, all mush. Guards your dreams like they\'re bones.'},
+  {id:'rottweiler',name:'Tank the Rottweiler',icon:'🦮',adopt:3400, bonus:360, sound:'GRRWOOF!',treat:'🥩',blurb:'Loyal heavyweight. Nobody is repossessing anything on his watch.'},
+  {id:'fox',     name:'Vivi the Fox',        icon:'🦊',adopt:6500, bonus:560, sound:'Ring-ding!',treat:'🍇',blurb:'Clever, exotic, slightly illegal in some cities. Worth every penny.'},
+  {id:'tiger',   name:'Raja the Tiger Cub',  icon:'🐯',adopt:20000,bonus:1050,sound:'rawr~',  treat:'🥩',blurb:'Tiger King energy on a budget. The flex right below a dragon.'},
   // Free starter — everyone owns this from turn one so the pet-cam panel is always alive. adopt:0 keeps it out of the buy list. bonus:0 keeps balance clean (its reward is the happiness payday tip).
   {id:'stray',   name:'Scout the Stray Pup', icon:'🐶',adopt:0,    bonus:0,   sound:'Woof!',  treat:'🦴',blurb:'Found you on day one. Loyal, free, and always happy to see you.'},
 ];
@@ -4286,7 +4302,7 @@ function initGame(prof, location) {
       {name:'Credit Cards', amt:scaledProf.ccDebt},
     ].filter(l=>l.amt>0),
     bankLoan:0, extraChildren:0, numChildren:0, extraBankPmt:0,
-    skipTurns:0, salaryBoost:0, edu:0, pet:{id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0}, petHappy:60, petTreats:3,
+    skipTurns:0, salaryBoost:0, edu:0, pet:{id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0}, pets:[{id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0}], petHappy:60, petTreats:3,
     // Family situation: override housing cost to a small family contribution
     expenseOverrides:housingSituation==='family'
       ?{mortgage:Math.round(scaledProf.mortgage*0.18/50)*50||200}
@@ -9879,14 +9895,18 @@ function openPets(){
     {label:G.petTreats>0?('🦴 Give a treat ('+G.petTreats+' left)'):'🦴 Out of treats — refills at payday',cls:'btn-tan',locked:(G.petTreats||0)<=0,fn:()=>{feedPet();openPets();}},
     {label:'✏️ Rename '+_petDisplayName(),cls:'btn-tan',fn:()=>{
       const n=prompt('Name your pet:',_petDisplayName());
-      if(n&&n.trim()){G.pet.name=n.trim().slice(0,14);G.pet.named=true;try{renderPetPanel();}catch(e){}updateUI();saveGame();}
+      if(n&&n.trim()){G.pet.name=n.trim().slice(0,14);G.pet.named=true;try{_petSyncActive();}catch(e){}try{renderPetPanel();}catch(e){}updateUI();saveGame();}
       openPets();
     }},
-    {label:'🐾 Adopt a different friend',cls:'btn-tan',fn:openPetAdopt},
+    {label:'🎒 My Pets ('+_petsArr().length+')',cls:'btn-tan',fn:openPetInventory},
+    {label:'🛍 Pet Shop',cls:'btn-tan',fn:openPetShop},
   ];
   if(!isStarter)acts.push({label:'↩ Release to the shelter',cls:'btn-tan',fn:()=>{
-    if(confirm('Release '+G.pet.name+'? You lose the +$'+fmt(G.pet.bonus)+'/mo morale boost and go back to Scout the Stray Pup (free).')){
+    if(confirm('Release '+G.pet.name+'? It leaves your collection and you switch back to Scout (no refund).')){
+      const rid=G.pet.id;
       G.salaryBoost=(G.salaryBoost||0)-(G.pet.bonus||0);
+      G.pets=_petsArr().filter(function(x){return x.id!==rid;});
+      if(!G.pets.some(function(x){return x.id==='stray';}))G.pets.unshift({id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0});
       addLog('↩','Released '+G.pet.name+' to a good home. Scout is glad to have you back.','b');
       G.pet={id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0};
       try{renderPetPanel();}catch(e){}updateUI();saveGame();openPets();
@@ -9904,27 +9924,61 @@ function openPets(){
     ].filter(Boolean),
     actions:acts,_noFS:true});
 }
-function openPetAdopt(){
-  openModal({band:'life',title:'🐾 Adopt a Companion',
-    desc:'A fancier friend gives a bigger monthly morale boost to your income. One-time adoption cost — your current pet retires to a good home.',
-    rows:[['Your Cash','$'+fmt(G.cash),'gold']],
-    actions:[
-      ...PETS.filter(p=>p.adopt>0).map(p=>({label:`${p.icon} ${p.name.split(' ')[0]} — $${fmt(p.adopt)} (+$${fmt(p.bonus)}/mo)`,cls:'btn-tan',locked:G.cash<p.adopt,fn:()=>adoptPet(p.id)})),
-      {label:'← Back',cls:'btn-gold',fn:openPets},
-    ],_noFS:true});
+function _petsArr(){ if(!Array.isArray(G.pets))G.pets=G.pet?[{id:G.pet.id,name:G.pet.name,icon:G.pet.icon,bonus:G.pet.bonus,named:G.pet.named}]:[]; return G.pets; }
+function _petOwned(id){ return _petsArr().some(function(x){return x.id===id;}); }
+function _petSyncActive(){ // write the active pet's editable fields back into its inventory entry
+  if(!G||!G.pet)return; const e=_petsArr().find(function(x){return x.id===G.pet.id;});
+  if(e){e.name=G.pet.name;e.named=G.pet.named;e.icon=G.pet.icon;e.bonus=G.pet.bonus;}
 }
+function setActivePet(id){ // swap which owned pet is in the pet-cam — only the active one's bonus applies
+  const e=_petsArr().find(function(x){return x.id===id;}); if(!e)return;
+  G.salaryBoost=(G.salaryBoost||0)-((G.pet&&G.pet.bonus)||0)+(e.bonus||0);
+  G.pet={id:e.id,name:e.name,icon:e.icon,bonus:e.bonus,named:e.named};
+  try{renderPetPanel();petReact('happy');}catch(e2){}
+  updateUI();saveGame();
+}
+// 🛍 PET SHOP — adopt dogs/cats/exotics. Own as many as you like; owned ones become "set active".
+function openPetShop(){
+  _petsArr();
+  const acts=PETS.filter(function(p){return p.adopt>0;}).map(function(p){
+    const active=G.pet&&G.pet.id===p.id, owned=_petOwned(p.id), short=p.name.split(' ')[0];
+    if(active)return {label:'✓ '+p.icon+' '+short+' — Active',cls:'btn-gold',fn:openPetShop};
+    if(owned)return {label:p.icon+' '+short+' — Set Active (+$'+fmt(p.bonus)+'/mo)',cls:'btn-tan',fn:function(){setActivePet(p.id);openPetShop();}};
+    return {label:p.icon+' '+short+' — $'+fmt(p.adopt)+' (+$'+fmt(p.bonus)+'/mo)',cls:'btn-tan',locked:G.cash<p.adopt,fn:function(){adoptPet(p.id);}};
+  });
+  acts.push({label:'← Back',cls:'btn-gold',fn:openPets});
+  openModal({band:'life',title:'🛍 Pet Shop',
+    desc:'Adopt more companions — dogs, cats and exotics. You can own as many as you like and swap which one rides shotgun. Only your ACTIVE pet\'s income bonus applies.',
+    rows:[['Your Cash','$'+fmt(G.cash),'gold'],['Pets Owned',String(_petsArr().length),'']],
+    actions:acts,_noFS:true});
+}
+function openPetInventory(){
+  const arr=_petsArr();
+  const acts=arr.map(function(p){
+    const active=G.pet&&G.pet.id===p.id, nm=p.named?p.name:(p.name||'Pet').split(' ')[0];
+    return {label:(active?'✓ ':'')+p.icon+' '+nm+(active?' — Active':' — Set Active'),cls:active?'btn-gold':'btn-tan',fn:active?openPetInventory:function(){setActivePet(p.id);openPetInventory();}};
+  });
+  acts.push({label:'🛍 Pet Shop — adopt more',cls:'btn-tan',fn:openPetShop});
+  acts.push({label:'← Back',cls:'btn-gold',fn:openPets});
+  openModal({band:'life',title:'🎒 My Pets ('+arr.length+')',
+    desc:'Your collection. Tap a pet to bring it out in the pet-cam — its bonus applies; the others wait at home.',
+    rows:[['Active',(G.pet?G.pet.icon+' '+(G.pet.named?G.pet.name:(G.pet.name||'').split(' ')[0]):'—'),'green']],
+    actions:acts,_noFS:true});
+}
+function openPetAdopt(){openPetShop();} // back-compat alias
 function adoptPet(id){
-  const p=PETS.find(x=>x.id===id);if(!p)return;
-  if(G.cash<p.adopt){_toast&&_toast('Not enough cash for '+p.name);return;}
+  const p=PETS.find(function(x){return x.id===id;});if(!p)return;
+  _petsArr();
+  if(_petOwned(id)){setActivePet(id);try{showToast('🐾 '+p.name.split(' ')[0]+' is now your active companion','linear-gradient(135deg,#2a8a4a,#34c87a)',2200);}catch(e){}openPets();return;}
+  if(G.cash<p.adopt){try{showToast('Not enough cash for '+p.name,'#7a1f1f',2400);}catch(e){}return;}
   G.cash-=p.adopt;
-  // You always own a pet now (free starter), so adoption SWAPS — remove the old bonus before adding the new one (no stacking).
-  G.salaryBoost=(G.salaryBoost||0)-((G.pet&&G.pet.bonus)||0)+p.bonus;
-  G.pet={id:p.id,name:p.name,icon:p.icon,bonus:p.bonus};
+  G.pets.push({id:p.id,name:p.name,icon:p.icon,bonus:p.bonus});
+  setActivePet(p.id); // swaps bonus, sets active, renders
   G.petHappy=Math.min(100,(typeof G.petHappy==='number'?G.petHappy:60)+20); // new friend, big mood boost
   addLog('🐾','Adopted '+p.icon+' '+p.name+'! +$'+fmt(p.bonus)+'/mo morale boost.','g');
   try{if(!window._muted){_tone(659,.1,'triangle',.14,0,880);_tone(988,.14,'triangle',.14,.09);}}catch(e){}
   try{showToast('🐾 '+p.name+' joined the family! +$'+fmt(p.bonus)+'/mo','linear-gradient(135deg,#2a8a4a,#34c87a)',2600);}catch(e){}
-  try{renderPetPanel();petReact('party');}catch(e){}
+  try{petReact('party');}catch(e){}
   updateUI();saveGame();openPets();
 }
 // ══ 🐾 INTERACTIVE PET COMPANION — pet-cam panel reactions ══
@@ -10018,7 +10072,7 @@ function commitRenamePet(){
   const span=document.getElementById('pet-name'),inp=document.getElementById('pet-name-inp');
   if(!inp||inp.style.display==='none')return; // guard double-commit (Enter then blur)
   const v=(inp.value||'').trim().slice(0,14);
-  if(v){G.pet.name=v;G.pet.named=true;}
+  if(v){G.pet.name=v;G.pet.named=true;try{_petSyncActive();}catch(e){}}
   inp.style.display='none';if(span)span.style.display='';
   renderPetPanel();try{saveGame();}catch(e){}
   if(v){try{_petBubble('I\'m '+v+'!');}catch(e){}}
@@ -12995,6 +13049,10 @@ function loadSave(key){
     if(!G.pet)G.pet={id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0};
     if(typeof G.petHappy!=='number')G.petHappy=60;
     if(typeof G.petTreats!=='number')G.petTreats=3;
+    // 🐾 Pet INVENTORY back-compat: build G.pets from the single active pet if missing; ensure active is in it
+    if(!Array.isArray(G.pets)||!G.pets.length)G.pets=[{id:G.pet.id,name:G.pet.name,icon:G.pet.icon,bonus:G.pet.bonus,named:G.pet.named}];
+    if(!G.pets.some(function(x){return x.id===G.pet.id;}))G.pets.push({id:G.pet.id,name:G.pet.name,icon:G.pet.icon,bonus:G.pet.bonus,named:G.pet.named});
+    if(!G.pets.some(function(x){return x.id==='stray';}))G.pets.unshift({id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0});
     // Restore multiplayer state if present
     if(s.PLAYERS&&s.PLAYERS.length>1){
       PLAYERS=s.PLAYERS;ACTIVE_PLAYER_IDX=s.ACTIVE_PLAYER_IDX||0;_mpCount=s._mpCount||PLAYERS.length;
