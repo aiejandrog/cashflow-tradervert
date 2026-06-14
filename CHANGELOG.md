@@ -4,6 +4,10 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.13.2 — 2026-06-14 — Main Menu button on career reveal + cheaper re-spin
+- **Main Menu button (user request):** the career reveal card (`#rev-card`, splash) now has a `← Main Menu` button alongside Change Path / CHOOSE. It calls the existing `resetToSpin()` → hides the reveal, shows the spin card (the splash main menu). It does NOT commit or change the life path, and does NOT clear the `cf_pending_spin` lock, so it isn't a free re-roll loophole (the paid Change Path stays the only re-spin).
+- **Cheaper re-spin (user request):** `CHANGE_PROF_COST` 2000 → **500** ✦. The "Change Path" label + the not-enough-credits alert both read the constant, so they auto-update.
+
 ## v1.13.1 — 2026-06-14 — Toggle-to-close top-bar buttons
 - **UX (user request):** the top-bar popup buttons now TOGGLE — click 🚗 Dealer / 🏡 Realty / 🍸 Leisure / 🎓 School / 🛍 Shop / ⚙️ Settings once to open, click the same button again to close. New `toggleModal(id,fn)` wrapper tracks `window._modalOpener` (set on open, cleared in `closeModal`); if the same button is clicked while its popup shows, it calls `closeModal()` instead of re-opening. Shop is special-cased (its own `#credits-shop` fullscreen overlay, not `#modal`) — toggling removes the overlay. Closing always routes through the existing `closeModal()`, so `_resumeFn` restore is intact (no stuck turns — verified mid-turn toggle + 5 rolls, 0 errors).
 

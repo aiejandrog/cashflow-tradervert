@@ -1775,6 +1775,7 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     <div class="rev-cf" id="rev-cf2"></div>
     <div class="rev-desc" id="rev-desc"></div>
     <div class="rev-btns">
+      <button class="btn-og btn-tan" onclick="resetToSpin()" title="Back to the main menu — doesn't change your path, just returns to the menu">← Main Menu</button>
       <button class="btn-og btn-tan" id="btn-change-prof" style="display:none" onclick="changeProfession()">🔄 Change Path</button>
       <button class="btn-og btn-gold" id="btn-begin" style="display:none">CHOOSE ›</button>
     </div>
@@ -2685,8 +2686,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.13.1';
+const GAME_VERSION='1.13.2';
 const CHANGELOG=[
+  {v:'1.13.2', date:'2026-06-14', notes:[
+    '🏠 Added a "← Main Menu" button on the career reveal screen — back out to the menu anytime without committing or changing your path.',
+    '💸 Changing your path is cheaper — re-spinning your career now costs ✦500 (was ✦2000).',
+  ]},
   {v:'1.13.1', date:'2026-06-14', notes:[
     '🔘 Top-bar buttons now toggle — tap 🚗 Dealer, 🏡 Realty, 🍸 Leisure, 🎓 School, 🛍 Shop or ⚙️ Settings once to open, tap the same button again to close it.',
   ]},
@@ -4480,7 +4485,7 @@ function doSpin(){
   requestAnimationFrame(frame);
 }
 
-const CHANGE_PROF_COST=2000;
+const CHANGE_PROF_COST=500;
 function changeProfession(){
   const p=loadProfile();
   if((p.credits||0)<CHANGE_PROF_COST){
