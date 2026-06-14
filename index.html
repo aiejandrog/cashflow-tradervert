@@ -9963,8 +9963,18 @@ function _ftIndexPerimeter(){
   [].slice.call(bot.children).reverse().forEach(el=>tiles.push(el));  // bottom R→L
   [].slice.call(left.children).reverse().forEach(el=>tiles.push(el)); // left B→T
   tiles.forEach((el,i)=>{el.id='ft-'+i;el.dataset.fti=i;});
-  // The 4 physical corners of the ring: top-left(0), top-right, bottom-right, bottom-left.
-  FT_DREAM_CORNERS=[0,T-1,T+R-1,T+R+B-1].filter((v,i,a)=>v>=0&&v<tiles.length&&a.indexOf(v)===i);
+  // Find the 4 GEOMETRIC corners (extreme x±y) so dreams land exactly on the visual
+  // corners regardless of how many tiles each side has (the old index formula was
+  // off-by-one — a dream sat one tile short of the bottom-right corner).
+  const ctr=tiles.map((el,i)=>{const r=el.getBoundingClientRect();return{i,x:r.left+r.width/2,y:r.top+r.height/2,w:r.width};});
+  if(ctr.length&&ctr[0].w>0){
+    const pick=fn=>{let b=ctr[0];ctr.forEach(c=>{if(fn(c)<fn(b))b=c;});return b.i;};
+    const TL=pick(c=>c.x+c.y), TR=pick(c=>-c.x+c.y), BR=pick(c=>-c.x-c.y), BL=pick(c=>c.x-c.y);
+    FT_DREAM_CORNERS=[...new Set([TL,TR,BR,BL])];
+  }else{
+    // fallback (no layout yet): index-based corners
+    FT_DREAM_CORNERS=[0,T-1,T+R,T+R+B-1].filter((v,i,a)=>v>=0&&v<tiles.length&&a.indexOf(v)===i);
+  }
   window._ftTiles=tiles;return tiles;
 }
 function ftLen(){return (window._ftTiles&&window._ftTiles.length)||40;}
