@@ -1651,6 +1651,63 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
 <body>
 
 <!-- ══ SPLASH ══ -->
+<!-- ══ BOOT / LOADING SCREEN — smooth branded intro, fades into the menu (removed by JS) ══ -->
+<div id="boot-screen" onclick="window._bootSkip&&window._bootSkip()">
+  <div class="boot-glow"></div>
+  <div class="boot-logo">
+    <svg class="boot-skyline" width="240" height="42" viewBox="0 0 220 38" xmlns="http://www.w3.org/2000/svg">
+      <g fill="rgba(255,255,255,.9)">
+        <rect x="0" y="26" width="14" height="12"/><rect x="4" y="18" width="6" height="8"/><polygon points="7,10 8,18 6,18"/>
+        <rect x="16" y="22" width="10" height="16"/><rect x="18" y="14" width="6" height="8"/><polygon points="21,7 23,14 19,14"/>
+        <rect x="28" y="26" width="8" height="12"/>
+        <rect x="38" y="18" width="14" height="20"/><rect x="40" y="10" width="10" height="8"/><rect x="42" y="4" width="6" height="6"/><polygon points="45,0 47,4 43,4"/>
+        <rect x="54" y="22" width="10" height="16"/><rect x="56" y="14" width="6" height="8"/>
+        <rect x="66" y="20" width="8" height="18"/><polygon points="70,12 72,20 68,20"/>
+        <rect x="76" y="16" width="14" height="22"/><rect x="78" y="8" width="10" height="8"/><polygon points="83,2 85,8 81,8"/>
+        <rect x="92" y="20" width="8" height="18"/>
+        <rect x="102" y="14" width="14" height="24"/><rect x="104" y="6" width="10" height="8"/><polygon points="109,1 111,6 107,6"/>
+        <rect x="118" y="22" width="10" height="16"/>
+        <rect x="130" y="18" width="14" height="20"/><rect x="132" y="10" width="10" height="8"/><polygon points="137,4 139,10 135,10"/>
+        <rect x="146" y="22" width="8" height="16"/>
+        <rect x="156" y="20" width="10" height="18"/><rect x="158" y="13" width="6" height="7"/><polygon points="161,7 163,13 159,13"/>
+        <rect x="168" y="24" width="12" height="14"/>
+        <rect x="182" y="22" width="10" height="16"/><rect x="184" y="15" width="6" height="7"/>
+        <rect x="194" y="26" width="26" height="12"/>
+      </g>
+    </svg>
+    <div class="boot-word"><span class="boot-cash">FREEDOM</span><span class="boot-gear">RACE</span></div>
+    <div class="boot-sub">Tradervert Edition</div>
+  </div>
+  <div class="boot-bar"><div class="boot-bar-fill"></div></div>
+  <div class="boot-skip">tap to skip</div>
+</div>
+<style>
+#boot-screen{position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -5%, rgba(107,63,168,.5) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 35% at 85% 85%, rgba(0,120,200,.18) 0%, transparent 60%),
+    linear-gradient(160deg,#0e0520 0%,#190835 40%,#0a0312 100%);
+  will-change:opacity;overflow:hidden;cursor:pointer}
+#boot-screen .boot-glow{position:absolute;inset:-30%;pointer-events:none;
+  background:radial-gradient(circle 38% at 50% 42%, rgba(120,70,200,.35), transparent 60%),radial-gradient(circle 30% at 70% 70%, rgba(34,160,200,.22), transparent 55%);
+  animation:bootGlow 7s ease-in-out infinite}
+@keyframes bootGlow{0%{transform:translate(-3%,-2%) scale(1)}50%{transform:translate(4%,3%) scale(1.12)}100%{transform:translate(-3%,-2%) scale(1)}}
+#boot-screen .boot-logo{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:2;animation:bootIn .9s cubic-bezier(.2,.8,.3,1) both}
+@keyframes bootIn{from{opacity:0;transform:translateY(16px) scale(.95)}to{opacity:1;transform:none}}
+#boot-screen .boot-skyline{opacity:.9;filter:drop-shadow(0 2px 10px rgba(160,120,255,.35))}
+#boot-screen .boot-word{font-family:Georgia,serif;font-weight:900;line-height:.92;letter-spacing:3px;display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 14px rgba(240,192,32,.28));animation:bootShimmer 2.6s ease-in-out infinite}
+#boot-screen .boot-cash{font-size:clamp(2.6rem,11vw,4.8rem);background:linear-gradient(180deg,#fff7d8,#f0c020 55%,#a8730a);-webkit-background-clip:text;background-clip:text;color:transparent}
+#boot-screen .boot-gear{font-size:clamp(2.6rem,11vw,4.8rem);background:linear-gradient(180deg,#fff7d8,#f0c020 55%,#a8730a);-webkit-background-clip:text;background-clip:text;color:transparent}
+@keyframes bootShimmer{0%,100%{filter:drop-shadow(0 3px 14px rgba(240,192,32,.22)) brightness(1)}50%{filter:drop-shadow(0 3px 22px rgba(240,192,32,.5)) brightness(1.12)}}
+#boot-screen .boot-sub{font-family:Arial,sans-serif;font-size:.8rem;letter-spacing:5px;text-transform:uppercase;color:rgba(210,190,255,.7);margin-top:4px}
+#boot-screen .boot-bar{position:relative;z-index:2;width:min(220px,54vw);height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;animation:bootIn .9s .15s both}
+#boot-screen .boot-bar-fill{height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,#6b3fa8,#22d3ee 60%,#f0c020);animation:bootFill 1.5s ease-out forwards}
+@keyframes bootFill{from{width:0}to{width:100%}}
+#boot-screen .boot-skip{position:absolute;bottom:22px;font-family:Arial,sans-serif;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.3);animation:bootSkipPulse 2.2s ease-in-out infinite}
+@keyframes bootSkipPulse{0%,100%{opacity:.25}50%{opacity:.6}}
+@media(max-width:620px){#boot-screen .boot-sub{font-size:.66rem;letter-spacing:3px}}
+</style>
+
 <div id="splash" class="screen">
   <!-- 🏆 Trophy rack — garage-shelf display, Pixel Car Racer style -->
   <div id="trophy-rack" onclick="openTrophyWall()" title="Open Trophy Wall"></div>
@@ -2686,8 +2743,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.13.2';
+const GAME_VERSION='1.14.0';
 const CHANGELOG=[
+  {v:'1.14.0', date:'2026-06-14', notes:[
+    '✨ New loading screen — the game now opens with a smooth animated FREEDOM RACE intro that fades right into the menu. Tap to skip anytime.',
+  ]},
   {v:'1.13.2', date:'2026-06-14', notes:[
     '🏠 Added a "← Main Menu" button on the career reveal screen — back out to the menu anytime without committing or changing your path.',
     '💸 Changing your path is cheaper — re-spinning your career now costs ✦500 (was ✦2000).',
@@ -14297,6 +14357,20 @@ try{
     if(_pp)setTimeout(()=>revealProf(_pp),250);
   }
 }catch(e){}
+// ── BOOT/LOADING screen fade-out — multiple removal timers so it can NEVER stay stuck ──
+(function(){
+  const el=document.getElementById('boot-screen');if(!el)return;
+  let done=false;
+  function hide(){
+    if(done)return;done=true;
+    try{el.animate([{opacity:1},{opacity:0}],{duration:550,easing:'ease'}).onfinish=()=>{try{el.remove();}catch(e){}};}
+    catch(e){el.style.transition='opacity .5s';el.style.opacity='0';setTimeout(()=>{try{el.remove();}catch(e){}},560);}
+    setTimeout(()=>{if(el&&el.parentNode)el.remove();},1300); // belt-and-suspenders removal
+  }
+  window._bootSkip=hide;             // tap to skip
+  setTimeout(hide,1700);             // minimum branded display
+  setTimeout(()=>{if(!done)hide();},4000); // absolute safety net
+})();
 $('btn-spin').addEventListener('click',doSpin);
 // btn-again listener removed — career spins are locked (one life per spin)
 $('btn-begin').addEventListener('click',()=>{

@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.14.0 — 2026-06-14 — Smooth FREEDOM RACE loading screen
+- **NEW (user request):** a branded loading screen on startup. `#boot-screen` (first child of `<body>`, z-index 100000) shows the FREEDOM RACE wordmark (reused skyline SVG + gold gradient text) on the **exact splash gradient** (seamless reveal) with a drifting glow, entrance + shimmer, and a loading bar. Fades into the menu (or resumed game) via a JS IIFE: WAAPI fade-out after a 1700ms minimum, plus belt-and-suspenders `setTimeout` removals (1300ms post-fade + a 4000ms absolute safety net) so it can NEVER stay stuck covering the game. Tap-to-skip via `window._bootSkip`. Decoupled from the resume logic — sits on top and fades to reveal whatever boot decided. Verified: renders full-screen with gold wordmark + skyline at z100000; auto-removes → interactive splash (menu path) and the board (resume path); 0 errors. (Note: http-server caches index.html — cache-bust the preview URL when testing.)
+
 ## v1.13.2 — 2026-06-14 — Main Menu button on career reveal + cheaper re-spin
 - **Main Menu button (user request):** the career reveal card (`#rev-card`, splash) now has a `← Main Menu` button alongside Change Path / CHOOSE. It calls the existing `resetToSpin()` → hides the reveal, shows the spin card (the splash main menu). It does NOT commit or change the life path, and does NOT clear the `cf_pending_spin` lock, so it isn't a free re-roll loophole (the paid Change Path stays the only re-spin).
 - **Cheaper re-spin (user request):** `CHANGE_PROF_COST` 2000 → **500** ✦. The "Change Path" label + the not-enough-credits alert both read the constant, so they auto-update.
