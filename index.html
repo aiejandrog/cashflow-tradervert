@@ -1925,6 +1925,59 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
   <!-- Rotating goals (objectives system) -->
   <div id="goals-box" style="display:none;position:fixed;bottom:14px;right:8px;width:212px;z-index:30;background:linear-gradient(160deg,rgba(8,3,20,.92),rgba(25,8,53,.88));border:1px solid rgba(240,192,32,.35);border-left:3px solid rgba(240,192,32,.6);border-radius:10px;padding:7px 11px;backdrop-filter:blur(6px);box-shadow:0 4px 16px rgba(0,0,0,.45)"></div>
 
+  <!-- 🐾 Interactive pet-cam companion (bottom-left). Lives inside #game so it auto-hides off-screen. -->
+  <div id="pet-panel" style="display:none">
+    <div id="pet-cam">
+      <span id="pet-live">● LIVE</span>
+      <div id="pet-bubble"></div>
+      <div id="pet-stage">
+        <div id="pet-face">🐶</div>
+        <div id="pet-lids"></div>
+      </div>
+    </div>
+    <div id="pet-happy-wrap"><div id="pet-happy-bar"></div></div>
+    <div id="pet-happy-lbl">Happy 60%</div>
+    <div id="pet-btns">
+      <button id="pet-btn-pet" onclick="if(typeof G!=='undefined'&&G)petPet()" title="Rub your pet — it loves you (raises happiness)">✋ Pet</button>
+      <button id="pet-btn-feed" onclick="if(typeof G!=='undefined'&&G)feedPet()" title="Feed a treat (refills at payday)">🦴 Treat</button>
+    </div>
+  </div>
+  <style>
+  #pet-panel{position:fixed;left:8px;bottom:14px;width:152px;z-index:28;
+    background:linear-gradient(165deg,rgba(20,10,40,.95),rgba(10,5,22,.95));
+    border:1px solid rgba(240,192,32,.32);border-radius:14px;padding:8px 8px 9px;
+    box-shadow:0 8px 30px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05);
+    backdrop-filter:blur(7px);font-family:Georgia,serif;user-select:none}
+  #pet-cam{position:relative;height:104px;border-radius:11px;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 40%,#2a1a4d 0%,#15092b 70%,#0a0418 100%);
+    border:1px solid rgba(120,70,190,.3)}
+  #pet-live{position:absolute;top:5px;right:7px;font-size:.46rem;font-weight:700;letter-spacing:.5px;
+    color:#ff5d5d;font-family:Arial,sans-serif;text-shadow:0 0 6px rgba(255,93,93,.6);z-index:5;animation:petLive 2s infinite}
+  @keyframes petLive{0%,70%{opacity:1}85%{opacity:.25}100%{opacity:1}}
+  #pet-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  #pet-face{font-size:3.1rem;line-height:1;filter:drop-shadow(0 3px 7px rgba(0,0,0,.5));will-change:transform}
+  #pet-lids{position:absolute;left:50%;top:34%;transform:translateX(-50%);width:46px;height:7px;
+    border-radius:6px;background:rgba(10,4,20,.0);opacity:0;
+    box-shadow:0 -10px 0 -3px rgba(10,4,20,.92),0 10px 0 -3px rgba(10,4,20,.92);pointer-events:none;z-index:4}
+  #pet-bubble{position:absolute;left:50%;top:4px;transform:translateX(-50%);display:none;
+    background:#fff;color:#2a1500;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:9px;
+    white-space:nowrap;z-index:6;box-shadow:0 2px 8px rgba(0,0,0,.4);font-family:Arial,sans-serif}
+  #pet-bubble::after{content:'';position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
+    border:5px solid transparent;border-top-color:#fff;border-bottom:0}
+  #pet-happy-wrap{height:8px;background:rgba(0,0,0,.4);border-radius:5px;overflow:hidden;margin:7px 2px 0}
+  #pet-happy-bar{height:100%;width:60%;border-radius:5px;background:linear-gradient(90deg,#16a34a,#5fd07a);transition:width .45s ease}
+  #pet-happy-lbl{text-align:center;font-size:.56rem;color:#d7c9ff;margin-top:3px;letter-spacing:.3px;font-family:Arial,sans-serif}
+  #pet-btns{display:flex;gap:5px;margin-top:7px}
+  #pet-btns button{flex:1;cursor:pointer;border:1px solid rgba(240,192,32,.4);border-radius:9px;
+    background:linear-gradient(180deg,#3a2360,#26143f);color:#f3ead2;font-family:Georgia,serif;
+    font-size:.6rem;font-weight:700;padding:6px 2px;transition:transform .08s,filter .15s}
+  #pet-btns button:hover{filter:brightness(1.18)}
+  #pet-btns button:active{transform:scale(.93)}
+  #pet-btns button:disabled{opacity:.45;cursor:default;filter:grayscale(.5)}
+  @media(max-width:1040px){#pet-panel{display:none!important}} /* small/landscape: pet & feed live in the Leisure → Pet modal */
+  @media(max-height:560px){#pet-panel{display:none!important}}
+  </style>
+
   <!-- Multiplayer player strip (hidden in solo mode) -->
   <div id="mp-strip"></div>
 
@@ -2632,8 +2685,13 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.12.0';
+const GAME_VERSION='1.13.0';
 const CHANGELOG=[
+  {v:'1.13.0', date:'2026-06-14', notes:[
+    '🐾 Meet your PET-CAM! A live, interactive companion now sits at the bottom-left of the board. Rub it (✋ Pet) and it closes its eyes, wags & shows hearts; feed it treats (🦴) and watch it chomp.',
+    '😊 New Happiness meter — petting & feeding fill it little by little. A happy pet pays you a bonus every payday. Happiness drifts down over time, so keep your buddy loved.',
+    '🐶 Everyone starts with a free stray pup (Scout) from turn one — adopt a fancier friend anytime for a bigger income boost. Your pet reacts to paydays, wins, and rough landings.',
+  ]},
   {v:'1.12.0', date:'2026-06-14', notes:[
     '🎲 Watch your rival ROLL — after your turn, the rival now visibly tumbles their dice before landing, just like seeing an opponent roll in multiplayer.',
     '🗝️ Fixed the Freedom progress bar on the Cashflow Day card — clean green bar instead of blocky text.',
@@ -3023,13 +3081,21 @@ const DREAMS = [
 // ══ PETS — adopt a companion. One-time cost; a small morale "salary" boost (folded
 // into salaryBoost so the Life Hub breakdown stays consistent). Pure upside + joy. ══
 const PETS = [
-  {id:'goldfish',name:'Bubbles the Goldfish',icon:'🐠',adopt:300,  bonus:40,  blurb:'Low maintenance, weirdly calming. Three-second memory, zero drama.'},
-  {id:'hamster', name:'Nibbles the Hamster', icon:'🐹',adopt:600,  bonus:70,  blurb:'Runs the wheel all night — basically your spirit animal.'},
-  {id:'cat',     name:'Whiskers the Cat',    icon:'🐈',adopt:900,  bonus:100, blurb:'Ignores you, owns you, and somehow boosts your mood anyway.'},
-  {id:'parrot',  name:'Captain the Parrot',  icon:'🦜',adopt:1400, bonus:140, blurb:'Repeats "buy assets" until it sticks. Best financial advisor you\'ll own.'},
-  {id:'dog',     name:'Buddy the Dog',       icon:'🐕',adopt:1800, bonus:190, blurb:'Unconditional love + forced morning walks = happier, richer you.'},
-  {id:'dragon',  name:'Smaug the Dragon',    icon:'🐉',adopt:50000,bonus:2200,blurb:'Hoards gold professionally. The ultimate flex pet — if you can afford the vet.'},
+  {id:'goldfish',name:'Bubbles the Goldfish',icon:'🐠',adopt:300,  bonus:40,  sound:'blub…',  treat:'🍤',blurb:'Low maintenance, weirdly calming. Three-second memory, zero drama.'},
+  {id:'hamster', name:'Nibbles the Hamster', icon:'🐹',adopt:600,  bonus:70,  sound:'squeak!',treat:'🌻',blurb:'Runs the wheel all night — basically your spirit animal.'},
+  {id:'cat',     name:'Whiskers the Cat',    icon:'🐈',adopt:900,  bonus:100, sound:'Meow!',  treat:'🐟',blurb:'Ignores you, owns you, and somehow boosts your mood anyway.'},
+  {id:'parrot',  name:'Captain the Parrot',  icon:'🦜',adopt:1400, bonus:140, sound:'Buy assets!',treat:'🥜',blurb:'Repeats "buy assets" until it sticks. Best financial advisor you\'ll own.'},
+  {id:'dog',     name:'Buddy the Dog',       icon:'🐕',adopt:1800, bonus:190, sound:'Woof!',  treat:'🦴',blurb:'Unconditional love + forced morning walks = happier, richer you.'},
+  {id:'dragon',  name:'Smaug the Dragon',    icon:'🐉',adopt:50000,bonus:2200,sound:'RAWR!',  treat:'🍖',blurb:'Hoards gold professionally. The ultimate flex pet — if you can afford the vet.'},
+  // Free starter — everyone owns this from turn one so the pet-cam panel is always alive. adopt:0 keeps it out of the buy list. bonus:0 keeps balance clean (its reward is the happiness payday tip).
+  {id:'stray',   name:'Scout the Stray Pup', icon:'🐶',adopt:0,    bonus:0,   sound:'Woof!',  treat:'🦴',blurb:'Found you on day one. Loyal, free, and always happy to see you.'},
 ];
+const _PET_STARTER={id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0};
+function _petMeta(id){return PETS.find(p=>p.id===id)||PETS.find(p=>p.id==='stray');}
+function petMorale(){ // tiered, flat happy-pet payday tip (paid in onPayday, NOT folded into income() — keeps FS math clean)
+  const h=(G&&typeof G.petHappy==='number')?G.petHappy:60;
+  return h>=85?110:h>=50?40:0;
+}
 
 // ── ☁️ IP-KEYED PROGRESS SYNC — your trophies/credits/wins follow your IP.
 // Privacy: only a SHA-256 hash of the IP ever leaves the machine. Merge rules
@@ -4113,7 +4179,7 @@ function initGame(prof, location) {
       {name:'Credit Cards', amt:scaledProf.ccDebt},
     ].filter(l=>l.amt>0),
     bankLoan:0, extraChildren:0, numChildren:0, extraBankPmt:0,
-    skipTurns:0, salaryBoost:0, edu:0, pet:null,
+    skipTurns:0, salaryBoost:0, edu:0, pet:{id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0}, petHappy:60, petTreats:3,
     // Family situation: override housing cost to a small family contribution
     expenseOverrides:housingSituation==='family'
       ?{mortgage:Math.round(scaledProf.mortgage*0.18/50)*50||200}
@@ -6510,6 +6576,8 @@ function showQuarterlyTax(){
 function triggerSpace(sp){
   G.turn++;
   recalcChildCosts(); // kid stage costs track turn-age (school/teen transitions)
+  // 🐾 Pet companion senses a rough landing and whimpers (cosmetic; guarded internally)
+  try{if(sp&&/doodad|layoff|audit|lawsuit|crisis|divorce|disability|recession/.test(sp.type))petReact('sad');}catch(e){}
   // Recession tick — count down and restore when done
   if(G._recessionTurns>0){
     G._recessionTurns--;
@@ -7097,6 +7165,13 @@ function onPayday(){
   if(G&&G._bankrupt)return; // dead game — no payday processing under the bankruptcy overlay
   const cf=monthlyCF(),pass=passiveIncome();
   if(cf>=0){sfxCash();sfxCoins(9);spawnCoinBurst(true);_haptic([18,45,18]);}
+  // 🐾 Pet companion: it reacts to the payday, pays a happy-pet tip (computed BEFORE decay),
+  // then happiness drifts down a little and the treat allowance refills — a recurring care loop.
+  try{petReact(cf>=0?'happy':'sad');}catch(e){}
+  const _petTip=petMorale();
+  if(_petTip>0){G.cash+=_petTip;addLog('🐾','Your happy companion lifts the mood — +$'+fmt(_petTip)+' bonus.','g');}
+  G.petHappy=Math.max(0,(typeof G.petHappy==='number'?G.petHappy:60)-8);
+  G.petTreats=3;
   let bonus=0;
   if(G._charityBonus){bonus=Math.round(Math.max(0,cf)*0.5);G._charityBonus=false;}
   // Mystery Box: expense waiver gives back the expense total this payday
@@ -7132,6 +7207,7 @@ function onPayday(){
     ['🗝 Freedom',freePct+'% '+freeBar,freePct>=100?'gold':freePct>=50?'green':''],
     ['Escape at','$'+fmt(expTot)+'/mo',''],
   ];
+  if(_petTip>0)rows.splice(2,0,['🐾 Happy Pet','+$'+fmt(_petTip),'green']);
   if(incNow.savingsInt>0)rows.splice(2,0,['🏦 Savings Int','+$'+fmt(incNow.savingsInt)+'/mo','green']);
   if(totalPrincipalPaid>0)rows.push(['Debt Paid Down','-$'+fmt(totalPrincipalPaid),'green']);
   if(bonus>0)rows.splice(1,0,['🎁 Generosity Bonus','+$'+fmt(bonus),'green']);
@@ -9586,40 +9662,142 @@ function openLeisure(){
 // ══ PETS — adopt a companion for a small permanent morale (salary) boost ══
 function openPets(){
   if(_mpLocked()){_mpLockToast();return;}
-  if(G.pet){
-    openModal({band:'life',title:G.pet.icon+' '+G.pet.name,
-      desc:'Your loyal companion. The joy keeps you sharp — a permanent morale boost to your income.',
-      rows:[['Companion',G.pet.icon+' '+G.pet.name,''],['Morale boost','+$'+fmt(G.pet.bonus)+'/mo to income','green'],['Your Cash','$'+fmt(G.cash),'gold']],
-      actions:[
-        {label:'💔 Give Up Pet (no refund)',cls:'btn-tan',fn:()=>{
-          if(confirm('Give up '+G.pet.name+'? You lose the +$'+fmt(G.pet.bonus)+'/mo morale boost and there\'s no refund.')){
-            G.salaryBoost=(G.salaryBoost||0)-(G.pet.bonus||0);
-            addLog('💔','Said goodbye to '+G.pet.name+'. The house feels quieter.','b');
-            G.pet=null;updateUI();saveGame();openLeisure();
-          }
-        }},
-        {label:'← Back',cls:'btn-gold',fn:openLeisure},
-      ],_noFS:true});
-    return;
-  }
-  openModal({band:'life',title:'🐾 Adopt a Pet',
-    desc:'A companion lifts your mood — and a happier you earns more (a small permanent morale boost to income). One-time adoption cost.',
+  if(!G.pet)G.pet={id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0}; // safety: always own a pet
+  const isStarter=G.pet.id==='stray';
+  const meta=_petMeta(G.pet.id);
+  const h=typeof G.petHappy==='number'?G.petHappy:60;
+  const mood=h>=85?'Overjoyed 🤩':h>=50?'Happy 😊':h>=25?'Okay 🙂':'Lonely 🥺';
+  const acts=[
+    {label:'✋ Pet '+G.pet.icon,cls:'btn-gold',fn:()=>{petPet();openPets();}},
+    {label:G.petTreats>0?('🦴 Give a treat ('+G.petTreats+' left)'):'🦴 Out of treats — refills at payday',cls:'btn-tan',locked:(G.petTreats||0)<=0,fn:()=>{feedPet();openPets();}},
+    {label:'🐾 Adopt a different friend',cls:'btn-tan',fn:openPetAdopt},
+  ];
+  if(!isStarter)acts.push({label:'↩ Release to the shelter',cls:'btn-tan',fn:()=>{
+    if(confirm('Release '+G.pet.name+'? You lose the +$'+fmt(G.pet.bonus)+'/mo morale boost and go back to Scout the Stray Pup (free).')){
+      G.salaryBoost=(G.salaryBoost||0)-(G.pet.bonus||0);
+      addLog('↩','Released '+G.pet.name+' to a good home. Scout is glad to have you back.','b');
+      G.pet={id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0};
+      try{renderPetPanel();}catch(e){}updateUI();saveGame();openPets();
+    }
+  }});
+  acts.push({label:'← Back',cls:'btn-gold',fn:openLeisure});
+  openModal({band:'life',title:G.pet.icon+' '+G.pet.name,
+    desc:meta?meta.blurb:'Your loyal companion. Pet it and feed it treats to keep it happy — a happy pet pays a bonus every payday.',
+    rows:[
+      ['Mood',mood+' · '+h+'%',h>=50?'green':h>=25?'':'red'],
+      ['Happy-pet bonus',petMorale()>0?'+$'+fmt(petMorale())+'/payday':'keep it happy to earn it',petMorale()>0?'green':''],
+      (G.pet.bonus>0?['Morale boost','+$'+fmt(G.pet.bonus)+'/mo to income','green']:null),
+      ['Treats left',String(G.petTreats||0),''],
+      ['Your Cash','$'+fmt(G.cash),'gold'],
+    ].filter(Boolean),
+    actions:acts,_noFS:true});
+}
+function openPetAdopt(){
+  openModal({band:'life',title:'🐾 Adopt a Companion',
+    desc:'A fancier friend gives a bigger monthly morale boost to your income. One-time adoption cost — your current pet retires to a good home.',
     rows:[['Your Cash','$'+fmt(G.cash),'gold']],
     actions:[
-      ...PETS.map(p=>({label:`${p.icon} ${p.name.split(' ')[0]} — $${fmt(p.adopt)} (+$${fmt(p.bonus)}/mo)`,cls:'btn-tan',locked:G.cash<p.adopt,fn:()=>adoptPet(p.id)})),
-      {label:'← Back',cls:'btn-gold',fn:openLeisure},
+      ...PETS.filter(p=>p.adopt>0).map(p=>({label:`${p.icon} ${p.name.split(' ')[0]} — $${fmt(p.adopt)} (+$${fmt(p.bonus)}/mo)`,cls:'btn-tan',locked:G.cash<p.adopt,fn:()=>adoptPet(p.id)})),
+      {label:'← Back',cls:'btn-gold',fn:openPets},
     ],_noFS:true});
 }
 function adoptPet(id){
   const p=PETS.find(x=>x.id===id);if(!p)return;
   if(G.cash<p.adopt){_toast&&_toast('Not enough cash for '+p.name);return;}
   G.cash-=p.adopt;
+  // You always own a pet now (free starter), so adoption SWAPS — remove the old bonus before adding the new one (no stacking).
+  G.salaryBoost=(G.salaryBoost||0)-((G.pet&&G.pet.bonus)||0)+p.bonus;
   G.pet={id:p.id,name:p.name,icon:p.icon,bonus:p.bonus};
-  G.salaryBoost=(G.salaryBoost||0)+p.bonus; // morale boost rides salaryBoost (shown in income breakdown)
+  G.petHappy=Math.min(100,(typeof G.petHappy==='number'?G.petHappy:60)+20); // new friend, big mood boost
   addLog('🐾','Adopted '+p.icon+' '+p.name+'! +$'+fmt(p.bonus)+'/mo morale boost.','g');
   try{if(!window._muted){_tone(659,.1,'triangle',.14,0,880);_tone(988,.14,'triangle',.14,.09);}}catch(e){}
   try{showToast('🐾 '+p.name+' joined the family! +$'+fmt(p.bonus)+'/mo','linear-gradient(135deg,#2a8a4a,#34c87a)',2600);}catch(e){}
+  try{renderPetPanel();petReact('party');}catch(e){}
   updateUI();saveGame();openPets();
+}
+// ══ 🐾 INTERACTIVE PET COMPANION — pet-cam panel reactions ══
+// All motion uses WAAPI element.animate() so it survives prefers-reduced-motion.
+// All visual helpers no-op safely when the panel is hidden (mobile / off-screen).
+function _petBubble(txt,col){
+  const b=document.getElementById('pet-bubble');if(!b||document.hidden)return;
+  b.textContent=txt;b.style.background=col||'#fff';b.style.color=col?'#fff':'#2a1500';b.style.display='block';
+  try{b.animate([{opacity:0,transform:'translateX(-50%) translateY(6px) scale(.8)'},{opacity:1,transform:'translateX(-50%) translateY(0) scale(1)',offset:.2},{opacity:1,transform:'translateX(-50%) translateY(0) scale(1)',offset:.78},{opacity:0,transform:'translateX(-50%) translateY(-4px) scale(.95)'}],{duration:1700,easing:'ease-out'}).onfinish=function(){b.style.display='none';};}catch(e){setTimeout(function(){b.style.display='none';},1400);}
+}
+function _petEyesClose(){
+  const l=document.getElementById('pet-lids');if(!l||document.hidden)return;
+  try{l.animate([{opacity:0},{opacity:.92,offset:.32},{opacity:.92,offset:.68},{opacity:0}],{duration:850,easing:'ease-in-out'});}catch(e){}
+}
+function _petHearts(n){
+  const cam=document.getElementById('pet-cam');if(!cam||document.hidden)return;
+  for(let i=0;i<(n||3);i++){
+    const el=document.createElement('div');el.textContent='♥';
+    el.style.cssText='position:absolute;left:'+(32+Math.random()*36)+'%;bottom:36%;font-size:'+(11+Math.random()*8)+'px;color:#ff6b9d;pointer-events:none;z-index:6;text-shadow:0 1px 3px rgba(0,0,0,.4)';
+    cam.appendChild(el);const dx=(Math.random()*28-14);
+    try{el.animate([{opacity:0,transform:'translate(0,0) scale(.5)'},{opacity:1,transform:'translate('+(dx*.5)+'px,-18px) scale(1)',offset:.3},{opacity:0,transform:'translate('+dx+'px,-52px) scale(.9)'}],{duration:1100+Math.random()*400,easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=function(){el.remove();};}catch(e){el.remove();}
+  }
+}
+function _petFaceAnim(frames,dur){
+  const f=document.getElementById('pet-face');if(!f||document.hidden)return;
+  try{f.animate(frames,{duration:dur||700,easing:'ease-out'});}catch(e){}
+}
+function petPet(){
+  if(!G)return;
+  const now=Date.now();if(window._petCd&&now-window._petCd<420)return;window._petCd=now; // gentle anti-spam
+  G.petHappy=Math.min(100,(typeof G.petHappy==='number'?G.petHappy:60)+2); // little by little
+  const meta=_petMeta(G.pet&&G.pet.id);
+  _petEyesClose();_petHearts(2);
+  _petFaceAnim([{transform:'scale(1)'},{transform:'scale(1.08) rotate(-4deg)',offset:.4},{transform:'scale(1.04) rotate(3deg)',offset:.7},{transform:'scale(1)'}]);
+  _petBubble((meta&&meta.sound)||'♥');
+  try{if(!window._muted)_tone(720,.07,'triangle',.06,0,960);_haptic(12);}catch(e){}
+  renderPetPanel();saveGame();
+}
+function feedPet(){
+  if(!G)return;
+  if((G.petTreats||0)<=0){_petBubble('Out of treats!','#7a1f1f');return;}
+  G.petTreats--;
+  G.petHappy=Math.min(100,(typeof G.petHappy==='number'?G.petHappy:60)+14);
+  const meta=_petMeta(G.pet&&G.pet.id);
+  const cam=document.getElementById('pet-cam');
+  if(cam&&!document.hidden){const t=document.createElement('div');t.textContent=(meta&&meta.treat)||'🦴';t.style.cssText='position:absolute;left:50%;bottom:6%;font-size:20px;pointer-events:none;z-index:7';cam.appendChild(t);try{t.animate([{opacity:0,transform:'translate(-50%,20px) scale(.6)'},{opacity:1,transform:'translate(-50%,-8px) scale(1)',offset:.5},{opacity:0,transform:'translate(-50%,-28px) scale(.4)'}],{duration:760,easing:'ease-in'}).onfinish=function(){t.remove();};}catch(e){t.remove();}}
+  _petFaceAnim([{transform:'scale(1)'},{transform:'scale(1.16) translateY(-2px)',offset:.4},{transform:'scale(.94)',offset:.7},{transform:'scale(1)'}]);
+  _petBubble('nom nom!','#2a8a4a');_petHearts(3);
+  try{if(!window._muted){_tone(523,.08,'triangle',.07);_tone(784,.1,'triangle',.07,.08);}_haptic([12,30,12]);}catch(e){}
+  renderPetPanel();saveGame();
+}
+function petReact(kind){
+  if(document.hidden||!document.getElementById('pet-face'))return;
+  if(kind==='sad'){
+    _petBubble('…','#5a3a1a');
+    _petFaceAnim([{transform:'translateY(0) rotate(0)'},{transform:'translateY(3px) rotate(-6deg)',offset:.5},{transform:'translateY(0) rotate(0)'}],900);
+    try{if(!window._muted)_tone(300,.18,'sine',.05,0,180);}catch(e){}
+  }else{ // happy / party
+    const meta=_petMeta(G&&G.pet&&G.pet.id);
+    _petBubble(kind==='party'?'🎉 '+((meta&&meta.sound)||'Yay!'):((meta&&meta.sound)||'♥'));
+    _petHearts(kind==='party'?5:2);
+    _petFaceAnim([{transform:'translateY(0) scale(1)'},{transform:'translateY(-10px) scale(1.1)',offset:.4},{transform:'translateY(0) scale(1)',offset:.75},{transform:'translateY(-4px) scale(1.04)',offset:.9},{transform:'translateY(0) scale(1)'}],1000);
+    try{if(!window._muted)_tone(660,.07,'triangle',.06,0,990);}catch(e){}
+  }
+}
+function renderPetPanel(){
+  const panel=document.getElementById('pet-panel');if(!panel)return;
+  if(!G||!G.pet){panel.style.display='none';return;}
+  panel.style.display='';
+  const face=document.getElementById('pet-face');if(face&&face.textContent!==G.pet.icon)face.textContent=G.pet.icon;
+  const h=typeof G.petHappy==='number'?G.petHappy:60;
+  const bar=document.getElementById('pet-happy-bar');
+  if(bar){bar.style.width=h+'%';bar.style.background=h>=85?'linear-gradient(90deg,#f0c020,#fde68a)':h>=50?'linear-gradient(90deg,#16a34a,#5fd07a)':h>=25?'linear-gradient(90deg,#ca8a04,#fde68a)':'linear-gradient(90deg,#b91c1c,#fca5a5)';}
+  const lbl=document.getElementById('pet-happy-lbl');if(lbl)lbl.textContent=(h>=85?'Overjoyed':h>=50?'Happy':h>=25?'Okay':'Lonely')+' '+h+'%';
+  const fb=document.getElementById('pet-btn-feed');if(fb){fb.disabled=(G.petTreats||0)<=0;fb.textContent=(G.petTreats||0)>0?('🦴 Treat ('+G.petTreats+')'):'🦴 0';}
+  if(!window._petIdleTimer)window._petIdleTimer=setInterval(_petIdle,2800);
+}
+function _petIdle(){
+  if(document.hidden||!G||!G.pet)return;
+  const panel=document.getElementById('pet-panel');if(!panel||panel.style.display==='none')return;
+  const r=Math.random();
+  if(r<0.4){_petFaceAnim([{transform:'translateY(0)'},{transform:'translateY(-3px)'},{transform:'translateY(0)'}],1400);}
+  else if(r<0.7){_petEyesClose();}
+  else if(r<0.88){const meta=_petMeta(G.pet.id);if(meta&&meta.sound)_petBubble(meta.sound);}
+  else if((G.petHappy||0)>=70){_petFaceAnim([{transform:'translateY(0)'},{transform:'translateY(-8px) scale(1.05)',offset:.5},{transform:'translateY(0)'}],600);}
 }
 function _leisureGo(cost,emoji,name,quip,perkFn){
   if(_leisurePay(cost,emoji,name,quip,perkFn)){G._leisureSpent=(G._leisureSpent||0)+cost;}
@@ -10340,6 +10518,7 @@ function replaySameProfession(){
 
 function spawnWinConfetti(){
   _haptic([60,40,60,40,140]); // celebratory buzz (win / dream-car garage)
+  try{petReact('party');}catch(e){} // 🐾 companion celebrates with you
   const colors=['#f0c020','#ff6b6b','#4ecdc4','#a8e6cf','#fff','#ffb347','#c77dff','#4CAF50','#FF69B4'];
   for(let i=0;i<90;i++){
     const el=document.createElement('div');
@@ -11710,6 +11889,7 @@ function updateUI(){
   })();
   try{renderRivalBar();}catch(e){} // keep the rival bar synced + restored on load
   try{renderPlaysTray();}catch(e){} // keep the power-up tray synced + restored on load
+  try{renderPetPanel();}catch(e){} // 🐾 keep the pet-cam companion synced + restored on load
 
   // Top bar
   $('pc-av').textContent=(G.identity&&G.identity.avatar)||G.prof.icon;
@@ -12550,6 +12730,10 @@ function loadSave(key){
     const raw=localStorage.getItem(key||SAVE_KEY);if(!raw)return false;
     const s=JSON.parse(raw);if(!s||!s.G||!s.G.prof)return false;
     G=s.G;expressMode=s.expressMode||false;_prevCash=null;
+    // 🐾 Back-compat: pre-pet / pre-happiness saves heal to the free starter + defaults
+    if(!G.pet)G.pet={id:'stray',name:'Scout the Stray Pup',icon:'🐶',bonus:0};
+    if(typeof G.petHappy!=='number')G.petHappy=60;
+    if(typeof G.petTreats!=='number')G.petTreats=3;
     // Restore multiplayer state if present
     if(s.PLAYERS&&s.PLAYERS.length>1){
       PLAYERS=s.PLAYERS;ACTIVE_PLAYER_IDX=s.ACTIVE_PLAYER_IDX||0;_mpCount=s._mpCount||PLAYERS.length;

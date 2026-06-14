@@ -4,6 +4,14 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.13.0 — 2026-06-14 — Interactive pet companion (pet-cam)
+- **NEW: live pet-cam panel (user request)** docked bottom-left of the board (`#pet-panel`, inside `#game` so it auto-hides off-screen; responsive — hidden ≤1040px wide or ≤560px tall, where Pet/Feed live in the Leisure → Pet modal instead). Shows the pet as a big animated "head" in a framed ● LIVE window with a happiness bar + ✋ Pet / 🦴 Treat buttons.
+- **Interactions:** `petPet()` (eyes close via `#pet-lids`, hearts float, face wags, species sound bubble, +2 happy, 420ms anti-spam cooldown) and `feedPet()` (treat emoji flies to the mouth + chomp, +14 happy, consumes a treat). All motion uses WAAPI so it survives prefers-reduced-motion; every helper no-ops when the panel is hidden or `document.hidden`.
+- **Happiness meter + reward:** `G.petHappy` (0–100) rises little-by-little as you interact, decays −8 each payday, and pays a tiered **happy-pet bonus** at payday via `petMorale()` (≥85→+$110, ≥50→+$40, <50→$0) — added to cash + shown as a payday row. Treats (`G.petTreats`) refill to 3 each payday. Bonus is a payday cash tip (NOT folded into `income()`), so FS math stays clean.
+- **Free starter pet:** everyone begins with **Scout the Stray Pup** (`adopt:0, bonus:0`) so the panel is alive from turn one; `adoptPet` now SWAPS (removes old bonus before adding new — no stacking), and "Release" reverts to Scout. PETS gained `sound`/`treat` fields + `_petMeta()` lookup.
+- **Event reactions:** `petReact()` — celebrates on positive payday & win/dream-car (`spawnWinConfetti`), whimpers on setback landings (doodad/layoff/audit/lawsuit/crisis/divorce/disability/recession). Idle loop (`_petIdle`, document.hidden-guarded) does ambient bob/blink/speech.
+- Back-compat: pre-pet saves heal to Scout + happy 60 + 3 treats on load.
+
 ## v1.12.0 — 2026-06-14 — Visible rival roll + freedom-bar fix
 - **Rival visible roll (user request)**: `_rivalTurnToast` now tumbles the rival's die (8× face-cycle ~520ms) before landing on the rolled value + revealing their % to freedom, so you SEE the rival roll like watching a multiplayer opponent. The rival already only races the rat race (advanceRival early-returns on `_onFastTrack`/`_winning`) — verified the Fast-Track freeze still holds.
 - **Freedom bar fix (user-reported)**: the Cashflow Day payday card built its Freedom gauge from Unicode block chars (`█`/`░`) → rendered as ugly dark-block + dots. Replaced with a real CSS bar (green gradient fill, % width) injected via the card's innerHTML row value. Verified: bar div renders, no block chars.
