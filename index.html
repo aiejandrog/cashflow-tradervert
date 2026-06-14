@@ -803,7 +803,7 @@ body{
 }
 .ecm-band{
   padding:9px 14px;font-family:Georgia,serif;font-style:italic;font-weight:700;
-  font-size:.92rem;color:#fff;display:flex;align-items:center;gap:8px;
+  font-size:.92rem;color:#fff;display:flex;align-items:center;gap:8px;background:#555;
 }
 .ecm-band.payday{background:#2e7d32}
 .ecm-band.opportunity{background:var(--green-d)}
@@ -838,9 +838,13 @@ body{
 #modal.vis{display:flex}
 .mbox{pointer-events:all}
 .mbox{background:var(--parch);border:3px solid var(--parch-b);border-radius:12px;width:380px;max-width:95vw;overflow:hidden;box-shadow:0 12px 50px rgba(0,0,0,.6);animation:cPop .2s ease;max-height:88vh;display:flex;flex-direction:column}
-.mbox-band{padding:8px 14px;font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:.88rem;color:#fff}
+.mbox-band{padding:8px 14px;font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:.88rem;color:#fff;background:#555}
 .mbox-band.green{background:var(--green-d)}.mbox-band.blue{background:var(--teal)}.mbox-band.gray{background:#555}
 .mbox-band.amber{background:linear-gradient(135deg,#92460a,#c06018)}.mbox-band.red{background:#8b1a1a}.mbox-band.purple{background:var(--purple2)}
+/* These three were missing — band defaulted to no background, so the white title vanished on the parchment. */
+.mbox-band.gold{background:linear-gradient(135deg,#c8910c,#f0c020);color:#2a1500}
+.mbox-band.life{background:#6b3fa8}
+.mbox-band.dream{background:linear-gradient(135deg,#7a3fb0,#c44fd0)}
 .mbox-body{padding:12px 14px;overflow-y:auto;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(79,45,127,.3) transparent}
 .mbox-body h3{font-size:.9rem;color:var(--purple2);margin-bottom:6px;font-style:italic}
 .mbox-body p{font-size:.76rem;color:var(--txt);line-height:1.5;margin-bottom:8px}
@@ -2628,8 +2632,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.10.1';
+const GAME_VERSION='1.11.0';
 const CHANGELOG=[
+  {v:'1.11.0', date:'2026-06-14', notes:[
+    '🩹 Fixed invisible card titles — the white header on power-up, School, Leisure, Pet & dream cards is now clearly readable.',
+    '🔮 The name guesser got even bigger — now recognizes 117 characters (added The Boys, Succession, Jujutsu Kaisen, Cyberpunk, Wolf of Wall Street, MrBeast & loads more).',
+  ]},
   {v:'1.10.1', date:'2026-06-14', notes:[
     '🐾 Your adopted pet now shows up next to you in the Life Hub — say hi to your companion!',
   ]},
@@ -14382,6 +14390,51 @@ const _FAMOUS_NAMES=[
   [/\bkaren\b/, 'meme royalty', 'Can I speak to your… compound interest? 💁'],
   [/\bdoge\b|much\s*wow|such\s*wow/, 'meme royalty', 'Much income. Very freedom. Wow. 🐕'],
   [/napoleon|julius\s*caesar|cleopatra|genghis\s*khan/, 'the history books', 'Conquer markets, not nations. 👑'],
+  // ── More shows ──
+  [/tyrion|cersei|\barya\s*stark|lannister/, 'Game of Thrones', 'A Lannister always pays his debts. Be the lender. 🦁'],
+  [/homelander|billy\s*butcher|the\s*boys/, 'The Boys', 'Supes crack under pressure. Diversified portfolios don\'t. 🩸'],
+  [/rick\s*grimes|\bnegan\b|daryl\s*dixon|walking\s*dead/, 'The Walking Dead', 'In the apocalypse, cash flow is the only currency. 🧟'],
+  [/logan\s*roy|kendall\s*roy|succession/, 'Succession', 'Real empires run on boring assets, not media drama. 💼'],
+  [/\bcarmy\b|carmen\s*berzatto|the\s*bear\b/, 'The Bear', 'Yes chef — now plate up that passive income. 🔪'],
+  [/ted\s*lasso/, 'Ted Lasso', 'Believe. In compound interest. 🛼'],
+  [/\bjinx\b|arcane|piltover|\bjayce\b/, 'Arcane', 'Power, money, and a little chaos. Invest the chaos. 💎'],
+  // ── More anime ──
+  [/light\s*yagami|\bryuk\b|death\s*note|\bkira\b/, 'Death Note', 'Write "financial freedom" in the notebook. 📓'],
+  [/\bgojo\b|itadori|jujutsu|sukuna/, 'Jujutsu Kaisen', 'Domain expansion: your investment portfolio. 🌀'],
+  [/edward\s*elric|fullmetal|alphonse/, 'Fullmetal Alchemist', 'Equivalent exchange: time + discipline = wealth. ⚗️'],
+  [/killua|hunter\s*x\s*hunter/, 'Hunter x Hunter', 'The real hunt is for cash-flowing assets. 🎴'],
+  [/\bdenji\b|chainsaw\s*man|makima/, 'Chainsaw Man', 'Chase the dream, not the debt. 🪚'],
+  [/spy\s*x\s*family|anya\s*forger/, 'Spy x Family', 'Waku waku! Secret mission: build wealth. 🥜'],
+  // ── More games ──
+  [/fortnite|battle\s*bus|victory\s*royale/, 'Fortnite', 'Build assets, not just forts. Victory royale = freedom. 🪂'],
+  [/among\s*us|impost(o|e)r/, 'Among Us', 'Fees are the impostor draining your returns. Vote them out. 🔪'],
+  [/arthur\s*morgan|red\s*dead|dutch\s*van\s*der/, 'Red Dead Redemption', 'We need money — so we invest it, not rob trains. 🤠'],
+  [/cloud\s*strife|sephiroth|final\s*fantasy/, 'Final Fantasy', 'Limit break: max out that retirement account. ⚔️'],
+  [/johnny\s*silverhand|cyberpunk|night\s*city/, 'Cyberpunk 2077', 'Wake up, samurai — we have a portfolio to build. 🌃'],
+  [/\bkirby\b/, 'Kirby', 'Inhale income, copy the rich guy\'s habits. 🌟'],
+  [/pac-?man/, 'Pac-Man', 'Eat the dots (dividends), dodge the ghosts (debt). 👻'],
+  // ── More movies ──
+  [/jordan\s*belfort|wolf\s*of\s*wall|\bbelfort\b/, 'The Wolf of Wall Street', 'Sell me this… index fund. Boring makes you rich. 🐺'],
+  [/chris\s*gardner|pursuit\s*of\s*happyness/, 'The Pursuit of Happyness', 'Rock bottom to wealth — one disciplined dollar at a time. 🤝'],
+  [/corleone|godfather|don\s*vito/, 'The Godfather', 'Make the market an offer it can\'t refuse: time in it. 🍊'],
+  [/marty\s*mcfly|doc\s*brown|back\s*to\s*the\s*future/, 'Back to the Future', 'Great Scott — start investing today. ⚡'],
+  [/sarah\s*connor|\bt-?800\b|terminator|skynet/, 'The Terminator', 'I\'ll be back… for my dividends. 🤖'],
+  [/jake\s*sully|neytiri|pandora/, 'Avatar', 'Unobtanium is rare. Compound interest isn\'t. 💙'],
+  [/indiana\s*jones/, 'Indiana Jones', 'Fortune and glory — mostly fortune, if you reinvest. 🤠'],
+  // ── More music ──
+  [/the\s*weeknd/, 'The Weeknd', 'Can\'t feel my face… but I feel my net worth. 🎷'],
+  [/billie\s*eilish/, 'Billie Eilish', 'Bury the bad debt, friend. 🖤'],
+  [/ariana\s*grande/, 'Ariana Grande', 'Thank u, next… paycheck straight to investments. 🎀'],
+  [/\bdrake\b|aubrey\s*graham/, 'Drake', 'Started from the bottom, now the whole portfolio here. 🦉'],
+  [/dua\s*lipa|\bsza\b|olivia\s*rodrigo|sabrina\s*carpenter|doja\s*cat/, 'pop royalty', 'New rules: pay yourself first. 🎶'],
+  // ── Internet / figures ──
+  [/mr\.?\s*beast|mrbeast/, 'MrBeast', 'Give away $1M, earn $10M. That\'s leverage. 💸'],
+  [/the\s*rock|dwayne\s*johnson/, 'Dwayne Johnson', 'Can you smell what your cash flow is cooking? 🪨'],
+  [/\bkeanu\b/, 'Keanu Reeves', 'Breathtaking. So is automatic investing. 🕶️'],
+  [/\boprah\b/, 'Oprah', 'You get an asset! YOU get an asset! 📣'],
+  [/sigma\s*(male|grindset)|skibidi|\bgyatt\b|\brizz\b|mewing/, 'meme royalty', 'Sigma grindset: net worth over clout. 🗿'],
+  [/\bpepe\b|wojak|stonks/, 'meme royalty', 'Stonks only go up… eventually. Stay invested. 📈'],
+  [/steph\s*curry|mahomes|ohtani|shohei|serena\s*williams|tiger\s*woods/, 'sports legend territory', 'GOATs invest the prize money. 🐐'],
 ];
 function _famousName(name){
   const n=(name||'').toLowerCase();

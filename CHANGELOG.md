@@ -4,6 +4,10 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.11.0 — 2026-06-14 — Invisible-title fix + name guesser to 117
+- **BUG FIX (user-reported): invisible card band titles.** `openModal` band values `gold` (16 uses), `life` (12), `dream` (2) had no `.mbox-band.*` CSS variant → fell back to base `color:#fff` with no background → white title on the parchment card = invisible (affected power-up plays, School, Leisure, Pets, dream & name-quiz modals). Added `.mbox-band.gold` (gold gradient + DARK text #2a1500), `.mbox-band.life` (purple), `.mbox-band.dream` (purple-magenta), and a fallback `background:#555` on both `.mbox-band` and `.ecm-band` bases so no band can ever render invisible again. Verified computed contrast on gold/life/dream/gray.
+- **Name guesser 78→117**: added The Boys, Walking Dead, Succession, The Bear, Ted Lasso, Arcane, Death Note, Jujutsu Kaisen, FMA, HxH, Chainsaw Man, Spy x Family, Fortnite, Among Us, Red Dead, Final Fantasy, Cyberpunk, Kirby, Pac-Man, Wolf of Wall Street, Pursuit of Happyness, Godfather, BTTF, Terminator, Avatar, Indiana Jones, The Weeknd, Billie Eilish, Ariana, Drake, MrBeast, The Rock, Keanu, Oprah, sigma/meme bundle, more sports. Verified 20 new matches + no false positives on common names (Michael/Sarah/Jesus/etc.).
+
 ## v1.10.1 — 2026-06-14 — Pet visibility + combined-systems bug hunt
 - **Pet shown in Life Hub**: adopted pet's icon now appends to `lh-avatar` (one-line render change) so the companion is visible, not just buried in the Leisure menu.
 - **Combined-systems bug hunt (clean, no fixes)**: stress-tested education(Master's) + pet + scenario(ratehike) + Quick Match all active on one run. Verified income/expense finite, `monthlyCF === income−expenses`, **`income.total === salary+interest+reCF+bizCF`** (pet morale folds into salary, breakdown stays consistent), rate-hike applied, save/restore preserves edu+pet+scenario across reload, zero console errors.
