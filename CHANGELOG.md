@@ -4,6 +4,10 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.8.0 — 2026-06-14 — One-tap chat phrases
+- **Quick-phrase banter** (`💬` button in chat → `#cl-phrase-picker`, 14 chips, `sendPhrase(txt)`): one tap sends canned lines (GG!, Nice deal, Coming for it, Rent's due, Skill issue, Cope, etc.) — instant MP banter, no typing. Reuses the chat send path (renders locally + `netSend({type:'chat'})`). `togglePhrasePicker()` and `toggleGifPicker()` close each other (no stacking); added to the `.cl-collapsed` hide rule.
+- **Bug caught + fixed pre-ship**: two phrases with apostrophes used `&apos;` which decodes to a literal `'` inside the single-quoted JS string → broke the onclick (silent click failure). Switched to `\'` (survives HTML attr decode → JS escaped quote). Verified both post correctly.
+
 ## v1.7.0 — 2026-06-14 — 6 new rivals
 - **RIVALS 4→10**: added Landlord Lara (24t), Index-Fund Ivy (32t), Flipper Hank (20t), FIRE Fiona (16t, fast/hard), Dividend Dave (34t, slow/easy), Algo Andy (19t, nod to KlausMNQ). Each with archetype blurb + 4 taunts; `escTurns` spread 16–34 for pace variety. Pure data addition to `RIVALS` — the pick grid (`rivalCardHTML` over `RIVALS`) and `_makeRival(id)` handle them automatically. Verified all 10 makeable (finite pace, taunts present), pick grid renders 13 cards (10 + Ghost + Solo + Surprise). (Zen/No-Rival already existed as the Solo card.)
 

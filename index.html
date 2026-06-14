@@ -707,7 +707,10 @@ body{
 #chat-log.cl-collapsed #cl-rows,
 #chat-log.cl-collapsed #cl-react-row,
 #chat-log.cl-collapsed #cl-input-row,
+#chat-log.cl-collapsed #cl-phrase-picker,
 #chat-log.cl-collapsed #cl-gif-picker{display:none!important}
+#cl-phrase-picker{display:none;padding:6px 8px;border-top:1px solid rgba(255,255,255,.06);max-height:150px;overflow-y:auto}
+#cl-phrase-chips{display:flex;flex-wrap:wrap;gap:4px}
 #cl-react-row{display:flex;flex-wrap:wrap;gap:3px;padding:5px 8px;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;align-items:center}
 .cl-react-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;cursor:pointer;font-size:.95rem;line-height:1;padding:3px 6px;transition:transform .1s,background .12s,border-color .12s}
 .cl-react-btn:hover{background:rgba(240,192,32,.18);border-color:rgba(240,192,32,.5);transform:translateY(-1px)}
@@ -2040,8 +2043,28 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
         <div id="cl-input-row">
           <input id="cl-text-inp" type="text" placeholder="Send a message…" maxlength="120"
             onkeydown="if(event.key==='Enter')sendChatMsg()">
+          <button class="cl-gif-btn" onclick="togglePhrasePicker()" title="Quick phrases">💬</button>
           <button class="cl-gif-btn" onclick="toggleGifPicker()" title="Search GIFs">GIF</button>
           <button class="cl-send-btn" onclick="sendChatMsg()">➤</button>
+        </div>
+        <div id="cl-phrase-picker">
+          <div style="font-size:.5rem;color:rgba(255,255,255,.35);font-family:Arial,sans-serif;letter-spacing:.5px;margin-bottom:4px;text-transform:uppercase">Quick phrases — tap to send</div>
+          <div id="cl-phrase-chips">
+            <button class="cl-meme-chip" onclick="sendPhrase('GG! 🤝')">GG! 🤝</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('Nice deal 👀')">Nice deal 👀</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('Coming for that dream 🎯')">Coming for it 🎯</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('Rent\'s due 🏠')">Rent's due 🏠</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('To the moon 🚀')">To the moon 🚀</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('Watch this 😎')">Watch this 😎</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('Broke behavior 💸')">Broke behavior 💸</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('Cope 🤡')">Cope 🤡</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('Skill issue 💀')">Skill issue 💀</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('We move 🏃')">We move 🏃</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('Sheesh 🥶')">Sheesh 🥶</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('That\'s diabolical 😭')">Diabolical 😭</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('Good luck! 🍀')">Good luck! 🍀</button>
+            <button class="cl-meme-chip" onclick="sendPhrase('Let him cook 👨‍🍳')">Let him cook 👨‍🍳</button>
+          </div>
         </div>
         <div id="cl-gif-picker">
           <input id="cl-gif-search" type="text" placeholder="Search GIFs (e.g. money, win)…"
@@ -2605,8 +2628,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.7.0';
+const GAME_VERSION='1.8.0';
 const CHANGELOG=[
+  {v:'1.8.0', date:'2026-06-14', notes:[
+    '💬 NEW: one-tap chat phrases — fire off "GG! 🤝", "Coming for it 🎯", "Skill issue 💀" & 11 more without typing. Perfect for trash talk in multiplayer.',
+  ]},
   {v:'1.7.0', date:'2026-06-14', notes:[
     '🏁 6 NEW rivals to race — Landlord Lara, Index-Fund Ivy, Flipper Hank, FIRE Fiona, Dividend Dave & Algo Andy, each with their own pace and trash talk.',
     '🎯 10 rivals total now (plus race-your-Ghost and relaxed Solo mode) — way more variety every run.',
@@ -12023,6 +12049,22 @@ function sendChatMsg(){
     try{netSend({type:'chat',from:_bcMyIdx,name:myName,txt:txt.slice(0,120)});}catch(e){}
   }
 }
+// Quick-phrase banter — one tap sends a canned line (no typing). Reuses the chat path.
+function sendPhrase(txt){
+  if(!txt)return;
+  _renderChatRow('You',txt,true);
+  if(PLAYERS.length>1&&_bcRole&&typeof netSend==='function'){
+    const myName=(PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].name)||'Player '+(_bcMyIdx+1);
+    try{netSend({type:'chat',from:_bcMyIdx,name:myName,txt:String(txt).slice(0,120)});}catch(e){}
+  }
+  const pp=$('cl-phrase-picker');if(pp)pp.style.display='none';
+}
+function togglePhrasePicker(){
+  const pp=$('cl-phrase-picker');if(!pp)return;
+  const open=pp.style.display==='block';
+  pp.style.display=open?'none':'block';
+  const gp=$('cl-gif-picker');if(gp)gp.style.display='none'; // never stack both pickers
+}
 let _lastReactTs=0;
 function sendReaction(emo){
   const now=Date.now();
@@ -12063,6 +12105,7 @@ function _renderChatRow(name,txt,isMe){
 let _gifDebounce=null;
 function toggleGifPicker(){
   const gp=$('cl-gif-picker');if(!gp)return;
+  const pp=$('cl-phrase-picker');if(pp)pp.style.display='none'; // never stack both pickers
   const open=gp.style.display==='flex'||gp.style.display==='block';
   gp.style.display=open?'none':'block';
   if(!open){const s=$('cl-gif-search');if(s){s.value='meme';searchGifs('meme');setTimeout(()=>s.focus(),80);}}
