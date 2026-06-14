@@ -2149,8 +2149,9 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
 
       <!-- Chat panel -->
       <div id="chat-log">
-        <div class="cl-hdr" onclick="toggleChatPanel()">
+        <div class="cl-hdr" onclick="toggleChatPanel()" ondblclick="resetChatPos(event)" title="Drag to move · double-click to reset position">
           <span class="cl-hdr-title">📜 <span>LIFE FEED</span></span>
+          <button class="cl-toggle-btn" id="cl-reset-btn" title="Reset feed position" onclick="resetChatPos(event)">⤢</button>
           <button class="cl-toggle-btn" id="cl-tog-btn" title="Collapse / expand">▼</button>
         </div>
         <div id="cl-rows"></div>
@@ -2755,8 +2756,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.15.2';
+const GAME_VERSION='1.16.0';
 const CHANGELOG=[
+  {v:'1.16.0', date:'2026-06-14', notes:[
+    '🎧 NEW: DJ Booth! Unlock it in the Shop, then paste any YouTube link in the music menu to play a song for everyone in the room. Anyone can mute it with the 🔊 button.',
+    '🛠 Fixed the LIFE FEED — it can no longer be dragged off-screen above the top bar, and you can double-click its header (or tap ⤢) to snap it back into place.',
+  ]},
   {v:'1.15.1', date:'2026-06-14', notes:[
     '🐶 Name your pet! The "LIVE" tag is gone — your companion\'s name now sits under the pet-cam in smooth gold lettering. Tap it to rename, or use ✏️ Rename in the Leisure → Pet menu (works on any screen).',
   ]},
@@ -3684,6 +3689,8 @@ const RARITY={
 };
 const RARITY_ORDER=['common','rare','epic','legendary','mythic'];
 const SHOP_ITEMS=[
+  // ── Perks (gameplay unlocks, not cosmetic) ──
+  {id:'dj', cat:'Perks', icon:'🎧', name:'DJ Booth', cost:1500, rarity:'epic', type:'perk', desc:'Paste a YouTube link in the music menu to play a song for the whole room.'},
   // ── Board felt themes ──
   {id:'th_midnight',cat:'Board Themes',icon:'🌌',name:'Midnight Felt', cost:500, rarity:'common',type:'theme',vals:{f1:'#1a2550',f2:'#0e1530',f3:'#070a18'}},
   {id:'th_crimson', cat:'Board Themes',icon:'🟥',name:'Crimson Felt',  cost:750, rarity:'rare',  type:'theme',vals:{f1:'#4d1a22',f2:'#2d0e14',f3:'#1a0808'}},
@@ -4854,6 +4861,8 @@ function toggleMute(){
   localStorage.setItem('cf_muted',window._muted?'1':'0');
   const b=$('btn-sound');
   if(b){b.textContent=window._muted?'🔇':'🔊';b.style.opacity=window._muted?'.55':'1';}
+  // 🎧 jukebox follows the mute: silence it when muted, resume when unmuted
+  try{if(window._ytPlayer){if(window._muted){window._ytPlayer.mute&&window._ytPlayer.mute();}else if(window._ytCurrent){window._ytPlayer.unMute&&window._ytPlayer.unMute();window._ytPlayer.playVideo&&window._ytPlayer.playVideo();}}}catch(e){}
   if(!window._muted){ // audible proof the toggle worked — also revives a suspended context
     try{const c=_ctx();if(c&&c.state==='suspended')c.resume();_tone(660,.10,'sine',.18,0,990);}catch(e){}
   }
@@ -4955,9 +4964,89 @@ function _updateMusicBtn(){const b=$('btn-music');if(!b)return;const on=_musIdx>
 function _musMenuHTML(){
   const rows=MUSIC_TRACKS.map((t,i)=>{const on=(i===_musIdx);return '<div onclick="_musSetTrack('+i+');_refreshMusicMenu()" style="cursor:pointer;display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:8px;margin:2px 0;background:'+(on?'rgba(160,120,255,.22)':'transparent')+';border:1px solid '+(on?'rgba(160,120,255,.5)':'transparent')+';color:'+(on?'#fff':'rgba(255,255,255,.8)')+';font-size:.78rem;font-weight:'+(on?'800':'600')+'">'+(on?'▶ ':'<span style=\'opacity:.4\'>♪ </span>')+t.name+'</div>';}).join('');
   const off='<div onclick="_musSetTrack(\'off\');_refreshMusicMenu()" style="cursor:pointer;padding:7px 10px;border-radius:8px;margin:5px 0 2px;background:'+(_musIdx<0?'rgba(200,60,60,.2)':'transparent')+';border:1px solid '+(_musIdx<0?'rgba(220,80,80,.45)':'rgba(255,255,255,.08)')+';color:rgba(255,200,200,.85);font-size:.74rem;font-weight:700">🔇 Music Off</div>';
-  return '<div style="font-size:.64rem;letter-spacing:1px;text-transform:uppercase;color:rgba(200,170,255,.7);font-weight:800;padding:4px 8px 6px">🎵 Background Music</div>'+rows+off+'<div style="font-size:.57rem;color:rgba(255,255,255,.4);padding:6px 8px 2px;line-height:1.4">Mixed under the game sounds. 🔊 mutes everything.</div>';
+  // 🎧 DJ Booth perk — paste a YouTube link to play a song for the whole room
+  let jukebox='';
+  try{
+    const owned=loadProfile().owned.includes('dj');
+    if(owned){
+      jukebox='<div style="border-top:1px solid rgba(160,120,255,.18);margin-top:6px;padding-top:5px">'
+        +'<div onclick="jukeboxPrompt()" style="cursor:pointer;padding:8px 10px;border-radius:8px;background:linear-gradient(135deg,rgba(58,29,107,.55),rgba(107,63,168,.45));border:1px solid rgba(160,120,255,.5);color:#fff;font-size:.78rem;font-weight:800">🎵 Play a Song (YouTube)</div>'
+        +(window._ytCurrent?'<div onclick="jukeboxStop(true);_refreshMusicMenu()" style="cursor:pointer;padding:6px 10px;border-radius:8px;margin-top:4px;background:rgba(200,60,60,.18);border:1px solid rgba(220,80,80,.4);color:rgba(255,200,200,.9);font-size:.72rem;font-weight:700">⏹ Stop the song</div>':'')
+        +'</div>';
+    }else{
+      jukebox='<div style="border-top:1px solid rgba(160,120,255,.18);margin-top:6px;padding-top:6px;font-size:.6rem;color:rgba(200,170,255,.55);padding-left:8px;padding-right:8px;line-height:1.4">🎧 Unlock the <b>DJ Booth</b> in the Shop to play any YouTube song for the whole room.</div>';
+    }
+  }catch(e){}
+  return '<div style="font-size:.64rem;letter-spacing:1px;text-transform:uppercase;color:rgba(200,170,255,.7);font-weight:800;padding:4px 8px 6px">🎵 Background Music</div>'+rows+off+jukebox+'<div style="font-size:.57rem;color:rgba(255,255,255,.4);padding:6px 8px 2px;line-height:1.4">Mixed under the game sounds. 🔊 mutes everything.</div>';
 }
 function _refreshMusicMenu(){const m=document.getElementById('music-menu');if(m)m.innerHTML=_musMenuHTML();}
+// ══ 🎧 YOUTUBE JUKEBOX (DJ perk) — paste a link, plays for the whole room; the 🔊 mute silences it ══
+function _ytParseId(u){
+  if(!u)return null;u=String(u).trim();
+  const m=u.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if(m)return m[1];
+  if(/^[A-Za-z0-9_-]{11}$/.test(u))return u;
+  return null;
+}
+function _ytLoadAPI(cb){
+  if(window.YT&&window.YT.Player){cb();return;}
+  window._ytReadyCbs=window._ytReadyCbs||[];window._ytReadyCbs.push(cb);
+  if(window._ytAPILoading)return;window._ytAPILoading=true;
+  const prev=window.onYouTubeIframeAPIReady;
+  window.onYouTubeIframeAPIReady=function(){try{prev&&prev();}catch(e){}(window._ytReadyCbs||[]).forEach(function(f){try{f();}catch(e){}});window._ytReadyCbs=[];};
+  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';s.async=true;
+  s.onerror=function(){window._ytAPILoading=false;try{showToast('🎵 Couldn\'t reach YouTube (no internet?)','#7a1f1f',3500,true);}catch(e){}};
+  document.head.appendChild(s);
+}
+function _ytEnsurePlayer(cb){
+  _ytLoadAPI(function(){
+    if(window._ytPlayer&&window._ytPlayerReady){cb(window._ytPlayer);return;}
+    window._ytReadyPlayerCbs=window._ytReadyPlayerCbs||[];window._ytReadyPlayerCbs.push(cb);
+    if(window._ytPlayer)return; // created, awaiting onReady
+    let host=document.getElementById('yt-jukebox');
+    if(!host){host=document.createElement('div');host.id='yt-jukebox';host.style.cssText='position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;opacity:0;pointer-events:none';document.body.appendChild(host);}
+    window._ytPlayer=new YT.Player('yt-jukebox',{height:'1',width:'1',
+      playerVars:{autoplay:1,controls:0,disablekb:1,playsinline:1,rel:0},
+      events:{
+        'onReady':function(){window._ytPlayerReady=true;try{if(window._muted)window._ytPlayer.mute();}catch(e){}(window._ytReadyPlayerCbs||[]).forEach(function(f){try{f(window._ytPlayer);}catch(e){}});window._ytReadyPlayerCbs=[];},
+        'onError':function(){try{showToast('🎵 That video can\'t be embedded — try another link','#7a1f1f',3500,true);}catch(e){}}
+      }});
+  });
+}
+function jukeboxPlay(id,broadcast){
+  if(!id)return;window._ytCurrent=id;
+  _ytEnsurePlayer(function(p){try{p.loadVideoById(id);if(window._muted){p.mute();}else{p.unMute&&p.unMute();p.setVolume&&p.setVolume(65);}}catch(e){}});
+  if(broadcast){
+    if(PLAYERS.length>1&&_bcRole&&typeof netSend==='function'){
+      const myName=(PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].name)||'Player '+(_bcMyIdx+1);
+      try{netSend({type:'music',action:'play',vid:id,from:_bcMyIdx,name:myName});}catch(e){}
+      try{_renderChatRow(myName,'🎵 started a song',true);}catch(e){}
+    }
+  }else if(!window._muted){_ytTapToHear();} // remote-started: offer tap-to-hear if autoplay is blocked
+}
+function jukeboxStop(broadcast){
+  try{if(window._ytPlayer)window._ytPlayer.stopVideo();}catch(e){}
+  window._ytCurrent=null;
+  if(broadcast&&PLAYERS.length>1&&_bcRole&&typeof netSend==='function'){try{netSend({type:'music',action:'stop',from:_bcMyIdx});}catch(e){}}
+  try{_refreshMusicMenu();}catch(e){}
+}
+function jukeboxPrompt(){
+  if(!loadProfile().owned.includes('dj')){try{showToast('🎧 Unlock the DJ Booth in the Shop to play YouTube songs','#3a1d6b',3200,true);}catch(e){}return;}
+  const u=prompt('Paste a YouTube link to play for the room:');if(u===null)return;
+  const id=_ytParseId(u);
+  if(!id){try{showToast('🎵 Couldn\'t read that link — paste a full YouTube URL','#7a1f1f',3200,true);}catch(e){}return;}
+  jukeboxPlay(id,true);
+  try{const m=document.getElementById('music-menu');if(m)m.remove();}catch(e){}
+  try{showToast('🎵 Now playing for the room — 🔊 mute anytime','linear-gradient(135deg,#3a1d6b,#6b3fa8)',2600);}catch(e){}
+}
+function _ytTapToHear(){
+  if(document.getElementById('yt-tap'))return;
+  const b=document.createElement('div');b.id='yt-tap';b.textContent='🎵 Tap to hear the music';
+  b.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;background:linear-gradient(135deg,#3a1d6b,#6b3fa8);color:#fff;font-family:Georgia,serif;font-weight:800;font-size:.8rem;padding:9px 16px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.5);cursor:pointer';
+  b.onclick=function(){try{window._ytPlayer&&window._ytPlayer.unMute&&!window._muted&&window._ytPlayer.unMute();window._ytPlayer&&window._ytPlayer.playVideo();}catch(e){}b.remove();};
+  document.body.appendChild(b);
+  setTimeout(function(){if(b.parentNode)b.remove();},9000);
+}
 function _closeMusicMenuOnce(e){const m=document.getElementById('music-menu');if(m&&!m.contains(e.target)&&!(e.target.closest&&e.target.closest('#btn-music'))){m.remove();document.removeEventListener('pointerdown',_closeMusicMenuOnce,true);}}
 function toggleMusicMenu(){
   const ex=document.getElementById('music-menu');if(ex){ex.remove();document.removeEventListener('pointerdown',_closeMusicMenuOnce,true);return;}
@@ -8000,10 +8089,23 @@ function makeDraggable(el,handle){
     el.style.right='auto';el.style.bottom='auto';
     ox=r.left;oy=r.top;sx=e.clientX;sy=e.clientY;
     handle.style.cursor='grabbing';
-    const mv=e2=>{el.style.left=(ox+e2.clientX-sx)+'px';el.style.top=(oy+e2.clientY-sy)+'px';};
+    const mv=e2=>{
+      const w=el.offsetWidth,h=el.offsetHeight;
+      let nx=ox+e2.clientX-sx, ny=oy+e2.clientY-sy;
+      // clamp on-screen: never above the top bar (~56px), always keep it reachable
+      nx=Math.max(4,Math.min(nx,(window.innerWidth||1000)-Math.min(w,(window.innerWidth||1000))-4));
+      ny=Math.max(56,Math.min(ny,(window.innerHeight||700)-40));
+      el.style.left=nx+'px';el.style.top=ny+'px';
+    };
     const up=()=>{handle.style.cursor='grab';document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
   });
+}
+function resetChatPos(e){ // clear drag-applied inline position → back to the CSS default spot
+  if(e){try{e.stopPropagation();}catch(_){}}
+  const el=document.getElementById('chat-log');if(!el)return;
+  el.style.left='';el.style.top='';el.style.right='';el.style.bottom='';el.style.transform='';el.style.margin='';el.style.position='';
+  try{showToast('📜 Feed position reset','#3a1d6b',1400);}catch(_){}
 }
 
 function showDoodadEvent(){
@@ -13962,6 +14064,14 @@ function bcHandleMessage(msg){
   }
   if(msg.type==='gif'){
     if(msg.from!==_bcMyIdx&&msg.url)_renderGifRow(msg.name||('Player '+((msg.from|0)+1)),msg.url,false);
+    if(_bcRole==='host')netRelay(msg);
+    return;
+  }
+  if(msg.type==='music'){ // 🎧 jukebox — play/stop the same song for everyone
+    if(msg.from!==_bcMyIdx){
+      if(msg.action==='stop'){try{jukeboxStop(false);}catch(e){}}
+      else if(msg.vid){try{_renderChatRow(msg.name||('Player '+((msg.from|0)+1)),'🎵 started a song');}catch(e){}try{jukeboxPlay(msg.vid,false);}catch(e){}}
+    }
     if(_bcRole==='host')netRelay(msg);
     return;
   }
