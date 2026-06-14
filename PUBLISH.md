@@ -92,3 +92,27 @@ delete the old upload, upload the new zip, re-tick "play in browser," **Save**.
 - **Today:** share **https://aiejandrog.github.io/cashflow-tradervert/** — it's live.
 - **This week:** zip `index.html` → itch.io → "play in browser" → fullscreen + mobile →
   cover image + screenshots → Public. That's where players find it.
+
+---
+
+## 🔁 The Release Ritual (run this on EVERY update)
+
+The game is **live** at https://freedomrace.itch.io/freedom-race. To ship an update and
+reach everyone who's interested:
+
+1. **Make the change**, then **bump the version**: edit `GAME_VERSION` in `index.html`
+   (patch = fix, minor = feature, major = overhaul) and add an entry to the in-game
+   `CHANGELOG` array **and** to `CHANGELOG.md`.
+2. **Deploy the web build:** `git push origin main` → GitHub Pages updates in ~40s.
+3. **Update itch:** rebuild the zip (a single `index.html` at the zip root), then on the
+   itch project → **Edit game** → **Upload files** → replace the old HTML upload with the
+   new zip → keep **"This file will be played in the browser"** ticked → Save.
+4. **Post a Devlog** (project → **Devlog** → new post). 🔑 *This is the part that matters:*
+   itch **automatically notifies every follower** of the new devlog — that's your free,
+   zero-infrastructure broadcast to everyone who cares. Paste the changelog notes.
+5. *(Optional)* Post a 15-sec clip (win / fast track) on IG/TikTok/Reddit with the link to
+   pull NEW followers.
+
+**Why followers matter:** the in-game "❤️ Follow" buttons (win screen + changelog) convert
+players into followers, and devlogs let you reach all of them on every release — and later,
+announce **paid** games to them. See `MONETIZE.md` for the full funnel.

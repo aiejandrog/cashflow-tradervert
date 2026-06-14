@@ -45,6 +45,15 @@ body{
     linear-gradient(160deg,#0e0520 0%,#190835 40%,#0a0312 100%);
   position:relative;overflow-y:auto;
 }
+/* Version badge — bottom corner of the splash; tap for the changelog */
+#version-badge{
+  position:absolute;bottom:8px;right:10px;z-index:3;
+  font-family:Arial,sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.5px;
+  color:rgba(200,180,255,.45);background:rgba(255,255,255,.04);
+  border:1px solid rgba(160,120,255,.18);border-radius:8px;padding:2px 8px;
+  cursor:pointer;transition:color .15s,border-color .15s,background .15s;user-select:none;
+}
+#version-badge:hover{color:rgba(220,205,255,.9);border-color:rgba(160,120,255,.5);background:rgba(160,120,255,.12)}
 /* Star particles */
 #splash::before{
   content:'';position:absolute;inset:0;pointer-events:none;
@@ -1696,6 +1705,7 @@ body{
       <button class="btn-og btn-gold" id="btn-begin" style="display:none">CHOOSE ›</button>
     </div>
   </div>
+  <div id="version-badge" onclick="if(typeof showChangelog==='function')showChangelog()" title="What's new — tap for the changelog">v1.0.0</div>
 </div>
 
 <!-- ══ CHARACTER (BitLife-style identity) ══ -->
@@ -2180,6 +2190,10 @@ body{
     <button class="btn-og btn-tan" onclick="replaySameProfession()" style="padding:12px 22px;font-size:.9rem">♻️ Same Prof</button>
     <button class="btn-og btn-amber" id="win-share-btn" onclick="copyWinResults(event)" style="padding:12px 22px;font-size:.9rem">🚀 Share Score</button>
   </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px;animation:wFade .8s ease 3.7s both;opacity:0">
+    <button class="btn-og btn-tan" onclick="try{window.open('https://freedomrace.itch.io','_blank')}catch(e){}" style="padding:9px 18px;font-size:.82rem">❤️ Follow for new games</button>
+    <button class="btn-og btn-tan" onclick="try{window.open('https://freedomrace.itch.io/freedom-race','_blank')}catch(e){}" style="padding:9px 18px;font-size:.82rem">☕ Support the dev</button>
+  </div>
 </div>
 
 <!-- ══ BANKRUPTCY OVERLAY ══ -->
@@ -2470,6 +2484,37 @@ const CAR_SEGMENTS=[
   {key:'Dream',   icon:'💎', blurb:'The garage you retire into'},
 ];
 // Starting beaters — every player begins with a real (old) car, matching their existing car loan
+// ── VERSION + CHANGELOG ───────────────────────────────────────────────────
+// Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
+// (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
+// deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
+const GAME_VERSION='1.0.0';
+const CHANGELOG=[
+  {v:'1.0.0', date:'2026-06-14', notes:[
+    '🎉 Launch! Escape the rat race, race a live rival, and buy your dream on the Fast Track.',
+    '🏁 Fast Track with 4 corner dream tiles + smooth board movement.',
+    '💸 Loans & expenses now pay down every payday — whether you pass or land on it.',
+    '🚙 Tap your vehicle in the Life Hub to open your Garage (view & sell rides).',
+    '🏘️ Buy multiple rental properties from the Realty office.',
+    '🎵 Synth soundtrack + juicy sound · 38 careers · difficulty & playstyle builds.',
+    '👥 Solo, same-device pass-and-play, and online multiplayer.',
+  ]},
+];
+function showChangelog(){
+  if(typeof openModal!=='function')return;
+  const rows=[];
+  CHANGELOG.forEach(c=>{
+    rows.push(['▸ v'+c.v+(c.date?'  ·  '+c.date:''),'']);
+    c.notes.forEach(n=>rows.push([n,'']));
+  });
+  openModal({band:'blue',title:"✨ What's New — v"+GAME_VERSION,
+    desc:'Freedom Race keeps getting better. Follow on itch to get every update + new games the moment they drop.',
+    rows:rows,
+    actions:[
+      {label:'❤️ Follow for new games & updates',cls:'btn-gold',fn:()=>{try{window.open('https://freedomrace.itch.io','_blank');}catch(e){}}},
+      {label:'Close',cls:'btn-tan',fn:()=>{}}
+    ]});
+}
 const BEATERS=[
   {name:'2006 Honda Civic',emoji:'🚗'},{name:'2008 Toyota Corolla',emoji:'🚗'},
   {name:'2005 Ford Taurus',emoji:'🚗'},{name:'2009 Nissan Sentra',emoji:'🚗'},
@@ -4391,6 +4436,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const b=$('btn-sound');
   if(b&&window._muted){b.textContent='🔇';b.style.opacity='.55';}
   try{_updateMusicBtn();}catch(e){}
+  try{const vb=$('version-badge');if(vb)vb.textContent='v'+GAME_VERSION;}catch(e){} // badge tracks the constant
 });
 
 // ══ BACKGROUND MUSIC ENGINE ══════════════════════════════════════════════
@@ -9678,8 +9724,10 @@ function openSettings(){
     rows:[['Sound',muted?'🔇 OFF':'🔊 ON',muted?'red':'green'],
           ['Auto-save','ON — every action persists','green'],
           ['Run',`${G.prof.icon} ${G.prof.name} · Turn ${G.turn}`,''],
-          ['Lifetime','✦ '+fmt(loadProfile().credits||0)+' · 🏆 '+loadProfile().trophies.length+' trophies','']],
+          ['Lifetime','✦ '+fmt(loadProfile().credits||0)+' · 🏆 '+loadProfile().trophies.length+' trophies',''],
+          ['Version','v'+GAME_VERSION,'']],
     actions:[
+      {label:"✨ What's New",cls:'btn-tan',fn:()=>{try{showChangelog();}catch(e){}}},
       {label:muted?'🔊 Unmute Sound':'🔇 Mute Sound',cls:'btn-tan',fn:()=>{toggleMute();openSettings();}},
       {label:'📖 Replay Tutorial',cls:'btn-tan',fn:()=>{try{startTutorial();}catch(e){}}},
       {label:'🔄 Restart Run (same career)',cls:'btn-tan',fn:()=>{
