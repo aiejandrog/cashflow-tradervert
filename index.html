@@ -1869,6 +1869,7 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗<span class="tb-lbl"> Dealer</span></button>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡<span class="tb-lbl"> Realty</span></button>
     <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openLeisure()" title="Leisure — dining, nightlife, travel" style="padding:6px 10px;font-size:.72rem">🍸<span class="tb-lbl"> Leisure</span></button>
+    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openEducation()" title="School — earn degrees to unlock careers & raise pay" style="padding:6px 10px;font-size:.72rem">🎓<span class="tb-lbl"> School</span></button>
     <button class="btn-og btn-tan" onclick="openShop()" title="Shop — spend your ✦ on cosmetics, Plays & the Mystery Box" style="padding:6px 10px;font-size:.72rem">🛍<span class="tb-lbl"> Shop</span></button>
     <button class="btn-og btn-tan" onclick="openSettings()" title="Settings" style="padding:6px 10px;font-size:.72rem">⚙️</button>
     <div class="tb-btn" id="btn-music" onclick="toggleMusicMenu()" title="Background music — tap to choose" style="opacity:.5">🎵</div>
@@ -2321,6 +2322,29 @@ const PROFS = [
   { id:'ecomop',     name:'E-com Operator',  icon:'📦', age:28, salary:7500,  taxes:1600, mortgage:1050, school:0,    car:220, cc:280, retail:100,other:820,  children:0, ccDebt:9000,  carLoan:11000, mortgage_d:88000,  schoolDebt:0,      savings:200, desc:'Amazon ranking drops, Meta ads spike — revenue can fall 60% overnight. The operators who last build income stacks outside the store.' },
 ];
 
+// ══ EDUCATION ════════════════════════════════════════════════════════════
+// Study to raise your salary AND unlock higher-tier careers at the Career Change
+// machine. Mirrors the real lesson: skills compound into income. pct = TOTAL salary
+// boost at that level; tuition = cash cost to advance from the previous level.
+const EDU_LEVELS=[
+  {name:'High School',          icon:'🎓',   pct:0,  tuition:0},
+  {name:'Trade / Associate',    icon:'📜',   pct:8,  tuition:4000},
+  {name:"Bachelor's Degree",    icon:'🎓',   pct:18, tuition:9000},
+  {name:"Master's / Doctorate", icon:'🧑‍🎓', pct:32, tuition:18000},
+];
+// Minimum education level to ENTER a career via the Career Change machine (default 0).
+// The initial life-spin ignores this — you're born into a random career.
+const PROF_EDU_REQ={ doctor:3,lawyer:3,quant:3,hedgefund:3,
+  engineer:2,accountant:2,hygienist:2,cryptodev:2,military:2,realtor:2,salesperson:2,teacher:2,nurse:2,
+  plumber:1,welder:1,hvac:1,carpenter:1,electrician:1,mechanic:1,barber:1,firefighter:1,police:1,chef:1,proptrader:1 };
+// One-line list of what each level newly unlocks (for the School modal hint).
+const EDU_UNLOCK_HINT=[
+  'Entry & working jobs: McDonald’s-tier, gig, warehouse, trucking, trades-curious.',
+  'Trade/Associate unlocks the trades: Electrician, Plumber, Welder, HVAC, Mechanic, Police, Firefighter, Chef…',
+  'Bachelor’s unlocks: Engineer, Accountant, Nurse, Teacher, Realtor, Sales Rep, Military Officer, Crypto Dev…',
+  'Master’s/Doctorate unlocks the top earners: Doctor, Lawyer, Quant Trader, Hedge Fund Manager.',
+];
+
 const BOARD_SPACES = [
   // v11 life-sim board — 32 spaces, 4 paydays, new life systems woven in.
   // getBXY()/fitBoard() position+scale by array length, so the ring auto-adapts.
@@ -2518,8 +2542,14 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.1.0';
+const GAME_VERSION='1.2.0';
 const CHANGELOG=[
+  {v:'1.2.0', date:'2026-06-14', notes:[
+    '🎓 NEW: School & Career Path — study to raise your salary and unlock higher-paying careers.',
+    '📜 Earn Trade/Associate, Bachelor\'s, or Master\'s/Doctorate — each adds a permanent salary boost (up to +32%).',
+    '🎰 The Career Change machine now only lands on jobs you\'re qualified for — get the degree to reach Doctor, Lawyer, Quant & more.',
+    '🎓 New "School" button in the top bar.',
+  ]},
   {v:'1.1.0', date:'2026-06-14', notes:[
     '⚙️ New Settings panel right on the main menu — sound, music picker, reduced motion, and more.',
     '🎵 Pick any of 6 soundtracks (or silence) before you even start a run.',
@@ -3895,7 +3925,7 @@ function initGame(prof, location) {
       {name:'Credit Cards', amt:scaledProf.ccDebt},
     ].filter(l=>l.amt>0),
     bankLoan:0, extraChildren:0, numChildren:0, extraBankPmt:0,
-    skipTurns:0, salaryBoost:0,
+    skipTurns:0, salaryBoost:0, edu:0,
     // Family situation: override housing cost to a small family contribution
     expenseOverrides:housingSituation==='family'
       ?{mortgage:Math.round(scaledProf.mortgage*0.18/50)*50||200}
@@ -3973,7 +4003,9 @@ function income() {
   const savRate=cash>=50000?0.04/12:cash>=5000?0.035/12:0;
   const savingsInt=Math.round(cash*savRate);
   const interest=stockDiv+savingsInt;
-  const salary =Math.max(0,G.prof.salary+(G.salaryBoost||0)); // floor at 0 — salary never goes negative
+  // Education multiplies salary (study → get paid more). Derived from EDU_LEVELS so old saves default safely.
+  const eduPct=(EDU_LEVELS[G.edu||0]||EDU_LEVELS[0]).pct||0;
+  const salary =Math.max(0,Math.round((G.prof.salary+(G.salaryBoost||0))*(1+eduPct/100))); // floor at 0 — salary never goes negative
   return {salary,interest,savingsInt,stockDiv,reCF,bizCF,total:salary+interest+reCF+bizCF};
 }
 function expenses() {
@@ -4105,12 +4137,16 @@ const ITEM_H=68; // px — must match .sp-item height
 // comfortable middle is a third, and most lives start in the grind (≈45%).
 // Mirrors reality, makes a Doctor roll feel like hitting a jackpot, and makes
 // the grind runs the badge of honor they deserve. Within a bucket it's fair.
-function _spinCareerLottery(){
+function _spinCareerLottery(maxEdu){
   // Near-even odds across every career, with the mega-earners a touch rarer so
   // landing a Doctor/Hedge Fund still feels like a lucky pull. Most blue-collar
   // and middle careers share roughly equal weight.
+  // maxEdu (optional): when set (Career Change machine), exclude careers that
+  // require more education than the player has earned. Omitted = full pool
+  // (initial life-spin + paid ✦ re-roll: you're born into a random career).
   const weighted=[];
   for(const p of PROFS){
+    if(maxEdu!==undefined && (PROF_EDU_REQ[p.id]||0) > maxEdu) continue; // education gate
     const w=p.salary>=14000?1:p.salary>=9000?2:3; // ultra-elite rare · high common-ish · everything else even
     for(let i=0;i<w;i++)weighted.push(p);
   }
@@ -6455,7 +6491,7 @@ function _careerCompareCard(np,viaMachine){
      {label:'🪑 Stay '+op.name,cls:dNet>=0?'btn-tan':'btn-gold',fn:()=>{addLog('🪑','Turned down the '+np.name+' offer — devil you know.','');endTurn();}}]);
 }
 function showCareerChange(){
-  const np=_spinCareerLottery();
+  const np=_spinCareerLottery(G.edu||0); // gate landing job by the player's education
   if(document.hidden){_careerCompareCard(np,false);return;} // stress/background path: straight to the choice
   // ── the machine ──
   let ov=document.getElementById('career-machine');if(ov)ov.remove();
@@ -9808,6 +9844,48 @@ function celebrateDebtFree(debtName){
   }else{
     showMilestone('✂️',debtName+' — PAID OFF!','One less bill forever. Expenses dropped permanently — every payday now hits harder. Deploy the savings into a deal.');
   }
+}
+
+// ══ 🎓 SCHOOL & CAREER PATH — study to unlock careers + raise pay ══
+function openEducation(){
+  if(!_gameScreenActive())return;
+  const lvl=G.edu||0, cur=EDU_LEVELS[lvl]||EDU_LEVELS[0], maxed=lvl>=EDU_LEVELS.length-1;
+  const nxt=maxed?null:EDU_LEVELS[lvl+1];
+  const inc=income(); // current salary reflects current edu
+  const rows=[
+    ['Your education',cur.icon+' '+cur.name,''],
+    ['Salary boost',(cur.pct>0?'+'+cur.pct+'%':'none yet'),cur.pct>0?'green':''],
+    ['Current salary','$'+fmt(inc.salary)+'/mo',''],
+  ];
+  if(nxt){
+    // preview the raise: salary at next level vs now
+    const base=G.prof.salary+(G.salaryBoost||0);
+    const nextSal=Math.max(0,Math.round(base*(1+nxt.pct/100)));
+    const raise=nextSal-inc.salary;
+    rows.push(['Next: '+nxt.icon+' '+nxt.name,'+'+nxt.pct+'% salary','green']);
+    rows.push(['Tuition','$'+fmt(nxt.tuition)+' (cash)',G.cash>=nxt.tuition?'':'red']);
+    rows.push(['Your raise','+$'+fmt(raise)+'/mo','green']);
+  }
+  const actions=[];
+  if(maxed){
+    rows.push(['Status','🎓 Education maxed','green']);
+  }else if(G.cash>=nxt.tuition){
+    actions.push({label:'🎓 Enroll — $'+fmt(nxt.tuition),cls:'btn-gold',fn:()=>{
+      G.cash-=nxt.tuition; G.edu=(G.edu||0)+1;
+      const earned=EDU_LEVELS[G.edu];
+      addLog('🎓',`Earned ${earned.name}! Salary boost now +${earned.pct}% — paid $${fmt(nxt.tuition)} tuition.`,'gold');
+      try{if(!window._muted){_tone(523,.12,'triangle',.16,0,659);_tone(784,.18,'triangle',.16,.1,1047);}}catch(e){}
+      try{showToast('🎓 '+earned.name+' earned! +'+earned.pct+'% salary','linear-gradient(135deg,#c8910c,#f0c020)',2600);}catch(e){}
+      updateUI();saveGame();openEducation();
+    }});
+  }else{
+    rows.push(['Need','$'+fmt(nxt.tuition-G.cash)+' more — keep earning','red']);
+  }
+  actions.push({label:'← Back',cls:'btn-tan',fn:()=>{}});
+  const desc=maxed
+    ? 'You\'ve reached the top. Your salary carries the full +'+cur.pct+'% education bonus.'
+    : 'Study to raise your salary AND unlock higher-paying careers at the 🎰 Career Change space. '+EDU_UNLOCK_HINT[Math.min(lvl+1,EDU_UNLOCK_HINT.length-1)];
+  openModal({band:'gray',title:'🎓 School & Career Path',desc,rows,actions,_noFS:true});
 }
 
 // ══ ⚙️ SETTINGS — in-game menu (save/leave/restart/sound/tutorial) ══
