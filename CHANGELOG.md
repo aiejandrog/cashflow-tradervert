@@ -4,6 +4,13 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.2.2 — 2026-06-14 — UI polish pass
+Objective consistency/readability/feedback fixes from a full-file UI audit (no speculative redesigns):
+- **Press feedback**: added `.btn-og:active{transform:translateY(1px)}` — every button variant now depresses on tap (they had hover but no active state). Base `.btn-og` radius 6px→8px.
+- **Top-bar chips**: unified the freedom chip's corner radius (14px→18px) to match the other three status chips; added hover feedback to the clickable credit chip (was interactive with no hover).
+- **Readability**: debt `.fs-pay-btn` was an ~8px button with 1px padding → 0.6rem / 3px 9px (legible + tappable, +hover/active); event-card number labels `.ec-num .nl` 0.58→0.62rem; credit-tier label 0.5→0.56rem.
+- Left alone (subjective/needs-pixels): splash row color palette, modal width unification, top-bar button finish — flagged but not changed blind.
+
 ## v1.2.1 — 2026-06-14 — Splash fit fix
 - Fixed the splash/main menu overflowing on short viewports (laptops ~768–860px tall): the bottom stats strip (`#profile-strip`) was clipped below the fold. Added `@media (max-height:860px)` + `(max-height:680px)` blocks that tighten splash gap/padding, logo size, and card spacing (~100px reclaimed). `.sp-item` height left at 68px so the spin reel (`ITEM_H=68`) stays aligned.
 
