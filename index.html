@@ -2013,7 +2013,7 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     color:#ff5d5d;font-family:Arial,sans-serif;text-shadow:0 0 6px rgba(255,93,93,.6);z-index:5;animation:petLive 2s infinite}
   @keyframes petLive{0%,70%{opacity:1}85%{opacity:.25}100%{opacity:1}}
   #pet-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
-  #pet-face{font-size:3.1rem;line-height:1;filter:drop-shadow(0 3px 7px rgba(0,0,0,.5));will-change:transform}
+  #pet-face{font-size:3.1rem;line-height:1;filter:drop-shadow(0 3px 7px rgba(0,0,0,.5));will-change:transform;transform-origin:50% 78%}
   #pet-lids{position:absolute;left:50%;top:34%;transform:translateX(-50%);width:46px;height:7px;
     border-radius:6px;background:rgba(10,4,20,.0);opacity:0;
     box-shadow:0 -10px 0 -3px rgba(10,4,20,.92),0 10px 0 -3px rgba(10,4,20,.92);pointer-events:none;z-index:4}
@@ -2743,8 +2743,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.14.0';
+const GAME_VERSION='1.14.1';
 const CHANGELOG=[
+  {v:'1.14.1', date:'2026-06-14', notes:[
+    '🐶 Petting your companion feels way better — fixed the glitchy jitter and gave it a bouncy squash-and-wag reaction with hearts and varied responses.',
+  ]},
   {v:'1.14.0', date:'2026-06-14', notes:[
     '✨ New loading screen — the game now opens with a smooth animated FREEDOM RACE intro that fades right into the menu. Tap to skip anytime.',
   ]},
@@ -9791,9 +9794,8 @@ function _petBubble(txt,col){
   b.textContent=txt;b.style.background=col||'#fff';b.style.color=col?'#fff':'#2a1500';b.style.display='block';
   try{b.animate([{opacity:0,transform:'translateX(-50%) translateY(6px) scale(.8)'},{opacity:1,transform:'translateX(-50%) translateY(0) scale(1)',offset:.2},{opacity:1,transform:'translateX(-50%) translateY(0) scale(1)',offset:.78},{opacity:0,transform:'translateX(-50%) translateY(-4px) scale(.95)'}],{duration:1700,easing:'ease-out'}).onfinish=function(){b.style.display='none';};}catch(e){setTimeout(function(){b.style.display='none';},1400);}
 }
-function _petEyesClose(){
-  const l=document.getElementById('pet-lids');if(!l||document.hidden)return;
-  try{l.animate([{opacity:0},{opacity:.92,offset:.32},{opacity:.92,offset:.68},{opacity:0}],{duration:850,easing:'ease-in-out'});}catch(e){}
+function _petEyesClose(){ // quick happy blink (squash) — replaces the old box-shadow eyelids that flickered like a glitch
+  _petFaceAnim([{transform:'scale(1,1)'},{transform:'scale(1.03,.62)',offset:.5},{transform:'scale(1,1)'}],240,'ease-in-out');
 }
 function _petHearts(n){
   const cam=document.getElementById('pet-cam');if(!cam||document.hidden)return;
@@ -9804,24 +9806,36 @@ function _petHearts(n){
     try{el.animate([{opacity:0,transform:'translate(0,0) scale(.5)'},{opacity:1,transform:'translate('+(dx*.5)+'px,-18px) scale(1)',offset:.3},{opacity:0,transform:'translate('+dx+'px,-52px) scale(.9)'}],{duration:1100+Math.random()*400,easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=function(){el.remove();};}catch(e){el.remove();}
   }
 }
-function _petFaceAnim(frames,dur){
+function _petFaceAnim(frames,dur,easing){
   const f=document.getElementById('pet-face');if(!f||document.hidden)return;
-  try{f.animate(frames,{duration:dur||700,easing:'ease-out'});}catch(e){}
+  try{f.getAnimations().forEach(function(a){a.cancel();});}catch(e){} // cancel in-flight anims so they never stack/jump (the glitch)
+  try{f.animate(frames,{duration:dur||700,easing:easing||'cubic-bezier(.34,1.56,.64,1)'});}catch(e){}
 }
 function petPet(){
   if(!G)return;
-  const now=Date.now();if(window._petCd&&now-window._petCd<420)return;window._petCd=now; // gentle anti-spam
+  const now=Date.now();if(window._petCd&&now-window._petCd<360)return;window._petCd=now; // gentle anti-spam
+  window.__petBusy=now; // pause the idle loop so it can't fight this reaction
   G.petHappy=Math.min(100,(typeof G.petHappy==='number'?G.petHappy:60)+2); // little by little
   const meta=_petMeta(G.pet&&G.pet.id);
-  _petEyesClose();_petHearts(2);
-  _petFaceAnim([{transform:'scale(1)'},{transform:'scale(1.08) rotate(-4deg)',offset:.4},{transform:'scale(1.04) rotate(3deg)',offset:.7},{transform:'scale(1)'}]);
-  _petBubble((meta&&meta.sound)||'♥');
-  try{if(!window._muted)_tone(720,.07,'triangle',.06,0,960);_haptic(12);}catch(e){}
+  // ONE composite squash → stretch → tail-wag → settle (no separate overlapping anims = no glitch)
+  _petFaceAnim([
+    {transform:'translateY(0) scale(1,1) rotate(0deg)'},
+    {transform:'translateY(2px) scale(1.10,.90) rotate(0deg)',offset:.16},
+    {transform:'translateY(-7px) scale(.94,1.12) rotate(-8deg)',offset:.42},
+    {transform:'translateY(-3px) scale(1.05,.97) rotate(7deg)',offset:.66},
+    {transform:'translateY(0) scale(1,1) rotate(-3deg)',offset:.86},
+    {transform:'translateY(0) scale(1,1) rotate(0deg)'}
+  ],720);
+  _petHearts(G.petHappy>=85?4:3);
+  const reacts=[(meta&&meta.sound)||'♥','♥','🐾','*happy wiggle*'];
+  _petBubble(reacts[Math.floor(Math.random()*reacts.length)]);
+  try{if(!window._muted)_tone(660+Math.random()*140,.07,'triangle',.06,0,940);_haptic(12);}catch(e){}
   renderPetPanel();saveGame();
 }
 function feedPet(){
   if(!G)return;
   if((G.petTreats||0)<=0){_petBubble('Out of treats!','#7a1f1f');return;}
+  window.__petBusy=Date.now(); // pause the idle loop during the chomp
   G.petTreats--;
   G.petHappy=Math.min(100,(typeof G.petHappy==='number'?G.petHappy:60)+14);
   const meta=_petMeta(G.pet&&G.pet.id);
@@ -9860,6 +9874,7 @@ function renderPetPanel(){
 }
 function _petIdle(){
   if(document.hidden||!G||!G.pet)return;
+  if(window.__petBusy&&Date.now()-window.__petBusy<1100)return; // let a fresh pet/feed reaction finish first
   const panel=document.getElementById('pet-panel');if(!panel||panel.style.display==='none')return;
   const r=Math.random();
   if(r<0.4){_petFaceAnim([{transform:'translateY(0)'},{transform:'translateY(-3px)'},{transform:'translateY(0)'}],1400);}
