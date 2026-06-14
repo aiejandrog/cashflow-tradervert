@@ -2755,10 +2755,10 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.15.1';
+const GAME_VERSION='1.15.2';
 const CHANGELOG=[
   {v:'1.15.1', date:'2026-06-14', notes:[
-    '🐶 Name your pet! The "LIVE" tag is gone — your companion\'s name now sits under the pet-cam in smooth gold lettering. Tap it anytime to rename your buddy.',
+    '🐶 Name your pet! The "LIVE" tag is gone — your companion\'s name now sits under the pet-cam in smooth gold lettering. Tap it to rename, or use ✏️ Rename in the Leisure → Pet menu (works on any screen).',
   ]},
   {v:'1.15.0', date:'2026-06-14', notes:[
     '🏳️ New "Resign Game" button in Settings — end a run anytime and head back to the menu.',
@@ -9775,6 +9775,11 @@ function openPets(){
   const acts=[
     {label:'✋ Pet '+G.pet.icon,cls:'btn-gold',fn:()=>{petPet();openPets();}},
     {label:G.petTreats>0?('🦴 Give a treat ('+G.petTreats+' left)'):'🦴 Out of treats — refills at payday',cls:'btn-tan',locked:(G.petTreats||0)<=0,fn:()=>{feedPet();openPets();}},
+    {label:'✏️ Rename '+_petDisplayName(),cls:'btn-tan',fn:()=>{
+      const n=prompt('Name your pet:',_petDisplayName());
+      if(n&&n.trim()){G.pet.name=n.trim().slice(0,14);G.pet.named=true;try{renderPetPanel();}catch(e){}updateUI();saveGame();}
+      openPets();
+    }},
     {label:'🐾 Adopt a different friend',cls:'btn-tan',fn:openPetAdopt},
   ];
   if(!isStarter)acts.push({label:'↩ Release to the shelter',cls:'btn-tan',fn:()=>{
