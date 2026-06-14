@@ -4,6 +4,13 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.17.2 — 2026-06-14 — Viral fixes: dead Follow/Support links + Post-on-X
+- **BUG (engagement leak):** 5 `freedomrace.itch.io` links (Follow/Support on the win screen, the level-up menu, and main Settings) pointed at the OLD account URL (renamed to `tradervert`). Fixed all → `tradervert.itch.io` / `tradervert.itch.io/freedom-race`. `copyWinResults` already shares `location.href` (correct, no change).
+- **Engagement add:** win screen gains a 🐦 **Post on X** button → `shareWinToX()` opens a tweet intent with a brag line (turns + grade + dream) + the game link + #FreedomRace — a one-tap desktop viral path alongside the native-share "Share Score". Verified: buttons render, intent URL valid, no stale links remain.
+
+## v1.17.1 — 2026-06-14 — Pet Shop discoverability
+- Added 🛍 Shop / 🎒 My Pets buttons directly on the pet-cam panel (`#pet-shop-btns`) so adopting/switching pets doesn't require digging through Leisure → Your Pet. `_mpLocked` guards on `openPetShop`/`openPetInventory`.
+
 ## v1.17.0 — 2026-06-14 — Pets expansion: breeds, cats, Pet Shop, multi-pet inventory
 - **12 new pets (user request, "get creative"):** chihuahua, kitten, rabbit, corgi, poodle, black cat, husky, pit bull, rottweiler, fox, tiger cub (+ existing goldfish/hamster/cat/parrot/dog/dragon) — 18 total. Each with icon/sound/treat/bonus/blurb in `PETS`.
 - **Pet Shop:** `openPetAdopt`→`openPetShop` lists all buyable pets; owned ones show "Set Active", the current one shows "Active", unowned show the price.

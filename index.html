@@ -2444,10 +2444,11 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     <button class="btn-og btn-gold" onclick="replayNewGame()" style="padding:12px 28px;font-size:.95rem">🔄 New Game</button>
     <button class="btn-og btn-tan" onclick="replaySameProfession()" style="padding:12px 22px;font-size:.9rem">♻️ Same Prof</button>
     <button class="btn-og btn-amber" id="win-share-btn" onclick="copyWinResults(event)" style="padding:12px 22px;font-size:.9rem">🚀 Share Score</button>
+    <button class="btn-og btn-tan" onclick="shareWinToX()" style="padding:12px 22px;font-size:.9rem">🐦 Post on X</button>
   </div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px;animation:wFade .8s ease 3.7s both;opacity:0">
-    <button class="btn-og btn-tan" onclick="try{window.open('https://freedomrace.itch.io','_blank')}catch(e){}" style="padding:9px 18px;font-size:.82rem">❤️ Follow for new games</button>
-    <button class="btn-og btn-tan" onclick="try{window.open('https://freedomrace.itch.io/freedom-race','_blank')}catch(e){}" style="padding:9px 18px;font-size:.82rem">☕ Support the dev</button>
+    <button class="btn-og btn-tan" onclick="try{window.open('https://tradervert.itch.io','_blank')}catch(e){}" style="padding:9px 18px;font-size:.82rem">❤️ Follow for new games</button>
+    <button class="btn-og btn-tan" onclick="try{window.open('https://tradervert.itch.io/freedom-race','_blank')}catch(e){}" style="padding:9px 18px;font-size:.82rem">☕ Support the dev</button>
   </div>
 </div>
 
@@ -2766,8 +2767,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.17.1';
+const GAME_VERSION='1.17.2';
 const CHANGELOG=[
+  {v:'1.17.2', date:'2026-06-14', notes:[
+    '🐦 New "Post on X" button on the win screen — brag about your run in one tap.',
+    '🔗 Fixed the Follow / Support links (they pointed at an old page) so they reach the right spot now.',
+  ]},
   {v:'1.17.1', date:'2026-06-14', notes:[
     '🛍 Easier to find: the pet-cam now has 🛍 Shop and 🎒 My Pets buttons right on it — adopt new pets or swap your active one without digging through menus.',
   ]},
@@ -2888,7 +2893,7 @@ function showChangelog(){
     desc:'Freedom Race keeps getting better. Follow on itch to get every update + new games the moment they drop.',
     rows:rows,
     actions:[
-      {label:'❤️ Follow for new games & updates',cls:'btn-gold',fn:()=>{try{window.open('https://freedomrace.itch.io','_blank');}catch(e){}}},
+      {label:'❤️ Follow for new games & updates',cls:'btn-gold',fn:()=>{try{window.open('https://tradervert.itch.io','_blank');}catch(e){}}},
       {label:'Close',cls:'btn-tan',fn:()=>{}}
     ]});
 }
@@ -5125,8 +5130,8 @@ function _mainSettingsHTML(){
    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">'
      +_msBtn("📖 How to Play","closeMainSettings();startTutorial()")
      +_msBtn("✨ What's New","showChangelog()")
-     +_msBtn("❤️ Follow","window.open('https://freedomrace.itch.io','_blank')")
-     +_msBtn("☕ Support","window.open('https://freedomrace.itch.io/freedom-race','_blank')")
+     +_msBtn("❤️ Follow","window.open('https://tradervert.itch.io','_blank')")
+     +_msBtn("☕ Support","window.open('https://tradervert.itch.io/freedom-race','_blank')")
    +'</div>'
    +'<div style="text-align:center;font-size:.62rem;color:rgba(255,255,255,.4);padding-top:3px;line-height:1.4">Freedom Race v'+GAME_VERSION+' · progress saves on this device</div>';
 }
@@ -10909,6 +10914,15 @@ function copyWinResults(e){
     `📈 Monthly Surplus: +$${fmt(surplus)}/mo\n\n`+
     `Can you beat ${G.turn} turns? 🎮\n${location.href}`;
   shareResult(txt,btn,'📋 Share Results');
+}
+function shareWinToX(){ // one-tap post to X (desktop viral path — tweet intent)
+  try{
+    const dream=(G.dream&&G.dream.name)||'my dream';const icon=(G.dream&&G.dream.icon)||'🎯';
+    const grade=getWinGrade(G.turn);
+    const txt=icon+' I escaped the rat race in '+G.turn+' turns and bought '+dream+' — grade '+grade.rank+' '+grade.label+'! Can you beat my time?';
+    const url=(location.href||'https://tradervert.itch.io/freedom-race').split('?')[0];
+    window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(txt)+'&url='+encodeURIComponent(url)+'&hashtags=FreedomRace,indiegame','_blank','noopener');
+  }catch(e){}
 }
 
 function getWinGrade(turns){
