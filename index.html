@@ -2447,6 +2447,7 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     <button class="btn-og btn-tan" onclick="shareWinToX()" style="padding:12px 22px;font-size:.9rem">🐦 Post on X</button>
   </div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px;animation:wFade .8s ease 3.7s both;opacity:0">
+    <button class="btn-og btn-gold" onclick="try{window.open('https://tradervert.itch.io/freedom-race#rate','_blank')}catch(e){}" style="padding:9px 18px;font-size:.82rem">⭐ Rate this game</button>
     <button class="btn-og btn-tan" onclick="try{window.open('https://tradervert.itch.io','_blank')}catch(e){}" style="padding:9px 18px;font-size:.82rem">❤️ Follow for new games</button>
     <button class="btn-og btn-tan" onclick="try{window.open('https://tradervert.itch.io/freedom-race','_blank')}catch(e){}" style="padding:9px 18px;font-size:.82rem">☕ Support the dev</button>
   </div>
@@ -2767,8 +2768,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.17.3';
+const GAME_VERSION='1.17.4';
 const CHANGELOG=[
+  {v:'1.17.4', date:'2026-06-14', notes:[
+    '⭐ Added a Rate this game button to the win screen — if you had fun, a rating helps others find it!',
+  ]},
   {v:'1.17.3', date:'2026-06-14', notes:[
     '🎧 The DJ Booth is now FREE for everyone — no unlock needed. Open the music menu, paste a YouTube link, and play a song for the whole room anytime.',
   ]},

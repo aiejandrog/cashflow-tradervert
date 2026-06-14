@@ -4,6 +4,10 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.17.4 — 2026-06-14 — Rate button + clean bug-hunt pass
+- **Engagement:** added a gold "⭐ Rate this game" button to the win screen (→ `tradervert.itch.io/freedom-race#rate`). Ratings are itch's #1 ranking signal and the game only has 3 — surfacing this at the win (peak-satisfaction) moment should lift it.
+- **Bug-hunt pass (clean):** stress-tested the pet inventory — 30 random adopt/switch/release ops left ZERO salaryBoost drift (pet bonus tracks the active pet exactly, no stacking); income/expense sums intact, monthlyCF consistent, 12 paydays finite, 0 console errors. No fix needed.
+
 ## v1.17.3 — 2026-06-14 — DJ Booth free for everyone (+ full feature test)
 - **DJ jukebox un-gated:** removed the `dj` perk requirement — the YouTube jukebox is now free for all players (removed the Shop item, `_musMenuHTML` always shows "Play a Song", `jukeboxPrompt` no longer checks ownership). Reason: maximize interaction (the original ✦1500 gate kept most players from ever using it).
 - **Full feature test (verified live in-browser):** 8-roll core loop + payday (0 errors); all menus open (Dealer/Realty/Leisure/School/Settings/Shop); pets pet/feed/shop/inventory; **DJ jukebox played a real YouTube video end-to-end** — IFrame API loaded, player reached state PLAYING, `toggleMute` muted it, `jukeboxStop` cued/stopped it (the immediate post-command getters read stale state — YT API is async via postMessage — but settle correctly after ~1s). 0 console errors throughout.
