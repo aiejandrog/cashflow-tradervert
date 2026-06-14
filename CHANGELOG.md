@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.7.0 — 2026-06-14 — 6 new rivals
+- **RIVALS 4→10**: added Landlord Lara (24t), Index-Fund Ivy (32t), Flipper Hank (20t), FIRE Fiona (16t, fast/hard), Dividend Dave (34t, slow/easy), Algo Andy (19t, nod to KlausMNQ). Each with archetype blurb + 4 taunts; `escTurns` spread 16–34 for pace variety. Pure data addition to `RIVALS` — the pick grid (`rivalCardHTML` over `RIVALS`) and `_makeRival(id)` handle them automatically. Verified all 10 makeable (finite pace, taunts present), pick grid renders 13 cards (10 + Ghost + Solo + Surprise). (Zen/No-Rival already existed as the Solo card.)
+
 ## v1.6.0 — 2026-06-14 — Quick Match + bug-hunt pass
 - **Quick Match** (`startQuickMatch()`, 🎲 button beside Spin): one tap → fully random life (random career via `_spinCareerLottery`, random `PRESET_CHARS` identity, random location + dream) → straight into the game. Placed in the spin button's flex row so it adds no splash height; verified splash still fits at 768.
 - **Bug-hunt pass** (no fixes needed — all clean): 38-profession invariant sweep, ~7-turn live playthrough, forced WIN detection (`checkWin` enters Fast Track), forced bankruptcy (`triggerBankruptcy` overlay) — income/CF math consistent, cash finite throughout, **zero console errors** across all of it.

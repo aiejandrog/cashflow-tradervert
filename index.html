@@ -2605,8 +2605,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.6.0';
+const GAME_VERSION='1.7.0';
 const CHANGELOG=[
+  {v:'1.7.0', date:'2026-06-14', notes:[
+    '🏁 6 NEW rivals to race — Landlord Lara, Index-Fund Ivy, Flipper Hank, FIRE Fiona, Dividend Dave & Algo Andy, each with their own pace and trash talk.',
+    '🎯 10 rivals total now (plus race-your-Ghost and relaxed Solo mode) — way more variety every run.',
+  ]},
   {v:'1.6.0', date:'2026-06-14', notes:[
     '🎲 NEW: Quick Match — one tap next to Spin drops you straight into a fully random life (career, character, city & dream all picked for you). Instant play.',
   ]},
@@ -3085,6 +3089,12 @@ const RIVALS=[
   {id:'gary', name:'Grindset Gary',  av:'🧑‍💼',color:'#5b9bd5',escTurns:26,blurb:'Hustles 24/7. Steady and relentless.',taunts:["Sleep is for the broke.","Another deal closed. You?","Consistency beats luck.","I'm not faster — I just never stop."]},
   {id:'carla',name:'Coupon Carla',   av:'🧕',color:'#86efac',escTurns:34,blurb:'Frugal queen. Slow but unstoppable.',taunts:["Slow money is still money.","Clipped a coupon AND a deal today.","Patience, darling.","No debt, no stress, no rush."]},
   {id:'chad', name:'Crypto Chad',    av:'🧑‍🚀',color:'#c77dff',escTurns:22,blurb:'All-in, all the time. Boom or bust.',taunts:["To the moon! 🚀","Diamond hands beat your rentals.","Risk it for the biscuit.","You're so... traditional."]},
+  {id:'lara', name:'Landlord Lara',  av:'👩‍💼',color:'#f59e0b',escTurns:24,blurb:'Owns half the block. Rent is due.',taunts:["Another door, another check.","You pay rent. I collect it.","Location, location, you-lose-ation.","My tenants fund my freedom."]},
+  {id:'ivy',  name:'Index-Fund Ivy', av:'🧑‍🏫',color:'#34d399',escTurns:32,blurb:'Boring, broad, and unbeatable.',taunts:["VTSAX and chill. 😎","Boring beats you. Quietly.","Time in the market, not timing it.","I don't pick stocks. I pick freedom."]},
+  {id:'hank', name:'Flipper Hank',   av:'👷',  color:'#fb7185',escTurns:20,blurb:'Buys ugly, sells pretty. Fast.',taunts:["Bought it ugly, sold it gorgeous.","Swing the hammer, swing the profit.","Sweat equity > your dice.","Next flip's already under contract."]},
+  {id:'fiona',name:'FIRE Fiona',     av:'🔥',  color:'#f97316',escTurns:16,blurb:'Saves 70%. Retiring before you wake up.',taunts:["Saved 70% this month. You?","Frugal AND fast. Deal with it.","I retire while you're still rolling.","Every dollar's a soldier. Mine win."]},
+  {id:'dave', name:'Dividend Dave',  av:'👴',  color:'#93c5fd',escTurns:34,blurb:'Slow, steady, and rich on payouts.',taunts:["Compounding since before you were born.","My dividends pay my dividends.","Patience, kid. It pays — literally.","I get paid to do nothing. Beautiful."]},
+  {id:'andy', name:'Algo Andy',      av:'🤖',  color:'#a78bfa',escTurns:19,blurb:'His bots trade while he sleeps.',taunts:["My algo closed 3 trades. You blinked.","Emotion-free money. Try it.","I sleep. The bot earns. Repeat.","Backtested your defeat already."]},
 ];
 function _makeRival(id){
   if(id==='ghost'){const pb=loadProfile().bestOverall;const et=pb&&pb>0?Math.max(10,pb):26;
