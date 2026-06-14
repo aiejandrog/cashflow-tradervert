@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.13.1 — 2026-06-14 — Toggle-to-close top-bar buttons
+- **UX (user request):** the top-bar popup buttons now TOGGLE — click 🚗 Dealer / 🏡 Realty / 🍸 Leisure / 🎓 School / 🛍 Shop / ⚙️ Settings once to open, click the same button again to close. New `toggleModal(id,fn)` wrapper tracks `window._modalOpener` (set on open, cleared in `closeModal`); if the same button is clicked while its popup shows, it calls `closeModal()` instead of re-opening. Shop is special-cased (its own `#credits-shop` fullscreen overlay, not `#modal`) — toggling removes the overlay. Closing always routes through the existing `closeModal()`, so `_resumeFn` restore is intact (no stuck turns — verified mid-turn toggle + 5 rolls, 0 errors).
+
 ## v1.13.0 — 2026-06-14 — Interactive pet companion (pet-cam)
 - **NEW: live pet-cam panel (user request)** docked bottom-left of the board (`#pet-panel`, inside `#game` so it auto-hides off-screen; responsive — hidden ≤1040px wide or ≤560px tall, where Pet/Feed live in the Leisure → Pet modal instead). Shows the pet as a big animated "head" in a framed ● LIVE window with a happiness bar + ✋ Pet / 🦴 Treat buttons.
 - **Interactions:** `petPet()` (eyes close via `#pet-lids`, hearts float, face wags, species sound bubble, +2 happy, 420ms anti-spam cooldown) and `feedPet()` (treat emoji flies to the mouth + chomp, +14 happy, consumes a treat). All motion uses WAAPI so it survives prefers-reduced-motion; every helper no-ops when the panel is hidden or `document.hidden`.

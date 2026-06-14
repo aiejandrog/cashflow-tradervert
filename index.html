@@ -1913,12 +1913,12 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     </div>
     <div class="tb-space"></div>
     <div id="express-badge" style="display:none;background:#6040b0;border:1px solid #9060e0;border-radius:10px;padding:2px 9px;font-size:.62rem;font-weight:900;color:#e0c8ff;letter-spacing:1px;font-family:Arial,sans-serif">⚡ EXPRESS</div>
-    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openCarDealership(false)" title="Car Dealership" style="padding:6px 10px;font-size:.72rem">🚗<span class="tb-lbl"> Dealer</span></button>
-    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openRealtyOffice()" title="Realty Office" style="padding:6px 10px;font-size:.72rem">🏡<span class="tb-lbl"> Realty</span></button>
-    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openLeisure()" title="Leisure — dining, nightlife, travel" style="padding:6px 10px;font-size:.72rem">🍸<span class="tb-lbl"> Leisure</span></button>
-    <button class="btn-og btn-tan" onclick="if(typeof G!=='undefined'&&G)openEducation()" title="School — earn degrees to unlock careers & raise pay" style="padding:6px 10px;font-size:.72rem">🎓<span class="tb-lbl"> School</span></button>
-    <button class="btn-og btn-tan" onclick="openShop()" title="Shop — spend your ✦ on cosmetics, Plays & the Mystery Box" style="padding:6px 10px;font-size:.72rem">🛍<span class="tb-lbl"> Shop</span></button>
-    <button class="btn-og btn-tan" onclick="openSettings()" title="Settings" style="padding:6px 10px;font-size:.72rem">⚙️</button>
+    <button class="btn-og btn-tan" onclick="toggleModal('dealer',()=>openCarDealership(false))" title="Car Dealership — tap again to close" style="padding:6px 10px;font-size:.72rem">🚗<span class="tb-lbl"> Dealer</span></button>
+    <button class="btn-og btn-tan" onclick="toggleModal('realty',openRealtyOffice)" title="Realty Office — tap again to close" style="padding:6px 10px;font-size:.72rem">🏡<span class="tb-lbl"> Realty</span></button>
+    <button class="btn-og btn-tan" onclick="toggleModal('leisure',openLeisure)" title="Leisure — dining, nightlife, travel (tap again to close)" style="padding:6px 10px;font-size:.72rem">🍸<span class="tb-lbl"> Leisure</span></button>
+    <button class="btn-og btn-tan" onclick="toggleModal('school',openEducation)" title="School — earn degrees to unlock careers & raise pay (tap again to close)" style="padding:6px 10px;font-size:.72rem">🎓<span class="tb-lbl"> School</span></button>
+    <button class="btn-og btn-tan" onclick="toggleModal('shop',openShop)" title="Shop — spend your ✦ on cosmetics, Plays & the Mystery Box (tap again to close)" style="padding:6px 10px;font-size:.72rem">🛍<span class="tb-lbl"> Shop</span></button>
+    <button class="btn-og btn-tan" onclick="toggleModal('settings',openSettings)" title="Settings — tap again to close" style="padding:6px 10px;font-size:.72rem">⚙️</button>
     <div class="tb-btn" id="btn-music" onclick="toggleMusicMenu()" title="Background music — tap to choose" style="opacity:.5">🎵</div>
     <div class="tb-btn" id="btn-sound" onclick="toggleMute()" title="Sound on/off">🔊</div>
   </div>
@@ -2685,8 +2685,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.13.0';
+const GAME_VERSION='1.13.1';
 const CHANGELOG=[
+  {v:'1.13.1', date:'2026-06-14', notes:[
+    '🔘 Top-bar buttons now toggle — tap 🚗 Dealer, 🏡 Realty, 🍸 Leisure, 🎓 School, 🛍 Shop or ⚙️ Settings once to open, tap the same button again to close it.',
+  ]},
   {v:'1.13.0', date:'2026-06-14', notes:[
     '🐾 Meet your PET-CAM! A live, interactive companion now sits at the bottom-left of the board. Rub it (✋ Pet) and it closes its eyes, wags & shows hearts; feed it treats (🦴) and watch it chomp.',
     '😊 New Happiness meter — petting & feeding fill it little by little. A happy pet pays you a bonus every payday. Happiness drifts down over time, so keep your buddy loved.',
@@ -10343,6 +10346,18 @@ function _ensureMboxStructure(){
     +'<div class="mbox-acts" id="mb-acts"></div>';
   try{delete window._mboxSavedHTML;delete window._mboxSavedStyle;}catch(e){window._mboxSavedHTML=undefined;window._mboxSavedStyle=undefined;}
 }
+// Toggle-to-close for top-bar popup buttons: click once opens, click the SAME
+// button again (while its popup shows) closes it. Tracker is set only here and
+// cleared by closeModal, so it can only match the button that just opened it.
+function toggleModal(id,fn){
+  if(typeof G==='undefined'||!G)return;
+  // Shop is its own fullscreen overlay (#credits-shop), not the #modal box.
+  if(id==='shop'){const s=document.getElementById('credits-shop');if(s){s.remove();window._modalOpener=null;return;}window._modalOpener=id;fn();return;}
+  const m=document.getElementById('modal');
+  if(m&&m.classList.contains('vis')&&window._modalOpener===id){closeModal();return;}
+  window._modalOpener=id;
+  fn();
+}
 function openModal({band,title,desc,rows,actions,customInput,_noFS}){
   _ensureMboxStructure(); // never crash on a corrupted/foreign modal box
   // ALWAYS preserve the turn's resume. openModal dialogs are side-trips (FS
@@ -10374,6 +10389,7 @@ function openModal({band,title,desc,rows,actions,customInput,_noFS}){
 }
 function closeModal(){
   window._modalFromBoard=false;
+  window._modalOpener=null; // clear toggle tracker so popups never re-toggle wrongly
   if(window._sideResumeSaved!==undefined){_resumeFn=window._sideResumeSaved;delete window._sideResumeSaved;}
   $('modal').classList.remove('vis');$('modal-bg').classList.remove('vis');
   $('fs-panel').classList.remove('open');
