@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.9.0 — 2026-06-14 — 5 new run scenarios
+- **SCENARIOS 6→11**: added Inheritance (🎁 onStart cash windfall), Tech Boom (💻 +50% cash-flow waves every 8 turns), Rate Hike Era (📈 `_rateHikeExtra` creep every 5), Pandemic Shock (🦠 sched turn 18, cash flow halved 5 turns), Side-Hustle Surge (💪 small cash drop every 4). All reuse proven economy fields (`_boomMult`/`_recLiteMult`/`_rateHikeExtra`/`G.cash`) consumed by income()/expenses() — no new engine wiring. Verified: each fires onStart/recurring/sched correctly, values finite, zero errors.
+
 ## v1.8.0 — 2026-06-14 — One-tap chat phrases
 - **Quick-phrase banter** (`💬` button in chat → `#cl-phrase-picker`, 14 chips, `sendPhrase(txt)`): one tap sends canned lines (GG!, Nice deal, Coming for it, Rent's due, Skill issue, Cope, etc.) — instant MP banter, no typing. Reuses the chat send path (renders locally + `netSend({type:'chat'})`). `togglePhrasePicker()` and `toggleGifPicker()` close each other (no stacking); added to the `.cl-collapsed` hide rule.
 - **Bug caught + fixed pre-ship**: two phrases with apostrophes used `&apos;` which decodes to a literal `'` inside the single-quoted JS string → broke the onclick (silent click failure). Switched to `\'` (survives HTML attr decode → JS escaped quote). Verified both post correctly.

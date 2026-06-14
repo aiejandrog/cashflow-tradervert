@@ -2628,8 +2628,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.8.0';
+const GAME_VERSION='1.9.0';
 const CHANGELOG=[
+  {v:'1.9.0', date:'2026-06-14', notes:[
+    '🌍 5 new run scenarios for fresh variety: 🎁 Inheritance (cash head start), 💻 Tech Boom, 📈 Rate Hike Era, 🦠 Pandemic Shock, and 💪 Side-Hustle Surge.',
+    '🎲 Every solo run now rolls one of 11 economy scenarios — no two games feel the same.',
+  ]},
   {v:'1.8.0', date:'2026-06-14', notes:[
     '💬 NEW: one-tap chat phrases — fire off "GG! 🤝", "Coming for it 🎯", "Skill issue 💀" & 11 more without typing. Perfect for trash talk in multiplayer.',
   ]},
@@ -3263,6 +3267,11 @@ const SCENARIOS=[
   {id:'stag',name:'Stagflation',icon:'🥵',desc:'Prices will not stop climbing — inflation ramps fast. Out-earn it.',weight:2,recurring(t){if(t>0&&t%5===0){G._inflationPct=(G._inflationPct||0)+3;addLog('🥵','Stagflation — living costs creep +3%.','b');}}},
   {id:'medical',name:'Medical Debt Start',icon:'🏥',desc:'You start under a hospital bill. Dig out, then build.',weight:1,onStart(){G.cash=Math.max(5,Math.round((G.cash||0)*0.55));G.liabilities=G.liabilities||[];G.liabilities.push({name:'Medical Debt',amt:8000,type:'cc'});}},
   {id:'bull',name:'Bull Market',icon:'🐂',desc:'Cash flows fat all game long — strike while it is hot.',weight:2,onStart(){G._boomMult=1.2;G._boomTurns=9999;}},
+  {id:'windfall',name:'Inheritance',icon:'🎁',desc:'A relative left you a head start. Don\'t blow it.',weight:1,onStart(){const g=Math.max(2500,Math.round((G.prof.salary||3000)*1.5));G.cash=(G.cash||0)+g;try{addLog('🎁','Inheritance! +$'+fmt(g)+' to start — invest it, don\'t spend it.','g');}catch(e){}}},
+  {id:'techboom',name:'Tech Boom',icon:'💻',desc:'Big cash-flow waves every so often — ride them hard.',weight:1,recurring(t){if(t>0&&t%8===0){G._boomMult=1.5;G._boomTurns=4;addLog('💻','TECH BOOM — cash flow +50% for 4 turns!','g');}}},
+  {id:'ratehike',name:'Rate Hike Era',icon:'📈',desc:'The central bank keeps hiking — debt costs creep up.',weight:1,recurring(t){if(t>0&&t%5===0){G._rateHikeExtra=(G._rateHikeExtra||0)+Math.round((G.prof.salary||3000)*0.03);addLog('📈','Rate hike — monthly costs climb a little.','b');}}},
+  {id:'pandemic',name:'Pandemic Shock',icon:'🦠',desc:'A shock hits around turn 18 — keep a cushion ready.',weight:1,sched:[{turn:18,fn(){G._recLiteMult=0.5;G._recLiteTurns=5;addLog('🦠','PANDEMIC — markets seize up, cash flow HALVED for 5 turns.','r');try{if(typeof sfxDownturn==='function')sfxDownturn();if(typeof obShake==='function')obShake();}catch(e){}}}]},
+  {id:'sidehustle',name:'Side-Hustle Surge',icon:'💪',desc:'Your hustle keeps paying off — small cash drops all game.',weight:1,recurring(t){if(t>0&&t%4===0){const g=Math.round((G.prof.salary||3000)*0.12);G.cash=(G.cash||0)+g;addLog('💪','Side hustle paid off — +$'+fmt(g)+' cash.','g');}}},
 ];
 function _pickScenario(){
   if(Math.random()>diffCfg().scenarioChance)return SCENARIOS.find(s=>s.id==='calm');
