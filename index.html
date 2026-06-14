@@ -2632,8 +2632,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.11.0';
+const GAME_VERSION='1.12.0';
 const CHANGELOG=[
+  {v:'1.12.0', date:'2026-06-14', notes:[
+    '🎲 Watch your rival ROLL — after your turn, the rival now visibly tumbles their dice before landing, just like seeing an opponent roll in multiplayer.',
+    '🗝️ Fixed the Freedom progress bar on the Cashflow Day card — clean green bar instead of blocky text.',
+  ]},
   {v:'1.11.0', date:'2026-06-14', notes:[
     '🩹 Fixed invisible card titles — the white header on power-up, School, Leisure, Pet & dream cards is now clearly readable.',
     '🔮 The name guesser got even bigger — now recognizes 117 characters (added The Boys, Succession, Jujutsu Kaisen, Cyberpunk, Wolf of Wall Street, MrBeast & loads more).',
@@ -3202,11 +3206,24 @@ function _rivalTurnToast(r,roll,done){
   t.innerHTML='<span style="font-size:1.7rem;line-height:1">'+r.av+'</span>'
     +'<div style="display:flex;flex-direction:column;gap:2px;text-align:left">'
       +'<div style="font-size:.75rem;font-weight:800;color:'+r.color+'">'+r.name+(done?' escapes! 🏁':'’s turn')+'</div>'
-      +'<div style="font-size:.66rem;color:rgba(255,255,255,.82)">spun <b style="font-size:1.15rem;color:#fff;vertical-align:-2px">'+faces[roll-1]+'</b> '+roll+' → <b style="color:'+r.color+'">'+pct+'%</b> to freedom</div>'
+      +'<div style="font-size:.66rem;color:rgba(255,255,255,.82)">rolling <b id="rtt-die" style="font-size:1.4rem;color:#fff;vertical-align:-3px">'+faces[Math.floor(Math.random()*6)]+'</b><span id="rtt-res"></span></div>'
     +'</div>';
   document.body.appendChild(t);
-  try{const bar=document.getElementById('rival-bar');if(bar)bar.animate([{filter:'brightness(1)'},{filter:'brightness(2)'},{filter:'brightness(1)'}],{duration:650});}catch(e){}
-  try{t.animate([{opacity:0,transform:'translateX(-50%) translateY(-10px) scale(.95)'},{opacity:1,transform:'translateX(-50%) translateY(0) scale(1)',offset:.18},{opacity:1,offset:.78},{opacity:0,transform:'translateX(-50%) translateY(-6px)'}],{duration:1900,easing:'ease-out'}).onfinish=function(){t.remove();};}catch(e){setTimeout(function(){t.remove();},1900);}
+  // SEE the rival roll: the die tumbles for ~550ms then lands on its value (like watching a multiplayer opponent throw).
+  try{
+    const die=t.querySelector('#rtt-die'),res=t.querySelector('#rtt-res');
+    let n=0;const iv=setInterval(function(){
+      if(!die||!die.isConnected){clearInterval(iv);return;}
+      die.textContent=faces[Math.floor(Math.random()*6)];
+      if(++n>=8){
+        clearInterval(iv);die.textContent=faces[roll-1];
+        if(res)res.innerHTML=' '+roll+' → <b style="color:'+r.color+'">'+pct+'%</b> to freedom';
+        try{const bar=document.getElementById('rival-bar');if(bar)bar.animate([{filter:'brightness(1)'},{filter:'brightness(2.2)'},{filter:'brightness(1)'}],{duration:650});}catch(e){}
+        try{if(!window._muted&&typeof _tone==='function')_tone(done?880:520,.09,'triangle',.07,0,done?1320:0);}catch(e){}
+      }
+    },65);
+  }catch(e){}
+  try{t.animate([{opacity:0,transform:'translateX(-50%) translateY(-10px) scale(.95)'},{opacity:1,transform:'translateX(-50%) translateY(0) scale(1)',offset:.12},{opacity:1,offset:.82},{opacity:0,transform:'translateX(-50%) translateY(-6px)'}],{duration:2600,easing:'ease-out'}).onfinish=function(){t.remove();};}catch(e){setTimeout(function(){t.remove();},2600);}
   try{if(typeof _haptic==='function')_haptic(15);}catch(e){}
 }
 function _rivalTaunt(msg){
@@ -7106,7 +7123,7 @@ function onPayday(){
   const totalPrincipalPaid=_paydayDebtPaydown(delinq);
   const expTot=expenses().total;
   const freePct=expTot>0?Math.min(100,Math.round(pass/expTot*100)):0;
-  const freeBar='█'.repeat(Math.round(freePct/10))+'░'.repeat(10-Math.round(freePct/10));
+  const freeBar='<div style="height:7px;background:rgba(0,0,0,.14);border-radius:4px;overflow:hidden;margin:4px 2px 0"><div style="height:100%;width:'+Math.min(100,freePct)+'%;background:linear-gradient(90deg,#16a34a,#5fd07a);border-radius:4px;transition:width .4s ease"></div></div>';
   const incNow=income();
   const rows=[
     ['Monthly CF',(cf>=0?'+':'-')+'$'+fmt(Math.abs(cf)),cf>=0?'green':'red'],
