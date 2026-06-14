@@ -2006,6 +2006,10 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
       <button id="pet-btn-pet" onclick="if(typeof G!=='undefined'&&G)petPet()" title="Rub your pet — it loves you (raises happiness)">✋ Pet</button>
       <button id="pet-btn-feed" onclick="if(typeof G!=='undefined'&&G)feedPet()" title="Feed a treat (refills at payday)">🦴 Treat</button>
     </div>
+    <div id="pet-shop-btns">
+      <button onclick="if(typeof G!=='undefined'&&G)openPetShop()" title="Adopt new pets — dogs, cats, exotics">🛍 Shop</button>
+      <button onclick="if(typeof G!=='undefined'&&G)openPetInventory()" title="Switch which pet is out">🎒 My Pets</button>
+    </div>
   </div>
   <style>
   #pet-panel{position:fixed;left:8px;bottom:14px;width:152px;z-index:28;
@@ -2044,6 +2048,12 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
   #pet-btns button:hover{filter:brightness(1.18)}
   #pet-btns button:active{transform:scale(.93)}
   #pet-btns button:disabled{opacity:.45;cursor:default;filter:grayscale(.5)}
+  #pet-shop-btns{display:flex;gap:5px;margin-top:5px}
+  #pet-shop-btns button{flex:1;cursor:pointer;border:1px solid rgba(160,120,255,.4);border-radius:9px;
+    background:rgba(160,120,255,.14);color:#d7c9ff;font-family:Georgia,serif;font-size:.58rem;font-weight:700;
+    padding:5px 2px;transition:transform .08s,filter .15s}
+  #pet-shop-btns button:hover{filter:brightness(1.25)}
+  #pet-shop-btns button:active{transform:scale(.93)}
   @media(max-width:1040px){#pet-panel{display:none!important}} /* small/landscape: pet & feed live in the Leisure → Pet modal */
   @media(max-height:560px){#pet-panel{display:none!important}}
   </style>
@@ -2756,8 +2766,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.17.0';
+const GAME_VERSION='1.17.1';
 const CHANGELOG=[
+  {v:'1.17.1', date:'2026-06-14', notes:[
+    '🛍 Easier to find: the pet-cam now has 🛍 Shop and 🎒 My Pets buttons right on it — adopt new pets or swap your active one without digging through menus.',
+  ]},
   {v:'1.17.0', date:'2026-06-14', notes:[
     '🐶 12 NEW pets! Husky, Pit Bull, Rottweiler, Chihuahua, Corgi, Poodle, Black Cat, Kitten, Rabbit, Fox & a Tiger Cub — adopt them in the new 🛍 Pet Shop.',
     '🎒 Pet INVENTORY — own as many pets as you want and swap which one rides in the pet-cam from "My Pets". Only your active pet\'s income bonus applies.',
@@ -9939,6 +9952,7 @@ function setActivePet(id){ // swap which owned pet is in the pet-cam — only th
 }
 // 🛍 PET SHOP — adopt dogs/cats/exotics. Own as many as you like; owned ones become "set active".
 function openPetShop(){
+  if(_mpLocked()){_mpLockToast();return;}
   _petsArr();
   const acts=PETS.filter(function(p){return p.adopt>0;}).map(function(p){
     const active=G.pet&&G.pet.id===p.id, owned=_petOwned(p.id), short=p.name.split(' ')[0];
@@ -9953,6 +9967,7 @@ function openPetShop(){
     actions:acts,_noFS:true});
 }
 function openPetInventory(){
+  if(_mpLocked()){_mpLockToast();return;}
   const arr=_petsArr();
   const acts=arr.map(function(p){
     const active=G.pet&&G.pet.id===p.id, nm=p.named?p.name:(p.name||'Pet').split(' ')[0];
