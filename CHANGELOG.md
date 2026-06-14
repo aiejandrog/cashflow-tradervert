@@ -4,6 +4,11 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.5.0 — 2026-06-14 — Chat reactions + meme categories
+- **Quick-reaction bar** (`#cl-react-row`) in the always-present chat/Life-Feed panel: 10 emojis (😂🔥💀👏😮💰😭🎉❤️🤡) calling the existing `sendReaction()` → big animated floating emoji + MP broadcast (`type:'react'`, receive handler already present). The reaction system existed but its only UI was the spectator-wait box; now it's reachable during your own turn and in solo.
+- **One-tap meme categories** (`#cl-meme-chips`, `memeSearch(term)`) in the GIF picker: LOL/Money/Win/Cry/Dance/Shook/Broke/Rich → instant themed Tenor search, no typing.
+- Verified: 10 react buttons + 8 chips render, sendReaction floats a reaction, memeSearch opens picker + sets query. (MP fan-out uses the pre-existing netSend/receive path — unchanged.)
+
 ## v1.4.0 — 2026-06-14 — Quick Pick characters
 - **Preset characters**: a "⚡ Quick Pick" row at the top of the create screen with 10 ready-made, diverse characters (`PRESET_CHARS`, built from `CHAR_STYLES`/`CHAR_TONES`). Tapping one fills `selectedIdentity` fully and reuses the real `btn-char-go` proceed path (works solo + MP), skipping the manual creator and the name-guess quip → straight to the city screen. The manual builder is unchanged below ("…or build your own").
 - Verified: 10 cards render with correct avatars/names/ages; applyPreset sets identity + advances to location; identity flows into a started game (G.identity correct).
