@@ -1321,7 +1321,7 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
 }
 #tut-overlay.vis{opacity:1;pointer-events:all;}
 #tut-card{
-  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  position:fixed;top:50%;left:50%;--tut-dy:0px;transform:translate(-50%,calc(-50% + var(--tut-dy)));
   width:380px;max-width:92vw;
   background:linear-gradient(150deg,#150630 0%,#261058 55%,#150630 100%);
   border:2px solid rgba(180,120,255,.5);border-radius:20px;
@@ -1332,8 +1332,8 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
 }
 #tut-card.tut-anim{animation:tutPop .32s cubic-bezier(.175,.885,.32,1.275) both;}
 #tut-card.tut-anim-next{animation:tutSlideNext .28s cubic-bezier(.34,1.56,.64,1) both;}
-@keyframes tutPop{from{transform:translate(-50%,-50%) scale(.88);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
-@keyframes tutSlideNext{from{transform:translate(calc(-50% + 36px),-50%);opacity:0}to{transform:translate(-50%,-50%);opacity:1}}
+@keyframes tutPop{from{transform:translate(-50%,calc(-50% + var(--tut-dy))) scale(.88);opacity:0}to{transform:translate(-50%,calc(-50% + var(--tut-dy))) scale(1);opacity:1}}
+@keyframes tutSlideNext{from{transform:translate(calc(-50% + 36px),calc(-50% + var(--tut-dy)));opacity:0}to{transform:translate(-50%,calc(-50% + var(--tut-dy)));opacity:1}}
 #tut-step-lbl{font-size:.58rem;color:rgba(200,170,255,.55);letter-spacing:2px;
   text-transform:uppercase;font-family:Arial,sans-serif;margin-bottom:8px}
 #tut-icon-row{font-size:2.4rem;margin-bottom:10px;line-height:1}
@@ -14262,16 +14262,22 @@ function _renderTutStep(first){
   card.classList.remove('tut-anim','tut-anim-next');
   void card.offsetWidth; // force reflow
   // Position the card so it NEVER covers the highlighted element (was sitting on top of it).
-  // No highlight → centered. Highlight in top half → dock card to the bottom; else to the top.
-  let topVal='50%';
+  // The offset must ride the ANIMATED transform via --tut-dy: a running keyframe with
+  // fill:both overrides any inline `top`, so the old top-based dock silently did nothing.
+  // No highlight → centered (dy 0). Highlight in top half → dock card down; else dock up.
+  let dy=0;
   if(hiEl){
     try{
       const r=hiEl.getBoundingClientRect();
-      const H=card.offsetHeight||300, m=18;
-      topVal=((r.top+r.height/2) < innerHeight/2 ? Math.max(H/2+m, innerHeight-H/2-m) : (H/2+m))+'px';
+      const H=card.offsetHeight||300, m=16, half=innerHeight/2;
+      if(H+2*m < innerHeight){ // only dock if the card actually fits off-center
+        let center=(r.top+r.height/2) < half ? (innerHeight-H/2-m) : (H/2+m);
+        center=Math.max(H/2+m, Math.min(innerHeight-H/2-m, center)); // keep fully on-screen
+        dy=center-half;
+      }
     }catch(e){}
   }
-  card.style.top=topVal;
+  card.style.setProperty('--tut-dy', dy+'px');
   card.classList.add(first?'tut-anim':'tut-anim-next');
 }
 
