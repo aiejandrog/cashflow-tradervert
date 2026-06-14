@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.17.5 — 2026-06-14 — Share Game from the menu
+- **Engagement/reach:** added a "📣 Share Game" button to the main-menu ⚙️ Settings panel (`_mainSettingsHTML` actions grid) → `shareGame()` uses `navigator.share` (native sheet) with a clipboard + X-intent fallback, sharing the hook line + `tradervert.itch.io/freedom-race`. Rationale: sharing previously only existed on the WIN screen, which most players never reach — this captures every visitor. Verified: button renders, share payload has the correct title/URL/text.
+
 ## v1.17.4 — 2026-06-14 — Rate button + clean bug-hunt pass
 - **Engagement:** added a gold "⭐ Rate this game" button to the win screen (→ `tradervert.itch.io/freedom-race#rate`). Ratings are itch's #1 ranking signal and the game only has 3 — surfacing this at the win (peak-satisfaction) moment should lift it.
 - **Bug-hunt pass (clean):** stress-tested the pet inventory — 30 random adopt/switch/release ops left ZERO salaryBoost drift (pet bonus tracks the active pet exactly, no stacking); income/expense sums intact, monthlyCF consistent, 12 paydays finite, 0 console errors. No fix needed.

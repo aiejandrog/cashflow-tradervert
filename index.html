@@ -2768,8 +2768,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.17.4';
+const GAME_VERSION='1.17.5';
 const CHANGELOG=[
+  {v:'1.17.5', date:'2026-06-14', notes:[
+    '📣 Added a Share Game button to the menu (⚙️ Settings) — share the game with friends anytime, not just after a win.',
+  ]},
   {v:'1.17.4', date:'2026-06-14', notes:[
     '⭐ Added a Rate this game button to the win screen — if you had fun, a rating helps others find it!',
   ]},
@@ -5134,12 +5137,21 @@ function _mainSettingsHTML(){
    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">'
      +_msBtn("📖 How to Play","closeMainSettings();startTutorial()")
      +_msBtn("✨ What's New","showChangelog()")
+     +_msBtn("📣 Share Game","shareGame()")
      +_msBtn("❤️ Follow","window.open('https://tradervert.itch.io','_blank')")
      +_msBtn("☕ Support","window.open('https://tradervert.itch.io/freedom-race','_blank')")
    +'</div>'
    +'<div style="text-align:center;font-size:.62rem;color:rgba(255,255,255,.4);padding-top:3px;line-height:1.4">Freedom Race v'+GAME_VERSION+' · progress saves on this device</div>';
 }
 function _refreshMainSettings(){const b=document.getElementById('main-settings-body');if(b)b.innerHTML=_mainSettingsHTML();}
+function shareGame(){ // share the game from the MENU (reaches everyone, not just winners)
+  const txt='🏁 Freedom Race — escape the rat race in this free browser board game (CASHFLOW meets BitLife). Pick a career, stack passive income, beat a live rival to your dream. Play free:';
+  const url='https://tradervert.itch.io/freedom-race';
+  try{
+    if(navigator.share){navigator.share({title:'Freedom Race — Tradervert Edition',text:txt,url:url}).catch(function(){});}
+    else{navigator.clipboard.writeText(txt+' '+url).then(function(){try{showToast('📋 Link copied — paste it anywhere!','#2e7d32',2600);}catch(e){}}).catch(function(){try{window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(txt)+'&url='+encodeURIComponent(url),'_blank');}catch(e){}});}
+  }catch(e){try{window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(txt)+'&url='+encodeURIComponent(url),'_blank');}catch(e2){}}
+}
 function closeMainSettings(){const o=document.getElementById('main-settings-overlay');if(o)o.remove();}
 function openMainSettings(){
   if(document.getElementById('main-settings-overlay'))return;
