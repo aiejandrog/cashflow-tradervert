@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.17.6 — 2026-06-14 — 6 new doodad event cards (content variety)
+- Added 6 doodads to `DOODADS` (now 28): Crypto FOMO, Subscription Creep, Vet Bill (ties into pets), Cracked Phone, Wedding Season, Impulse Upgrade — each with a financial-lesson tip + a cheaper `choice`. More variety per run = fresher replays. Verified: pool=28, all present, 6 events fired, 0 errors. (Bug-hunt this cycle: full save/restore integrity = 0 diffs across 14 state values, all finite — clean.)
+
 ## v1.17.5 — 2026-06-14 — Share Game from the menu
 - **Engagement/reach:** added a "📣 Share Game" button to the main-menu ⚙️ Settings panel (`_mainSettingsHTML` actions grid) → `shareGame()` uses `navigator.share` (native sheet) with a clipboard + X-intent fallback, sharing the hook line + `tradervert.itch.io/freedom-race`. Rationale: sharing previously only existed on the WIN screen, which most players never reach — this captures every visitor. Verified: button renders, share payload has the correct title/URL/text.
 

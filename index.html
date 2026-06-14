@@ -2768,8 +2768,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.17.5';
+const GAME_VERSION='1.17.6';
 const CHANGELOG=[
+  {v:'1.17.6', date:'2026-06-14', notes:[
+    '🃏 6 new event cards in the rat race — Crypto FOMO, Subscription Creep, a surprise Vet Bill, cracked phone, wedding season &amp; an impulse upgrade. More variety every run.',
+  ]},
   {v:'1.17.5', date:'2026-06-14', notes:[
     '📣 Added a Share Game button to the menu (⚙️ Settings) — share the game with friends anytime, not just after a win.',
   ]},
@@ -2964,6 +2967,31 @@ function carMonthlyPmt(principal,apr,months){ // standard amortization
 
 const DOODADS = [
   // choice:{cost,label,story} = cheaper alternative button; main cost = premium option
+  // ── Fresh cards (more variety in the rat race) ──
+  { cost:900,  title:'Crypto FOMO',
+    story:'A coworker won\'t shut up about a coin. You ape in at the top. $900 down 60% by morning.',
+    tip:'If you don\'t understand it, you\'re not investing — you\'re gambling. Assets that pay you beat hype that drains you.',
+    choice:{cost:100,label:'Just Read About It — $100',story:'You bought one book instead of one bag. Kept $800 and your sanity.'}},
+  { cost:420,  title:'Subscription Creep',
+    story:'Five streaming services, two gym apps, a meal kit you forgot about. The audit hurts: $420/yr of "meh".',
+    tip:'Recurring charges are passive income — for someone else. Cancel what you don\'t use; redirect it to what you own.',
+    choice:{cost:60,label:'Cancel the Dead Ones — $60',story:'You kept the two you actually use. Freed up $360 a year.'}},
+  { cost:650,  title:'Vet Bill',
+    story:'Your pet ate something it shouldn\'t have. The emergency visit is $650 — no negotiating with a worried face.',
+    tip:'Companions are worth it, but surprises aren\'t budgeted. A small reserve turns a crisis into an inconvenience.',
+    choice:{cost:200,label:'Pet Insurance Kicks In — $200',story:'That monthly premium finally paid off. You only owe the copay.'}},
+  { cost:550,  title:'Cracked Phone',
+    story:'Dropped it screen-down on concrete. The repair quote is $550 because of course it is.',
+    tip:'The cheapest insurance is a $15 case. Protect the tools you depend on before they fail.',
+    choice:{cost:120,label:'Third-Party Repair — $120',story:'A local shop fixed it for a fraction. Works like new.'}},
+  { cost:800,  title:'Wedding Season',
+    story:'Three weddings, two states, one summer. Flights, gifts, an outfit. $800 of being a good friend.',
+    tip:'Generosity is a value, not a budget hole. Plan for predictable "irregular" costs — they happen every year.',
+    choice:{cost:250,label:'Send Love, Skip Two — $250',story:'One trip, two heartfelt cards. Friends understood. Saved $550.'}},
+  { cost:1200, title:'Impulse Upgrade',
+    story:'You didn\'t need the new flagship. You bought the new flagship. $1,200 for slightly rounder corners.',
+    tip:'The dopamine of "new" fades in a week. The freedom of an owned asset compounds for years.',
+    choice:{cost:0,label:'Keep What Works — $0',story:'You closed the tab. Your old one is fine. Funded a deal instead.'}},
   { cost:1000, title:'Vegas Weekend',
     story:'Bachelor party. Open bar. One bad run. $1,000 evaporates.',
     tip:'Lifestyle spending is silent debt. Every $1,000 on experiences instead of assets delays freedom by weeks.',
