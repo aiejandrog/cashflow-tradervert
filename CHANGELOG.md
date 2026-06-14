@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.17.7 — 2026-06-14 — 4 new investment deals (content variety)
+- Added 4 small deals to `SMALL_DEALS` (now 30): Vending Machine Route (biz), Self-Storage Shares (biz), Solar Lease Royalty (note), Downtown Parking Lot (re/land). Unique non-numeric ids (`sd_*`) to avoid collisions with MARKETS asset refs. More passive-income options per run. Verified: pool=30, no dup ids, 6 deal events fired, buying adds an asset, passive finite, 0 errors.
+
 ## v1.17.6 — 2026-06-14 — 6 new doodad event cards (content variety)
 - Added 6 doodads to `DOODADS` (now 28): Crypto FOMO, Subscription Creep, Vet Bill (ties into pets), Cracked Phone, Wedding Season, Impulse Upgrade — each with a financial-lesson tip + a cheaper `choice`. More variety per run = fresher replays. Verified: pool=28, all present, 6 events fired, 0 errors. (Bug-hunt this cycle: full save/restore integrity = 0 diffs across 14 state values, all finite — clean.)
 

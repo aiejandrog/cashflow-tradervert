@@ -2624,6 +2624,11 @@ const SMALL_DEALS = [
   // More RE/biz small deals
   { id:'s13', type:'re', name:'Mobile Home Lot', cost:18000, down:2000, cf:100, story:'A landlord retiring from mobile home parks. Tenant owns their home, pays lot rent. $180/month, you own the land.', tip:'Land ownership with minimal landlord duties. Tenant maintains their structure — you collect rent on dirt.' },
   { id:'s14', type:'re', name:'Airbnb Condo', cost:48000, down:4000, cf:200, story:'A downtown condo owner needs liquidity. Short-term rentals generate $320/month net after fees and occasional vacancies.', tip:'Airbnb properties cash flow higher but require more management. A property manager at 20% can make this passive.' },
+  // ── Fresh small deals (more ways to build passive income) ──
+  { id:'sd_vend', type:'biz', name:'Vending Machine Route', cost:12000, down:1500, cf:120, story:'A retiree sells his route of 8 snack machines in office lobbies. Restock twice a month, the coins pile up. $120/month, scalable.', tip:'Boring beats flashy. A vending route is a tiny business with no employees — the simplest cash-flow on-ramp there is.' },
+  { id:'sd_stor', type:'biz', name:'Self-Storage Shares (15%)', cost:30000, down:3000, cf:170, story:'A 200-unit storage facility takes on a silent partner. People pay monthly to store stuff they\'ll never use. $170/month to you.', tip:'Self-storage is recession-resistant: in good times people buy more, in bad times they downsize and store it. Always full.' },
+  { id:'sd_solar', type:'note', name:'Solar Lease Royalty', cost:16000, down:1600, cf:110, story:'A solar developer leases a farmer\'s land and sells you the income stream. The sun shows up every day; so does the check. $110/month, 20-year term.', tip:'Royalties are the purest passive income — you own a slice of cash flow with zero operations. Find the checks that arrive on their own.' },
+  { id:'sd_lot', type:'re', name:'Downtown Parking Lot', cost:35000, down:3500, cf:190, isLand:true, story:'A gravel lot near the stadium. No building, no tenants, no toilets — just painted lines and an app collecting $190/month net.', tip:'Land with a simple use is the lowest-maintenance real estate. Dirt that collects rent appreciates while it earns.' },
   { id:'s15', type:'biz', name:'Vending Route (3 machines)', cost:9000, down:1500, cf:75, story:'Route operator retiring. 3 machines placed in offices, averages $220/month. No employees, minimal time.', tip:'Vending machines are micro-businesses. Scale the route to 10 machines and you have a full income stream.' },
   { id:'s16', type:'note', name:'Tax Lien Certificate (12%)', cost:8000, down:8000, cf:80, story:'County auction. You buy the tax lien — owner has 2 years to redeem. If not, you could acquire the property. $80/month accruing.', tip:'Tax liens are secured by real property. 12% return guaranteed by law. The county is your enforcer.' },
   // ── Digital / Trader / Entrepreneur deals ───────────────────────────────────
@@ -2768,8 +2773,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.17.6';
+const GAME_VERSION='1.17.7';
 const CHANGELOG=[
+  {v:'1.17.7', date:'2026-06-14', notes:[
+    '💼 4 new investment deals to find — a vending route, self-storage shares, a solar royalty &amp; a downtown parking lot. More ways to build passive income.',
+  ]},
   {v:'1.17.6', date:'2026-06-14', notes:[
     '🃏 6 new event cards in the rat race — Crypto FOMO, Subscription Creep, a surprise Vet Bill, cracked phone, wedding season &amp; an impulse upgrade. More variety every run.',
   ]},
