@@ -4,6 +4,10 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.10.1 — 2026-06-14 — Pet visibility + combined-systems bug hunt
+- **Pet shown in Life Hub**: adopted pet's icon now appends to `lh-avatar` (one-line render change) so the companion is visible, not just buried in the Leisure menu.
+- **Combined-systems bug hunt (clean, no fixes)**: stress-tested education(Master's) + pet + scenario(ratehike) + Quick Match all active on one run. Verified income/expense finite, `monthlyCF === income−expenses`, **`income.total === salary+interest+reCF+bizCF`** (pet morale folds into salary, breakdown stays consistent), rate-hike applied, save/restore preserves edu+pet+scenario across reload, zero console errors.
+
 ## v1.10.0 — 2026-06-14 — Pets
 - **Adopt a pet** (🍸 Leisure → 🐾): `PETS` (6: goldfish/hamster/cat/parrot/dog + a $50k dragon). `openPets()`/`adoptPet()` deduct a one-time adoption cost and add a permanent morale boost folded into `G.salaryBoost` (so it shows in the income breakdown — no income()/expenses() edits, stays consistent like the hustler/raise perks). Give-up subtracts the boost (no refund). `G.pet` persists with the save. Affordability gating verified (cheap pets enabled, pricey ones 🔒 when broke); adopt/give-up round-trips salaryBoost cleanly.
 
