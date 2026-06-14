@@ -992,6 +992,16 @@ body{
 }
 .tr-item.tr-locked{filter:grayscale(1) brightness(.32) blur(.4px)}
 #trophy-rack{max-height:76vh;overflow-y:auto;scrollbar-width:thin}
+/* Base trophy-wall card — was missing, so cards rendered unstyled/cramped */
+.tw-card{
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;gap:6px;
+  background:linear-gradient(155deg,rgba(26,8,54,.92),rgba(14,4,32,.96));
+  border:1.5px solid rgba(255,255,255,.1);border-radius:12px;
+  padding:16px 12px;min-height:132px;box-sizing:border-box;
+  transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;
+}
+.tw-card.tw-has{cursor:default}
+.tw-card:hover{transform:translateY(-3px)}
 .tw-card[data-tier="M"]{grid-column:span 2;background:linear-gradient(150deg,rgba(255,77,109,.10),rgba(20,5,15,.4))}
 .tw-card[data-tier="M"].tw-has{border-width:2px}
 /* ── 🏆 trophy hover tooltip — one floating card, WAAPI-animated in ── */
@@ -1210,6 +1220,13 @@ body{
   #fs-panel{transition-duration:.42s!important}
   #player-token{transition-duration:.32s!important}
 }
+/* In-game toggle mirror of the above (Settings → Reduced Motion). Same rules, class-gated. */
+html.cf-reduce-motion *,html.cf-reduce-motion *::before,html.cf-reduce-motion *::after{
+  animation-duration:.01ms!important;animation-iteration-count:1!important;
+  transition-duration:.01ms!important;scroll-behavior:auto!important;
+}
+html.cf-reduce-motion #fs-panel{transition-duration:.42s!important}
+html.cf-reduce-motion #player-token{transition-duration:.32s!important}
 
 /* ── MYSTERY BOX ── */
 #mystery-overlay{
@@ -1678,6 +1695,7 @@ body{
     <div style="display:flex;gap:10px;max-width:420px;margin:10px auto 0">
       <button onclick="openTrophyWall()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:linear-gradient(135deg,rgba(200,145,12,.12),rgba(240,192,32,.08));border:1.5px solid rgba(240,192,32,.4);border-radius:12px;color:#f0dc90;font-size:.82rem;font-weight:900;font-family:Georgia,serif;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='rgba(240,192,32,.8)'" onmouseleave="this.style.borderColor='rgba(240,192,32,.4)'">🏆 Trophy Wall <span id="menu-trophy-count" style="font-size:.66rem;opacity:.7"></span></button>
       <button onclick="openShop()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;background:linear-gradient(135deg,rgba(34,180,140,.12),rgba(34,211,170,.08));border:1.5px solid rgba(34,211,170,.4);border-radius:12px;color:#7ef0d0;font-size:.82rem;font-weight:900;font-family:Georgia,serif;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='rgba(34,211,170,.8)'" onmouseleave="this.style.borderColor='rgba(34,211,170,.4)'">🛍 Shop</button>
+      <button onclick="openMainSettings()" title="Settings — sound, music & more" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;background:linear-gradient(135deg,rgba(160,120,255,.14),rgba(107,63,168,.1));border:1.5px solid rgba(160,120,255,.4);border-radius:12px;color:#cdb8ff;font-size:.82rem;font-weight:900;font-family:Georgia,serif;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='rgba(160,120,255,.85)'" onmouseleave="this.style.borderColor='rgba(160,120,255,.4)'">⚙️ Settings</button>
       <div style="display:flex;align-items:center;gap:6px;padding:10px 16px;background:rgba(200,145,12,.1);border:1.5px solid rgba(200,145,12,.35);border-radius:12px;color:#ffe9a8;font-size:.82rem;font-weight:900;font-family:Georgia,serif" title="Lifetime Credits"><span id="menu-credits">✦ 0</span></div>
     </div>
     <!-- Daily Challenge — its own explained card, not a mystery button -->
@@ -2488,8 +2506,14 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.0.0';
+const GAME_VERSION='1.1.0';
 const CHANGELOG=[
+  {v:'1.1.0', date:'2026-06-14', notes:[
+    '⚙️ New Settings panel right on the main menu — sound, music picker, reduced motion, and more.',
+    '🎵 Pick any of 6 soundtracks (or silence) before you even start a run.',
+    '📖 Clearer first-time tutorial — tips now point at the right buttons instead of covering them.',
+    '🏆 Trophy Wall redesigned — clean, readable trophy cards.',
+  ]},
   {v:'1.0.0', date:'2026-06-14', notes:[
     '🎉 Launch! Escape the rat race, race a live rival, and buy your dream on the Fast Track.',
     '🏁 Fast Track with 4 corner dream tiles + smooth board movement.',
@@ -4437,6 +4461,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(b&&window._muted){b.textContent='🔇';b.style.opacity='.55';}
   try{_updateMusicBtn();}catch(e){}
   try{const vb=$('version-badge');if(vb)vb.textContent='v'+GAME_VERSION;}catch(e){} // badge tracks the constant
+  try{if(localStorage.getItem('cf_reduce_motion')==='1')document.documentElement.classList.add('cf-reduce-motion');}catch(e){}
 });
 
 // ══ BACKGROUND MUSIC ENGINE ══════════════════════════════════════════════
@@ -4540,6 +4565,64 @@ function toggleMusicMenu(){
   m.style.cssText='position:fixed;z-index:9500;top:50px;right:6px;background:linear-gradient(160deg,rgba(20,8,40,.98),rgba(10,4,22,.99));border:1.5px solid rgba(160,120,255,.45);border-radius:12px;padding:8px;box-shadow:0 12px 40px rgba(0,0,0,.6);font-family:Georgia,serif;min-width:210px;max-width:92vw;animation:cPop .16s ease';
   m.innerHTML=_musMenuHTML();document.body.appendChild(m);
   setTimeout(()=>document.addEventListener('pointerdown',_closeMusicMenuOnce,true),0);
+}
+
+// ══ MAIN-MENU SETTINGS (splash) ══════════════════════════════════════════
+// Standalone panel — NOT openModal (that's coupled to game-turn resume state and
+// guarded to the game screen). Lets players adjust sound + music + motion and reach
+// What's New / Follow / How-to-Play right from the menu. Reuses the music picker.
+function _msBtn(label,js){
+  return '<button onclick="'+js.replace(/"/g,'&quot;')+'" style="padding:10px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:9px;color:#f0e6c8;font-family:Georgia,serif;font-size:.78rem;font-weight:800;cursor:pointer;transition:background .12s" onmouseenter="this.style.background=\'rgba(255,255,255,.13)\'" onmouseleave="this.style.background=\'rgba(255,255,255,.06)\'">'+label+'</button>';
+}
+function _toggleReduceMotion(){
+  const on=localStorage.getItem('cf_reduce_motion')==='1';
+  localStorage.setItem('cf_reduce_motion',on?'0':'1');
+  document.documentElement.classList.toggle('cf-reduce-motion',!on);
+}
+function _mainSettingsHTML(){
+  const muted=window._muted;
+  const reduce=localStorage.getItem('cf_reduce_motion')==='1';
+  return ''
+   +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px">'
+     +'<div style="font-family:Georgia,serif;font-weight:900;font-size:1.18rem;color:#f0dc90">⚙️ Settings</div>'
+     +'<button onclick="closeMainSettings()" aria-label="Close settings" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:9px;width:32px;height:32px;cursor:pointer;font-size:1rem;line-height:1">✕</button>'
+   +'</div>'
+   // SOUND EFFECTS
+   +'<div onclick="toggleMute();_refreshMainSettings()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-radius:11px;margin-bottom:9px;background:'+(muted?'rgba(200,60,60,.14)':'rgba(34,180,140,.14)')+';border:1.5px solid '+(muted?'rgba(220,80,80,.42)':'rgba(34,211,170,.42)')+'">'
+     +'<span style="font-weight:800;color:#fff;font-size:.9rem">'+(muted?'🔇 Sound Effects':'🔊 Sound Effects')+'</span>'
+     +'<span style="font-size:.78rem;font-weight:800;color:'+(muted?'rgba(255,160,160,.9)':'#7ef0d0')+'">'+(muted?'OFF':'ON')+'</span>'
+   +'</div>'
+   // MUSIC — reuse the existing picker, rewire its refresh to this panel
+   +'<div style="background:rgba(160,120,255,.07);border:1.5px solid rgba(160,120,255,.22);border-radius:11px;padding:6px 5px;margin-bottom:9px">'
+     +_musMenuHTML().replace(/_refreshMusicMenu\(\)/g,'_refreshMainSettings()')
+   +'</div>'
+   // REDUCED MOTION (real — toggles html.cf-reduce-motion)
+   +'<div onclick="_toggleReduceMotion();_refreshMainSettings()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-radius:11px;margin-bottom:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12)">'
+     +'<span style="font-weight:700;color:#fff;font-size:.86rem">🎞 Reduced Motion</span>'
+     +'<span style="font-size:.78rem;font-weight:800;color:'+(reduce?'#7ef0d0':'rgba(255,255,255,.45)')+'">'+(reduce?'ON':'OFF')+'</span>'
+   +'</div>'
+   // ACTIONS
+   +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">'
+     +_msBtn("📖 How to Play","closeMainSettings();startTutorial()")
+     +_msBtn("✨ What's New","showChangelog()")
+     +_msBtn("❤️ Follow","window.open('https://freedomrace.itch.io','_blank')")
+     +_msBtn("☕ Support","window.open('https://freedomrace.itch.io/freedom-race','_blank')")
+   +'</div>'
+   +'<div style="text-align:center;font-size:.62rem;color:rgba(255,255,255,.4);padding-top:3px;line-height:1.4">Freedom Race v'+GAME_VERSION+' · progress saves on this device</div>';
+}
+function _refreshMainSettings(){const b=document.getElementById('main-settings-body');if(b)b.innerHTML=_mainSettingsHTML();}
+function closeMainSettings(){const o=document.getElementById('main-settings-overlay');if(o)o.remove();}
+function openMainSettings(){
+  if(document.getElementById('main-settings-overlay'))return;
+  try{const c=_ctx();if(c&&c.state==='suspended')c.resume();}catch(e){}
+  const o=document.createElement('div');o.id='main-settings-overlay';
+  o.style.cssText='position:fixed;inset:0;z-index:9600;display:flex;align-items:center;justify-content:center;background:rgba(4,2,12,.74);backdrop-filter:blur(3px);padding:16px;animation:mFadeIn .18s ease both';
+  o.onclick=(e)=>{if(e.target===o)closeMainSettings();};
+  const p=document.createElement('div');p.id='main-settings-panel';
+  p.style.cssText='width:100%;max-width:380px;max-height:88vh;overflow-y:auto;background:linear-gradient(160deg,rgba(24,10,48,.99),rgba(12,5,26,.99));border:1.5px solid rgba(160,120,255,.4);border-radius:16px;padding:16px;box-shadow:0 18px 60px rgba(0,0,0,.65);animation:cPop .2s ease';
+  p.innerHTML='<div id="main-settings-body"></div>';
+  o.appendChild(p);document.body.appendChild(o);
+  _refreshMainSettings();
 }
 
 function playClick(){
@@ -14135,8 +14218,8 @@ const TUTORIAL_STEPS=[
    body:'One mission: build passive income that beats your monthly expenses and ESCAPE the Rat Race. Everything else — deals, debts, credit, life — is in service of that number.',
    hi:null},
   {icon:'🎲',title:'Roll to Move',
-   body:'Roll the dice, ride the board. Deals build you, doodads bleed you, paydays pay you. Every space teaches itself the first time you land on it — no homework required.',
-   hi:'#board-center'},
+   body:'Tap ROLL to ride the board. Deals build you, doodads bleed you, paydays pay you. Every space teaches itself the first time you land on it — no homework required.',
+   hi:'#center-roll-btn'},
   {icon:'🌾',title:'Payday & the Freedom Goal',
    body:'Land on OR pass a 🌾 CASHFLOW DAY to collect your monthly cash flow. The goal: stack assets until passive income covers 100% of expenses — that\'s the escape, and the Freedom Meter tracks it live.',
    hi:null},
@@ -14172,11 +14255,23 @@ function _renderTutStep(first){
   // Next button label
   $('tut-next-btn').textContent=_tutIdx===TUTORIAL_STEPS.length-1?"🚀 Let's Play!":'Next →';
   // Highlight element
-  if(s.hi){const el=document.querySelector(s.hi);if(el)el.classList.add('tut-hi');}
+  let hiEl=null;
+  if(s.hi){hiEl=document.querySelector(s.hi);if(hiEl)hiEl.classList.add('tut-hi');}
   // Re-trigger animation — pop on first, slide from right on Next
   const card=$('tut-card');
   card.classList.remove('tut-anim','tut-anim-next');
   void card.offsetWidth; // force reflow
+  // Position the card so it NEVER covers the highlighted element (was sitting on top of it).
+  // No highlight → centered. Highlight in top half → dock card to the bottom; else to the top.
+  let topVal='50%';
+  if(hiEl){
+    try{
+      const r=hiEl.getBoundingClientRect();
+      const H=card.offsetHeight||300, m=18;
+      topVal=((r.top+r.height/2) < innerHeight/2 ? Math.max(H/2+m, innerHeight-H/2-m) : (H/2+m))+'px';
+    }catch(e){}
+  }
+  card.style.top=topVal;
   card.classList.add(first?'tut-anim':'tut-anim-next');
 }
 
@@ -14219,10 +14314,10 @@ function endTutorial(){
 <!-- Tutorial Overlay -->
 <div id="tut-overlay">
   <div id="tut-card" class="tut-anim">
-    <div id="tut-step-lbl">STEP 1 OF 8</div>
+    <div id="tut-step-lbl">STEP 1 OF 4</div>
     <div id="tut-icon-row">🎮</div>
-    <div id="tut-title">Welcome to Cashflow</div>
-    <div id="tut-body">Your mission: build passive income that exceeds your monthly expenses.</div>
+    <div id="tut-title">Welcome to Freedom Race</div>
+    <div id="tut-body">Build passive income that beats your monthly expenses and escape the Rat Race.</div>
     <div class="tut-dots" id="tut-dots"></div>
     <div class="tut-btns">
       <button class="tut-skip" onclick="skipTutorial()">Skip Tutorial</button>
