@@ -258,6 +258,18 @@ body{
   display:flex;align-items:center;padding:0 12px;gap:10px;flex-shrink:0;
   box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:139;position:relative;
 }
+/* Scroll-fade hint: the top bar scrolls horizontally on narrow screens (offices,
+   settings, music & sound live to the right). This pinned fade + nudging chevron
+   tells players there's more. pointer-events:none so taps still reach the buttons. */
+#tb-fade{
+  position:absolute;top:0;right:0;height:50px;width:46px;pointer-events:none;
+  background:linear-gradient(90deg,rgba(10,4,20,0),rgba(10,4,20,.55) 55%,rgba(10,4,20,.92));
+  display:none;align-items:center;justify-content:flex-end;padding-right:5px;
+  z-index:140;opacity:0;transition:opacity .25s;
+}
+#tb-fade.show{display:flex;opacity:1}
+#tb-fade .tbf-chev{color:rgba(255,255,255,.85);font-size:1.15rem;font-weight:900;animation:tbfNudge 1.4s ease-in-out infinite}
+@keyframes tbfNudge{0%,100%{transform:translateX(0);opacity:.5}50%{transform:translateX(3px);opacity:1}}
 #player-chip{
   display:flex;align-items:center;gap:7px;background:#5a3d8a;
   border:2px solid #7a5aaa;border-radius:18px;padding:3px 12px 3px 3px;
@@ -12087,10 +12099,31 @@ function setupBack(to){
   if(to==='location'&&typeof buildLocGrid==='function')buildLocGrid();
   showScreen(to);
 }
+// Top-bar scroll-fade hint — show the "more →" fade only while the bar can scroll right.
+function _ensureTbFade(){
+  let f=document.getElementById('tb-fade');
+  if(!f){
+    const g=document.getElementById('game'),tb=document.getElementById('top-bar');
+    if(!g||!tb)return null;
+    f=document.createElement('div');f.id='tb-fade';f.innerHTML='<span class="tbf-chev">›</span>';
+    g.appendChild(f);
+    tb.addEventListener('scroll',_updateTbFade,{passive:true});
+  }
+  return f;
+}
+function _updateTbFade(){
+  const tb=document.getElementById('top-bar'),f=_ensureTbFade();
+  if(!tb||!f)return;
+  const max=tb.scrollWidth-tb.clientWidth;
+  f.classList.toggle('show', max>6 && tb.scrollLeft < max-6);
+}
+window.addEventListener('resize',()=>{try{_updateTbFade();}catch(e){}});
+
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   $(id).classList.add('active');
   _nagWatch(id);
+  if(id==='game')setTimeout(()=>{try{_updateTbFade();}catch(e){}},60);
   // Clean up ob-mode when leaving game screen (e.g. win screen after dream landed)
   if(id!=='game'){
     const gEl=$('game');if(gEl)gEl.classList.remove('ob-mode');
