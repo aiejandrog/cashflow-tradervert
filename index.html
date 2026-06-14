@@ -2628,8 +2628,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.9.0';
+const GAME_VERSION='1.10.0';
 const CHANGELOG=[
+  {v:'1.10.0', date:'2026-06-14', notes:[
+    '🐾 NEW: Adopt a pet! Find them under 🍸 Leisure — a goldfish, hamster, cat, parrot, dog… or a $50k dragon if you\'re flexing.',
+    '😊 Your companion gives a small permanent morale boost to your income — happier you, richer you.',
+  ]},
   {v:'1.9.0', date:'2026-06-14', notes:[
     '🌍 5 new run scenarios for fresh variety: 🎁 Inheritance (cash head start), 💻 Tech Boom, 📈 Rate Hike Era, 🦠 Pandemic Shock, and 💪 Side-Hustle Surge.',
     '🎲 Every solo run now rolls one of 11 economy scenarios — no two games feel the same.',
@@ -2999,6 +3003,17 @@ const DREAMS = [
   {id:'island',name:'Private Island',icon:'🏝️',cost:1200000,desc:'A dot on the map that answers to you. The final boss of real estate.'},
   {id:'foundation',name:'Charity Foundation',icon:'🕊️',cost:900000,desc:'A foundation with your name funding scholarships forever. Wealth that outlives you.'},
   {id:'esports',name:'Esports Team',icon:'🎮',cost:750000,desc:'Your tag on jerseys, your team on the big stage. GG, wealth gap.'},
+];
+
+// ══ PETS — adopt a companion. One-time cost; a small morale "salary" boost (folded
+// into salaryBoost so the Life Hub breakdown stays consistent). Pure upside + joy. ══
+const PETS = [
+  {id:'goldfish',name:'Bubbles the Goldfish',icon:'🐠',adopt:300,  bonus:40,  blurb:'Low maintenance, weirdly calming. Three-second memory, zero drama.'},
+  {id:'hamster', name:'Nibbles the Hamster', icon:'🐹',adopt:600,  bonus:70,  blurb:'Runs the wheel all night — basically your spirit animal.'},
+  {id:'cat',     name:'Whiskers the Cat',    icon:'🐈',adopt:900,  bonus:100, blurb:'Ignores you, owns you, and somehow boosts your mood anyway.'},
+  {id:'parrot',  name:'Captain the Parrot',  icon:'🦜',adopt:1400, bonus:140, blurb:'Repeats "buy assets" until it sticks. Best financial advisor you\'ll own.'},
+  {id:'dog',     name:'Buddy the Dog',       icon:'🐕',adopt:1800, bonus:190, blurb:'Unconditional love + forced morning walks = happier, richer you.'},
+  {id:'dragon',  name:'Smaug the Dragon',    icon:'🐉',adopt:50000,bonus:2200,blurb:'Hoards gold professionally. The ultimate flex pet — if you can afford the vet.'},
 ];
 
 // ── ☁️ IP-KEYED PROGRESS SYNC — your trophies/credits/wins follow your IP.
@@ -4070,7 +4085,7 @@ function initGame(prof, location) {
       {name:'Credit Cards', amt:scaledProf.ccDebt},
     ].filter(l=>l.amt>0),
     bankLoan:0, extraChildren:0, numChildren:0, extraBankPmt:0,
-    skipTurns:0, salaryBoost:0, edu:0,
+    skipTurns:0, salaryBoost:0, edu:0, pet:null,
     // Family situation: override housing cost to a small family contribution
     expenseOverrides:housingSituation==='family'
       ?{mortgage:Math.round(scaledProf.mortgage*0.18/50)*50||200}
@@ -9536,8 +9551,47 @@ function openLeisure(){
       {label:'🍽 Go Out to Eat',cls:'btn-tan',fn:openDining},
       {label:'🌃 Nightlife',cls:'btn-tan',fn:openNightlife},
       {label:'✈️ Travel',cls:'btn-tan',fn:openTravel},
+      {label:(G.pet?G.pet.icon+' Your Pet':'🐾 Adopt a Pet'),cls:'btn-tan',fn:openPets},
       {label:'Close',cls:'btn-gold',fn:()=>{}},
     ],_noFS:true});
+}
+// ══ PETS — adopt a companion for a small permanent morale (salary) boost ══
+function openPets(){
+  if(_mpLocked()){_mpLockToast();return;}
+  if(G.pet){
+    openModal({band:'life',title:G.pet.icon+' '+G.pet.name,
+      desc:'Your loyal companion. The joy keeps you sharp — a permanent morale boost to your income.',
+      rows:[['Companion',G.pet.icon+' '+G.pet.name,''],['Morale boost','+$'+fmt(G.pet.bonus)+'/mo to income','green'],['Your Cash','$'+fmt(G.cash),'gold']],
+      actions:[
+        {label:'💔 Give Up Pet (no refund)',cls:'btn-tan',fn:()=>{
+          if(confirm('Give up '+G.pet.name+'? You lose the +$'+fmt(G.pet.bonus)+'/mo morale boost and there\'s no refund.')){
+            G.salaryBoost=(G.salaryBoost||0)-(G.pet.bonus||0);
+            addLog('💔','Said goodbye to '+G.pet.name+'. The house feels quieter.','b');
+            G.pet=null;updateUI();saveGame();openLeisure();
+          }
+        }},
+        {label:'← Back',cls:'btn-gold',fn:openLeisure},
+      ],_noFS:true});
+    return;
+  }
+  openModal({band:'life',title:'🐾 Adopt a Pet',
+    desc:'A companion lifts your mood — and a happier you earns more (a small permanent morale boost to income). One-time adoption cost.',
+    rows:[['Your Cash','$'+fmt(G.cash),'gold']],
+    actions:[
+      ...PETS.map(p=>({label:`${p.icon} ${p.name.split(' ')[0]} — $${fmt(p.adopt)} (+$${fmt(p.bonus)}/mo)`,cls:'btn-tan',locked:G.cash<p.adopt,fn:()=>adoptPet(p.id)})),
+      {label:'← Back',cls:'btn-gold',fn:openLeisure},
+    ],_noFS:true});
+}
+function adoptPet(id){
+  const p=PETS.find(x=>x.id===id);if(!p)return;
+  if(G.cash<p.adopt){_toast&&_toast('Not enough cash for '+p.name);return;}
+  G.cash-=p.adopt;
+  G.pet={id:p.id,name:p.name,icon:p.icon,bonus:p.bonus};
+  G.salaryBoost=(G.salaryBoost||0)+p.bonus; // morale boost rides salaryBoost (shown in income breakdown)
+  addLog('🐾','Adopted '+p.icon+' '+p.name+'! +$'+fmt(p.bonus)+'/mo morale boost.','g');
+  try{if(!window._muted){_tone(659,.1,'triangle',.14,0,880);_tone(988,.14,'triangle',.14,.09);}}catch(e){}
+  try{showToast('🐾 '+p.name+' joined the family! +$'+fmt(p.bonus)+'/mo','linear-gradient(135deg,#2a8a4a,#34c87a)',2600);}catch(e){}
+  updateUI();saveGame();openPets();
 }
 function _leisureGo(cost,emoji,name,quip,perkFn){
   if(_leisurePay(cost,emoji,name,quip,perkFn)){G._leisureSpent=(G._leisureSpent||0)+cost;}

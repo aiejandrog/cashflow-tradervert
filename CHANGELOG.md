@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.10.0 — 2026-06-14 — Pets
+- **Adopt a pet** (🍸 Leisure → 🐾): `PETS` (6: goldfish/hamster/cat/parrot/dog + a $50k dragon). `openPets()`/`adoptPet()` deduct a one-time adoption cost and add a permanent morale boost folded into `G.salaryBoost` (so it shows in the income breakdown — no income()/expenses() edits, stays consistent like the hustler/raise perks). Give-up subtracts the boost (no refund). `G.pet` persists with the save. Affordability gating verified (cheap pets enabled, pricey ones 🔒 when broke); adopt/give-up round-trips salaryBoost cleanly.
+
 ## v1.9.0 — 2026-06-14 — 5 new run scenarios
 - **SCENARIOS 6→11**: added Inheritance (🎁 onStart cash windfall), Tech Boom (💻 +50% cash-flow waves every 8 turns), Rate Hike Era (📈 `_rateHikeExtra` creep every 5), Pandemic Shock (🦠 sched turn 18, cash flow halved 5 turns), Side-Hustle Surge (💪 small cash drop every 4). All reuse proven economy fields (`_boomMult`/`_recLiteMult`/`_rateHikeExtra`/`G.cash`) consumed by income()/expenses() — no new engine wiring. Verified: each fires onStart/recurring/sched correctly, values finite, zero errors.
 
