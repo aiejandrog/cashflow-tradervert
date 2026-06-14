@@ -158,6 +158,25 @@ body{
 }
 @keyframes bPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
 
+/* Short viewports (laptops ~768–860px tall): tighten the splash so the bottom
+   stats strip is never clipped below the fold. Reclaims ~100px of vertical space. */
+@media (max-height:860px){
+  #splash{padding:8px 16px;gap:6px}
+  .logo-cg{margin-bottom:2px}
+  .logo-skyline-svg{transform:scaleX(1.05) scaleY(.9);margin-bottom:-8px}
+  .logo-cash{font-size:clamp(2rem,4vw,2.9rem)}
+  .logo-gear{font-size:clamp(1.7rem,3.6vw,2.5rem);margin-top:-6px}
+  .logo-sub{font-size:.6rem;margin-top:2px}
+  .sp-card{padding:10px 18px}
+  .sp-title{padding-bottom:5px;margin-bottom:6px}
+  .sp-stage{margin-bottom:6px}
+  .btn-spin{padding:8px;margin-bottom:2px}
+}
+@media (max-height:680px){
+  #splash{gap:4px;padding:6px 16px}
+  .logo-cash{font-size:1.9rem}.logo-gear{font-size:1.55rem}
+}
+
 /* ── Secondary options row (express · players · join) — quiet, one line ── */
 .sp-options-row{
   display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
@@ -2542,8 +2561,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.2.0';
+const GAME_VERSION='1.2.1';
 const CHANGELOG=[
+  {v:'1.2.1', date:'2026-06-14', notes:[
+    '🖥️ Fixed the main menu being cut off at the bottom on laptops & shorter screens — everything fits now.',
+  ]},
   {v:'1.2.0', date:'2026-06-14', notes:[
     '🎓 NEW: School & Career Path — study to raise your salary and unlock higher-paying careers.',
     '📜 Earn Trade/Associate, Bachelor\'s, or Master\'s/Doctorate — each adds a permanent salary boost (up to +32%).',

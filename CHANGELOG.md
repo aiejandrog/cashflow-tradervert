@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.2.1 — 2026-06-14 — Splash fit fix
+- Fixed the splash/main menu overflowing on short viewports (laptops ~768–860px tall): the bottom stats strip (`#profile-strip`) was clipped below the fold. Added `@media (max-height:860px)` + `(max-height:680px)` blocks that tighten splash gap/padding, logo size, and card spacing (~100px reclaimed). `.sp-item` height left at 68px so the spin reel (`ITEM_H=68`) stays aligned.
+
 ## v1.2.0 — 2026-06-14 — 🎓 Education / School system
 - **New School & Career Path** (🎓 top-bar button → `openEducation()`): study to raise your salary and unlock higher-paying careers.
 - **3 education levels** above High School — Trade/Associate (+8%), Bachelor's (+18%), Master's/Doctorate (+32%). Each level's `pct` is a permanent salary multiplier in `income()`; tuition paid in cash.
