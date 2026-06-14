@@ -1700,7 +1700,12 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     <div class="sp-stage" id="sp-stage">
       <div id="spin-reel"></div>
     </div>
-    <button class="btn-spin" id="btn-spin">🎯 Spin to Pick Your Path</button>
+    <div style="display:flex;gap:8px;align-items:stretch">
+      <button class="btn-spin" id="btn-spin" style="flex:1;width:auto">🎯 Spin to Pick Your Path</button>
+      <button id="btn-quickmatch" onclick="startQuickMatch()" title="Instant random game — career, character, city & dream all picked for you. Play now!"
+        style="flex:0 0 auto;padding:0 15px;border-radius:9px;border:1px solid rgba(160,120,255,.6);background:linear-gradient(135deg,#3a1d6b,#6b3fa8 50%,#3a1d6b);color:#fff;font-family:Georgia,serif;font-weight:900;font-size:.8rem;cursor:pointer;line-height:1;transition:all .18s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"
+        onmouseenter="this.style.filter='brightness(1.18)';this.style.transform='translateY(-2px)'" onmouseleave="this.style.filter='';this.style.transform=''">🎲<span style="font-size:.55rem;font-weight:800;letter-spacing:.5px">QUICK</span></button>
+    </div>
     <!-- Difficulty selector — bundles rival pace + threat ramp + scenario frequency -->
     <div id="sp-diff-row" style="display:flex;gap:6px;justify-content:center;align-items:center;margin:9px 0 2px;flex-wrap:wrap">
       <span style="font-size:.6rem;color:rgba(240,220,144,.55);font-family:Arial,sans-serif;font-weight:800;letter-spacing:1px">DIFFICULTY</span>
@@ -2600,8 +2605,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.5.0';
+const GAME_VERSION='1.6.0';
 const CHANGELOG=[
+  {v:'1.6.0', date:'2026-06-14', notes:[
+    '🎲 NEW: Quick Match — one tap next to Spin drops you straight into a fully random life (career, character, city & dream all picked for you). Instant play.',
+  ]},
   {v:'1.5.0', date:'2026-06-14', notes:[
     '😂 NEW: a quick-reaction bar in the chat/feed — tap any of 10 emojis to fire a big animated reaction (and it shows for everyone in multiplayer).',
     '🖼️ One-tap meme categories (LOL, Money, Win, Cry, Dance & more) in the GIF picker — find the perfect meme instantly, no typing.',
@@ -3956,6 +3964,20 @@ function startDailyRun(){
   startGame(selectedProf,selectedLocation);
   G._dailyDate=date;saveGame();
   addLog('📅',`DAILY RUN ${date}: ${selectedProf.icon} ${selectedProf.name} in ${selectedLocation.name}, dream: ${selectedDream.name}`,'gold');
+}
+// ⚡ QUICK MATCH — one tap → fully random life (career + preset character + city + dream), play now.
+function startQuickMatch(){
+  const R=a=>a[Math.floor(Math.random()*a.length)];
+  selectedProf=_spinCareerLottery();           // random career (full pool)
+  selectedLocation=R(LOCATIONS);
+  selectedDream=R(DREAMS);
+  const p=R(PRESET_CHARS);
+  selectedIdentity={name:p.name,avatar:_presetAvatar(p),ethnicityLabel:p.eth,toneLabel:CHAR_TONES[p.ti].label,gender:p.g,ageStart:p.age,_typedName:true};
+  window._nameQuipDone=true;                    // no quiz — speed is the point
+  try{localStorage.removeItem('cf_pending_spin');}catch(e){} // not a spin — clear any stale lock
+  clearSave();
+  startGame(selectedProf,selectedLocation);
+  try{showToast('🎲 Quick Match: '+selectedProf.icon+' '+selectedProf.name+' in '+selectedLocation.name,'linear-gradient(135deg,#3a1d6b,#6b3fa8)',2800);}catch(e){}
 }
 
 // ── STATE ────────────────────────────────────────────

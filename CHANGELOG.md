@@ -4,6 +4,10 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.6.0 — 2026-06-14 — Quick Match + bug-hunt pass
+- **Quick Match** (`startQuickMatch()`, 🎲 button beside Spin): one tap → fully random life (random career via `_spinCareerLottery`, random `PRESET_CHARS` identity, random location + dream) → straight into the game. Placed in the spin button's flex row so it adds no splash height; verified splash still fits at 768.
+- **Bug-hunt pass** (no fixes needed — all clean): 38-profession invariant sweep, ~7-turn live playthrough, forced WIN detection (`checkWin` enters Fast Track), forced bankruptcy (`triggerBankruptcy` overlay) — income/CF math consistent, cash finite throughout, **zero console errors** across all of it.
+
 ## v1.5.0 — 2026-06-14 — Chat reactions + meme categories
 - **Quick-reaction bar** (`#cl-react-row`) in the always-present chat/Life-Feed panel: 10 emojis (😂🔥💀👏😮💰😭🎉❤️🤡) calling the existing `sendReaction()` → big animated floating emoji + MP broadcast (`type:'react'`, receive handler already present). The reaction system existed but its only UI was the spectator-wait box; now it's reachable during your own turn and in solo.
 - **One-tap meme categories** (`#cl-meme-chips`, `memeSearch(term)`) in the GIF picker: LOL/Money/Win/Cry/Dance/Shook/Broke/Rich → instant themed Tenor search, no typing.
