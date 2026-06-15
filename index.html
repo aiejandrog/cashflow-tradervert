@@ -2804,8 +2804,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.23.1';
+const GAME_VERSION='1.24.0';
 const CHANGELOG=[
+  {v:'1.24.0', date:'2026-06-15', notes:[
+    '🎨 Fresh look! Every icon in the game now uses a consistent hand-drawn illustrated set (OpenMoji) instead of your device\'s default emoji — so the whole UI reads as designed, not generic. Same meanings, cleaner identity. Falls back to system emoji if you\'re offline.'
+  ]},
   {v:'1.23.1', date:'2026-06-15', notes:[
     '🏦 Fixed confusing rental math: the property manager popup now shows the mortgage payment and a "Net cash flow" line, so the numbers actually add up. (The cash flow was always correct — it just wasn\'t showing the mortgage being subtracted, which made it look wrong.)'
   ]},
@@ -15742,5 +15745,51 @@ function endTutorial(){
   </div>
 </div>
 
+<!-- ✨ Illustrated icon set — replaces platform-default emoji with OpenMoji's hand-drawn set
+     so the UI reads as DESIGNED, not "system default". Engine = Twemoji parser (bulletproof
+     emoji detection); assets = OpenMoji (its uppercase, FE0F-stripped filenames match the
+     parser's codepoints 1:1). Fully graceful: offline, or any missing glyph, falls straight
+     back to the original system emoji — never a broken image. Reversible: delete this block. -->
+<style>
+  img.emoji{height:1em;width:1em;margin:0 .06em 0 .08em;vertical-align:-0.14em;display:inline-block;pointer-events:none}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@twemoji/api@15.1.0/dist/twemoji.min.js" crossorigin="anonymous"></script>
+<script>
+(function(){
+  var OM='https://cdn.jsdelivr.net/npm/openmoji@15.0.0/color/svg/';
+  var fail=Object.create(null); // codepoints with no OpenMoji asset -> leave as text (no retry loop)
+  var opts={className:'emoji',callback:function(icon){return fail[icon]?false:OM+icon.toUpperCase()+'.svg';}};
+  var busy=false,queued=[],sched=false;
+  function parse(n){ if(!window.twemoji||!n)return; busy=true; try{twemoji.parse(n,opts);}catch(e){} busy=false; }
+  function flush(){ sched=false; var q=queued; queued=[]; for(var i=0;i<q.length;i++){ if(q[i]&&q[i].isConnected)parse(q[i]); } }
+  // Rare OpenMoji 404 -> remember it, drop to the original system emoji. Capture phase so we
+  // win before twemoji's own onerror; populating `fail` stops the observer re-creating the img.
+  document.addEventListener('error',function(e){
+    var t=e.target;
+    if(t&&t.tagName==='IMG'&&t.className==='emoji'){
+      var m=(t.src||'').match(/\/([0-9A-Fa-f-]+)\.svg$/);
+      if(m)fail[m[1].toLowerCase()]=1;
+      if(t.parentNode)t.parentNode.replaceChild(document.createTextNode(t.alt||''),t);
+    }
+  },true);
+  function start(){
+    if(!window.twemoji){setTimeout(start,200);return;}
+    parse(document.body);
+    new MutationObserver(function(muts){
+      if(busy)return; // ignore our own <img> insertions
+      for(var i=0;i<muts.length;i++){
+        var a=muts[i].addedNodes;
+        for(var j=0;j<a.length;j++){
+          var n=a[j];
+          if(n.nodeType===1){ if(n.tagName==='IMG'&&n.className==='emoji')continue; queued.push(n); }
+          else if(n.nodeType===3&&n.parentNode){ queued.push(n.parentNode); }
+        }
+      }
+      if(queued.length&&!sched){sched=true;setTimeout(flush,0);} // setTimeout (not rAF) so it fires even when the tab is backgrounded
+    }).observe(document.body,{childList:true,subtree:true});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>
 </body>
 </html>

@@ -4,6 +4,16 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.24.0 — 2026-06-15 — OpenMoji illustrated icon set (visual identity)
+- Replaced platform-default emoji with **OpenMoji** (hand-drawn, CC-BY) across the whole UI so it reads as *designed*, not generic — the #1 lever against the "AI slop / looks default" perception, with no artist budget.
+- **Engine:** Twemoji parser (bulletproof emoji detection); **assets:** OpenMoji. OpenMoji's uppercase, FE0F-stripped filenames match the parser's codepoints 1:1 (verified: `1F454`, `1F9D1-1F3FD`, `2764` all 200; `2764-FE0F` 404 → not used). Near-100% coverage incl. skin tones.
+- **Robust:** `MutationObserver` re-renders dynamically-built DOM (modals, board, preset avatars). Fail-set guard + capture-phase error handler → any missing glyph silently falls back to the original system emoji (never a broken image), and never loops.
+- **Bug fixed during verification:** flush was scheduled via `requestAnimationFrame`, which pauses in backgrounded tabs → dynamic content (e.g. preset avatars) wasn't converting. Switched to `setTimeout` so it fires regardless of tab visibility.
+- Injected as one self-contained block before `</body>` — fully reversible. Verified: 419 emoji imgs converted on the character screen, 0 broken, 0 console errors.
+
+## v1.23.1 — 2026-06-15 — Property manager popup shows mortgage + net cash flow (bugfix)
+- The manage-property popup showed gross rent and the manager fee but **not the mortgage payment**, so the numbers didn't reconcile to the asset's actual cash flow (e.g. $7,550 − $600 looked like $6,950 but CF was $2,933). Added a 🏦 Mortgage line and a 💰 Net cash flow line. Underlying math was always correct — display was incomplete.
+
 ## v1.23.0 — 2026-06-15 — Preset character personas (UX, user request) + bug-hunt pass
 - **PRESET_CHARS 10→14:** added Trang (Vietnam), Emre (Turkey), Kai (Pacific Islander), João (Brazil) — showcasing the v1.22 name-guesser regions.
 - **Persona taglines:** every preset now shows a vibe (The Hustler/Planner/Visionary/Veteran/Strategist/Late Bloomer/Grinder/Prodigy/Dreamer/Wildcard/Striver/Closer/Free Spirit/Optimist), rendered under the name in the quick-start row.
