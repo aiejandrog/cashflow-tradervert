@@ -2804,8 +2804,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.25.0';
+const GAME_VERSION='1.25.1';
 const CHANGELOG=[
+  {v:'1.25.1', date:'2026-06-15', notes:[
+    '🐛 Fixed the turn counter: Fast Track rolls now count as turns. Before, escaping the Rat Race early and then buying everything on the Fast Track could show an impossible "1 turn / 15 assets" on the win screen. Your turn count (and grade) now reflects the whole run.'
+  ]},
   {v:'1.25.0', date:'2026-06-15', notes:[
     '✏️ A real art direction — moving away from emoji! Careers, money, real estate, deals and UI now use hand-drawn line-art icons (game-icons.net), tinted to match the screen so they look intentional, not generic. Drawn character avatars are coming next.'
   ]},
@@ -11289,6 +11292,8 @@ function ftShowMarket(){
     actions:[{label:'Continue →',cls:'btn-gold',fn:()=>{_ftEndRoll('');}}],_noFS:true});
 }
 function ftLand(){
+  G.turn=(G.turn||0)+1; // Fast Track rolls count as turns too — otherwise an early escape + lots of
+                        // Fast Track buying shows an impossible "1 turn / 15 assets" on the win screen
   const type=ftType(G._ftPos);
   const tile=document.getElementById('ft-'+G._ftPos);
   if(tile&&!document.hidden&&tile.animate){try{tile.animate([{transform:'scale(1)'},{transform:'scale(1.2)',offset:.4},{transform:'scale(1)'}],{duration:440,easing:'ease-out'});}catch(e){}}
@@ -11699,6 +11704,7 @@ const OB_FX={
   dream:{s:()=>{},e:['⭐','✨','🌟']},
 };
 function obLand(){
+  G.turn=(G.turn||0)+1; // outer-board rolls count as turns too (same fix as ftLand)
   const sp=OUTER_SPACES[G._outerPos];
   obAddLog(`📍 Landed on: ${sp.name}`);
   const tileEl=document.getElementById('ob-sp-'+G._outerPos);
