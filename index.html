@@ -2777,8 +2777,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.18.1';
+const GAME_VERSION='1.18.2';
 const CHANGELOG=[
+  {v:'1.18.2', date:'2026-06-15', notes:[
+    '↩️ Easy to undo multiplayer: the MULTIPLAYER SELECTED banner now has a “Back to Single Player” button, and the room setup’s cancel is now clearly labeled “← Back to Single Player.”'
+  ]},
   {v:'1.18.1', date:'2026-06-15', notes:[
     '👥 Clearer multiplayer: picking 2-4 players now shows a bold “MULTIPLAYER SELECTED” banner up top, and Join Room now lives in the Online Rooms box where it belongs.',
   ]},
@@ -13310,7 +13313,7 @@ function mpSetCount(n){
   [1,2,3,4].forEach(i=>{const b=$('mp-btn-'+i);if(b)b.classList.toggle('active',i===n);});
   // clear "multiplayer selected" banner at the top so it's obvious you're in MP mode
   const ban=$('mp-mode-banner');
-  if(ban){ if(n>1){ban.innerHTML='👥 MULTIPLAYER SELECTED — '+n+' players · name your room, then spin. Friends join from the Online Rooms box.';ban.style.display='';} else {ban.style.display='none';} }
+  if(ban){ if(n>1){ban.innerHTML='<div style="margin-bottom:6px">👥 MULTIPLAYER SELECTED — '+n+' players · name your room, then spin. Friends join from the Online Rooms box.</div>'+'<button onclick="mpSetCount(1)" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:8px;color:#fff;font-family:Georgia,serif;font-weight:800;font-size:.72rem;padding:5px 14px;cursor:pointer">↩ Back to Single Player</button>';ban.style.display='';} else {ban.style.display='none';} }
   const hdr=$('mp-setup-hdr');
   if(n>1){
     if(hdr)hdr.style.display='none'; // hidden until room is confirmed
@@ -13386,6 +13389,7 @@ function mpCancelRoomSetup(){
   // revert to single player
   _mpCount=1;
   [1,2,3,4].forEach(i=>{const b=$('mp-btn-'+i);if(b)b.classList.toggle('active',i===1);});
+  const ban=$('mp-mode-banner');if(ban)ban.style.display='none'; // clear the MULTIPLAYER SELECTED banner
   const btn=$('btn-dream-go');if(btn)btn.textContent='Begin Game →';
 }
 
@@ -15597,7 +15601,7 @@ function endTutorial(){
       <div id="mp-rs-names"></div>
     </div>
     <button class="mp-rs-confirm" onclick="mpConfirmRoomSetup()">Lock In → Start Setup</button>
-    <button class="mp-rs-cancel" onclick="mpCancelRoomSetup()">Cancel</button>
+    <button class="mp-rs-cancel" onclick="mpCancelRoomSetup()">← Back to Single Player</button>
   </div>
 </div>
 
