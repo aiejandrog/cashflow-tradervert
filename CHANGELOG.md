@@ -4,6 +4,12 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.23.0 — 2026-06-15 — Preset character personas (UX, user request) + bug-hunt pass
+- **PRESET_CHARS 10→14:** added Trang (Vietnam), Emre (Turkey), Kai (Pacific Islander), João (Brazil) — showcasing the v1.22 name-guesser regions.
+- **Persona taglines:** every preset now shows a vibe (The Hustler/Planner/Visionary/Veteran/Strategist/Late Bloomer/Grinder/Prodigy/Dreamer/Wildcard/Striver/Closer/Free Spirit/Optimist), rendered under the name in the quick-start row.
+- **Bug-hunt pass (no fixes needed):** validated data integrity across 45 careers + 28 dreams (0 issues), new-career game start (no NaN, paydays compute), education gating (statistically airtight: gated careers never leak at low edu, appear at required edu), win/dream-cost logic. Game logically sound after recent content adds.
+- Verified: 0 syntax errors; 14 presets render with taglines + valid avatars/indices; new names resolve (Trang→Vietnam, Emre→Turkey, Kai→Pacific); applyPreset sets identity & proceeds with 0 errors.
+
 ## v1.22.0 — 2026-06-15 — Name-guesser expansion (content + bug fix, user request)
 - **Origins 15→25 regions** (`_NAME_ORIGINS`), now 589 first names: added Vietnam, Turkey, Netherlands, Pacific Islands/Hawaii, Israel, East Africa (Ethiopia), Thailand, Indonesia, Hungary.
 - **Pop-culture radar ~117→148** (`_FAMOUS_NAMES`): trending shows (Severance, Shōgun, House of the Dragon, Yellowstone, Bridgerton, Fallout, Invincible, Bluey, Andor), anime (Frieren, Solo Leveling, Berserk, Vinland Saga, Dr. Stone, Dandadan), games (Elden Ring, Black Myth Wukong, Stardew, Sims, Roblox, Skyrim, Genshin, AC), music (BLACKPINK, country, Chappell Roan, Latin).

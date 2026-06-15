@@ -2804,8 +2804,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.22.0';
+const GAME_VERSION='1.23.0';
 const CHANGELOG=[
+  {v:'1.23.0', date:'2026-06-15', notes:[
+    '🎭 Preset characters leveled up! Each of the one-tap quick-start characters now has a persona vibe (The Hustler, The Visionary, The Late Bloomer…), and there are 4 new faces from around the world — Trang, Emre, Kai, and João (14 total). Skip the creator and jump straight into your city.'
+  ]},
   {v:'1.22.0', date:'2026-06-15', notes:[
     '🔮 The name-guesser got a brain upgrade! It now knows 25 cultural origins (Vietnam, Turkey, Netherlands, Pacific/Hawaii, Israel, Ethiopia, Thailand, Indonesia, Hungary + more) from 589 first names, and the pop-culture radar grew to 148 references — Frieren, Solo Leveling, Elden Ring, Severance, Yellowstone, Bluey, BLACKPINK, Genshin, Fallout and tons more. Bonus: fixed a bug where "Wallen" was misread as WALL-E. 😅'
   ]},
@@ -14861,29 +14864,34 @@ function _charDefaultIdentity(){
 }
 // ── Preset characters — one tap to skip the whole creator. si/ti index CHAR_STYLES/CHAR_TONES. ──
 const PRESET_CHARS=[
-  {name:'Marcus', si:1, ti:2, g:'m', eth:'Latino / Hispanic',            age:24},
-  {name:'Sofia',  si:2, ti:0, g:'f', eth:'White / European',             age:22},
-  {name:'Amara',  si:4, ti:4, g:'f', eth:'Black / African American',     age:28},
-  {name:'Jack',   si:6, ti:0, g:'m', eth:'White / European',             age:35},
-  {name:'Priya',  si:2, ti:3, g:'f', eth:'South Asian',                  age:26},
-  {name:'Walter', si:8, ti:1, g:'m', eth:'White / European',             age:40},
-  {name:'DeShawn',si:7, ti:4, g:'m', eth:'Black / African American',     age:30},
-  {name:'Mei',    si:2, ti:0, g:'f', eth:'East Asian',                   age:21},
-  {name:'Layla',  si:9, ti:2, g:'f', eth:'Middle Eastern / North African',age:23},
-  {name:'Sam',    si:0, ti:2, g:'n', eth:'',                             age:27},
+  {name:'Marcus', si:1, ti:2, g:'m', eth:'Latino / Hispanic',            age:24, tag:'The Hustler'},
+  {name:'Sofia',  si:2, ti:0, g:'f', eth:'White / European',             age:22, tag:'The Planner'},
+  {name:'Amara',  si:4, ti:4, g:'f', eth:'Black / African American',     age:28, tag:'The Visionary'},
+  {name:'Jack',   si:6, ti:0, g:'m', eth:'White / European',             age:35, tag:'The Veteran'},
+  {name:'Priya',  si:2, ti:3, g:'f', eth:'South Asian',                  age:26, tag:'The Strategist'},
+  {name:'Walter', si:8, ti:1, g:'m', eth:'White / European',             age:40, tag:'The Late Bloomer'},
+  {name:'DeShawn',si:7, ti:4, g:'m', eth:'Black / African American',     age:30, tag:'The Grinder'},
+  {name:'Mei',    si:2, ti:0, g:'f', eth:'East Asian',                   age:21, tag:'The Prodigy'},
+  {name:'Layla',  si:9, ti:2, g:'f', eth:'Middle Eastern / North African',age:23, tag:'The Dreamer'},
+  {name:'Sam',    si:0, ti:2, g:'n', eth:'',                             age:27, tag:'The Wildcard'},
+  {name:'Trang',  si:3, ti:0, g:'f', eth:'East Asian',                   age:24, tag:'The Striver'},
+  {name:'Emre',   si:1, ti:1, g:'m', eth:'Middle Eastern / North African',age:27, tag:'The Closer'},
+  {name:'Kai',    si:0, ti:3, g:'n', eth:'Pacific Islander',            age:25, tag:'The Free Spirit'},
+  {name:'João',   si:1, ti:2, g:'m', eth:'Latino / Hispanic',            age:29, tag:'The Optimist'},
 ];
 function _presetAvatar(p){try{return CHAR_STYLES[p.si].build(CHAR_TONES[p.ti].mod);}catch(e){return '\u{1F9D1}';}}
 function renderPresetChars(){
   const row=document.getElementById('char-preset-row'); if(!row)return;
   row.innerHTML=PRESET_CHARS.map((p,i)=>{
     const av=_presetAvatar(p);
-    return '<div onclick="applyPreset('+i+')" title="Play as '+p.name+', age '+p.age+' — skip straight to picking your city" '+
-      'style="flex:0 0 auto;width:82px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.14);border-radius:12px;transition:all .14s" '+
+    return '<div onclick="applyPreset('+i+')" title="Play as '+p.name+' — '+(p.tag||'')+', age '+p.age+'. Skip straight to picking your city" '+
+      'style="flex:0 0 auto;width:88px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.14);border-radius:12px;transition:all .14s" '+
       'onmouseenter="this.style.borderColor=\'#f0c020\';this.style.background=\'rgba(240,192,32,.12)\';this.style.transform=\'translateY(-2px)\'" '+
       'onmouseleave="this.style.borderColor=\'rgba(255,255,255,.14)\';this.style.background=\'rgba(255,255,255,.05)\';this.style.transform=\'\'">'+
       '<div style="font-size:1.95rem;line-height:1">'+av+'</div>'+
       '<div style="font-size:.72rem;font-weight:800;color:#f0dc90;font-family:Georgia,serif;white-space:nowrap">'+p.name+'</div>'+
-      '<div style="font-size:.56rem;color:rgba(200,175,120,.7)">Age '+p.age+'</div>'+
+      (p.tag?'<div style="font-size:.52rem;font-weight:700;color:#c89a3c;font-style:italic;white-space:nowrap">'+p.tag+'</div>':'')+
+      '<div style="font-size:.54rem;color:rgba(200,175,120,.6)">Age '+p.age+'</div>'+
       '</div>';
   }).join('');
 }
