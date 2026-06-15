@@ -4,6 +4,11 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.19.0 — 2026-06-15 — 15 new investment deals (content, user request)
+- **SMALL_DEALS 30→36:** townhouse rental, rental lock-up garages, ATM route, roadside billboard, tiny-home rental, music royalty share (`sd_town/garage/atm/bill/tiny/royalty`).
+- **BIG_DEALS 14→23:** 50-unit complex, mobile-home park, roadside motel, RV park, industrial warehouse (NNN), drive-thru QSR ground lease, mixed-use retail+apts, laundromat chain, boutique hotel (`b15`–`b23`) — scaling to $1.5M trophy assets.
+- Every niche (re/biz/note/land), small→mega. CF ~0.5-0.7%/mo of cost, downs ~11-13%, consistent with existing. Verified: 36+23 pools, no dup ids, both deal sizes fire (12 events), buying adds an asset, passive finite, 0 errors.
+
 ## v1.18.4 — 2026-06-15 — Sync the reveal MP badge on re-select (user-reported)
 - Bug: revert to single player on the reveal card, then start a room again (e.g. from the Online Rooms box) → the reveal-card MP badge stayed hidden, because `mpSetCount` only refreshed the spin-card `#mp-mode-banner`, not `#rev-mp-badge`. Fix: `mpSetCount` (and `mpCancelRoomSetup`) now also call `_revMpBadge()`, so both indicators track `_mpCount` no matter which screen/control triggers the change. Verified the exact repro: reveal MP → single → re-select MP (no re-render) → badge reappears.
 
