@@ -4,6 +4,10 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.18.1 — 2026-06-15 — Clearer multiplayer menu UX (user-reported)
+- **"Multiplayer selected" indicator:** picking 2-4 players now shows a bold pulsing `#mp-mode-banner` at the top of the spin card ("👥 MULTIPLAYER SELECTED — N players…") driven by `mpSetCount`, so players know they're in MP mode (they didn't before). Hides at 1 player.
+- **Join Room moved into the Online Rooms box:** new `#btn-join-online` (🚪 Join a Room by Name → `mpOpenJoinModal`) lives in `#rooms-panel` where it belongs. The old in-card Join button (`.sp-join-row`) is now the **mobile fallback only** (`@media(min-width:1001px){display:none}`) since the rooms box is hidden ≤1000px — so desktop joins from the box, mobile from the card. Verified: banner toggles 1P/2P, online Join wired, 0 errors.
+
 ## v1.18.0 — 2026-06-15 — Anonymous session tracking (play time + progress)
 - **New telemetry (to answer "are people playing / how long"):** created Supabase table `public.cf_sessions` (RLS: anon INSERT only, no public SELECT — privacy) on project dddcfwbydgtxxwdsvsvt. Client logs one row per session: `duration_s`, `turns`, `won`, `prof`, `mode` (solo/mp), `ended` (win/bankrupt/resign/leave), `ver`, random `device` id (reuses `_deviceId()`, no PII/IP). `_sessionStart()` on startGame/mpLaunchGame/resumeGame; `logSession()` on win/bankruptcy/resign + a `pagehide` keepalive POST (captures players who just close the tab — the typical case). Read aggregates via Supabase MCP (`select avg(duration_s), avg(turns), win rate, count`). Verified end-to-end: test row inserted (dur 7s, turn 12, doctor/solo) then deleted. itch's own analytics has NO play-duration metric, hence this.
 

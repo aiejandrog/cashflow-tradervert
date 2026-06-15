@@ -1560,6 +1560,8 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
 .mp-lobby-wait-msg{font-size:.73rem;color:rgba(200,175,120,.5);text-align:center;margin-top:12px}
 /* ── JOIN ROOM BUTTON on splash ── */
 .sp-join-row{display:flex;justify-content:center;margin-top:9px}
+/* Desktop shows Join in the Online Rooms box; the in-card Join is the mobile fallback (rooms box is hidden ≤1000px) */
+@media(min-width:1001px){.sp-join-row{display:none}}
 #btn-join-room{background:rgba(34,211,238,.1);border:1.5px solid rgba(34,211,238,.35);border-radius:9px;color:rgba(34,211,238,.85);font-size:.75rem;font-weight:700;padding:7px 18px;cursor:pointer;transition:all .15s;font-family:inherit;letter-spacing:.03em}
 #btn-join-room:hover{background:rgba(34,211,238,.18);border-color:rgba(34,211,238,.6)}
 /* ── JOIN ROOM MODAL ── */
@@ -1719,6 +1721,7 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
   <div id="rooms-panel">
     <div class="rp-hdr">🌐 ONLINE ROOMS <span id="rp-live" style="width:7px;height:7px;border-radius:50%;background:#4caf50;display:inline-block;animation:lhbGlow 2s infinite"></span></div>
     <div id="rp-list"><div class="rp-empty">Checking for open rooms…</div></div>
+    <button id="btn-join-online" onclick="mpOpenJoinModal()" title="Join a friend's room by name (incl. private rooms)" style="width:100%;margin:8px 0 2px;background:rgba(34,211,238,.12);border:1.5px solid rgba(34,211,238,.4);border-radius:9px;color:#bdeeff;font-size:.72rem;font-weight:800;padding:8px;cursor:pointer;font-family:inherit;letter-spacing:.03em;transition:all .15s" onmouseenter="this.style.background='rgba(34,211,238,.22)'" onmouseleave="this.style.background='rgba(34,211,238,.12)'">🚪 Join a Room by Name</button>
     <div class="rp-create">
       <div style="font-size:.56rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(34,211,238,.8);font-weight:800;font-family:Arial,sans-serif;margin-bottom:6px">➕ Create a Room</div>
       <div style="display:flex;gap:6px">
@@ -1764,6 +1767,7 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     <div class="logo-sub">Tradervert Edition</div>
   </div>
   <div class="sp-card">
+    <div id="mp-mode-banner" style="display:none;margin:0 auto 9px;padding:8px 12px;border-radius:10px;background:linear-gradient(135deg,rgba(34,211,238,.18),rgba(107,63,168,.2));border:1.5px solid rgba(34,211,238,.55);color:#bdeeff;font-family:Georgia,serif;font-weight:900;font-size:.82rem;text-align:center;letter-spacing:.3px;box-shadow:0 0 18px rgba(34,211,238,.2);animation:bPulse 1.8s ease-in-out infinite"></div>
     <div class="sp-title">Select Your Profession</div>
     <div class="sp-stage" id="sp-stage">
       <div id="spin-reel"></div>
@@ -2773,8 +2777,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.18.0';
+const GAME_VERSION='1.18.1';
 const CHANGELOG=[
+  {v:'1.18.1', date:'2026-06-15', notes:[
+    '👥 Clearer multiplayer: picking 2-4 players now shows a bold “MULTIPLAYER SELECTED” banner up top, and Join Room now lives in the Online Rooms box where it belongs.',
+  ]},
   {v:'1.18.0', date:'2026-06-15', notes:[
     '📊 Added anonymous play stats — just how long a run lasts and how far you get, with a random device tag. No names, no accounts, no personal data. It helps me see what to improve.',
   ]},
@@ -13301,6 +13308,9 @@ const MP_COLORS=['#f0c020','#22d3ee','#fb7185','#4ade80'];
 function mpSetCount(n){
   _mpCount=n;
   [1,2,3,4].forEach(i=>{const b=$('mp-btn-'+i);if(b)b.classList.toggle('active',i===n);});
+  // clear "multiplayer selected" banner at the top so it's obvious you're in MP mode
+  const ban=$('mp-mode-banner');
+  if(ban){ if(n>1){ban.innerHTML='👥 MULTIPLAYER SELECTED — '+n+' players · name your room, then spin. Friends join from the Online Rooms box.';ban.style.display='';} else {ban.style.display='none';} }
   const hdr=$('mp-setup-hdr');
   if(n>1){
     if(hdr)hdr.style.display='none'; // hidden until room is confirmed
