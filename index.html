@@ -2804,8 +2804,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.20.0';
+const GAME_VERSION='1.21.0';
 const CHANGELOG=[
+  {v:'1.21.0', date:'2026-06-15', notes:[
+    '🏆 6 MEGA dreams added (now 28 win-goals)! Chase a Skyscraper, an F1 Racing Team, a Space Tourism Seat, your own Unicorn startup, a Film Studio, or a Pro Sports Franchise — stretch goals up to $5M for the high-earner careers and late-game empires. Pick the dream that matches your hustle.'
+  ]},
   {v:'1.20.0', date:'2026-06-15', notes:[
     '💼 7 new careers (now 45 total)! Software Engineer, Pharmacist, Dentist, Veterinarian, Airline Pilot, Bartender, and Social Worker — each with its own salary, debt load, and starting story. High earners come with serious school debt; service jobs start lean but debt-free. Degree careers (Dentist, Pharmacist, Vet, Software Eng, Pilot) unlock through the School system.'
   ]},
@@ -3293,6 +3296,13 @@ const DREAMS = [
   {id:'island',name:'Private Island',icon:'🏝️',cost:1200000,desc:'A dot on the map that answers to you. The final boss of real estate.'},
   {id:'foundation',name:'Charity Foundation',icon:'🕊️',cost:900000,desc:'A foundation with your name funding scholarships forever. Wealth that outlives you.'},
   {id:'esports',name:'Esports Team',icon:'🎮',cost:750000,desc:'Your tag on jerseys, your team on the big stage. GG, wealth gap.'},
+  // ── MEGA tier — true bragging-rights wins for elite careers & late-game empires ──
+  {id:'skyscraper',name:'Own a Skyscraper',icon:'🏢',cost:1500000,desc:'Your name etched in the lobby of a tower that defines a skyline. Every floor pays rent.'},
+  {id:'f1team',name:'F1 Racing Team',icon:'🏎️',cost:2200000,desc:'Garage, pit crew, podium. Speed measured in millions, sponsors measured in more.'},
+  {id:'spaceflight',name:'Space Tourism Seat',icon:'🚀',cost:2800000,desc:'Strap in. The view from orbit is the last flex money can buy.'},
+  {id:'unicorn',name:'Build a Unicorn',icon:'🦄',cost:3500000,desc:'A billion-dollar company, built and exited. The founder\'s endgame.'},
+  {id:'filmstudio',name:'Own a Film Studio',icon:'🎬',cost:4200000,desc:'Green-light films, walk the red carpet you funded, own the back catalog forever.'},
+  {id:'franchise',name:'Pro Sports Franchise',icon:'🏆',cost:5000000,desc:'Owner\'s box, championship rings, and a whole city that chants your team\'s name.'},
 ];
 
 // ══ PETS — adopt a companion. One-time cost; a small morale "salary" boost (folded

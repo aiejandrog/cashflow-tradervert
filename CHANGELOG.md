@@ -4,6 +4,11 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.21.0 — 2026-06-15 — 6 mega dreams (content, balance)
+- **DREAMS 22→28:** Own a Skyscraper ($1.5M), F1 Racing Team ($2.2M), Space Tourism Seat ($2.8M), Build a Unicorn ($3.5M), Own a Film Studio ($4.2M), Pro Sports Franchise ($5M) — a "MEGA" stretch tier (`skyscraper/f1team/spaceflight/unicorn/filmstudio/franchise`).
+- Closes the balance gap opened by v1.19.0 ($1.5M big deals) + v1.20.0 (elite careers like $12k dentist): old dream ceiling was $1.2M, now $5M for true bragging-rights wins. Cost range $200k–$5M.
+- Verified: 28 dreams, no dup ids, all 6 render in the picker, selecting a $5M dream highlights cleanly with 0 JS errors.
+
 ## v1.20.0 — 2026-06-15 — 7 new careers (content, user request)
 - **PROFS 38→45:** Software Engineer (💻 $9.5k, $30k school debt), Pharmacist (💊 $10.5k, $110k debt), Dentist (🦷 $12k, $280k debt), Veterinarian (🐾 $5.8k, $120k debt), Airline Pilot (✈️ $9k, $60k training debt), Bartender (🍹 $2.9k, debt-free), Social Worker (🫂 $2.7k, hard-mode low income).
 - **PROF_EDU_REQ:** degree careers gated in the Career Change machine — Dentist/Pharmacist/Vet require Master's/Doctorate (lvl 3); Software Eng/Pilot/Social Worker require Bachelor's (lvl 2). Initial spin still ignores edu req.
