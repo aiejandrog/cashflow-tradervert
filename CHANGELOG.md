@@ -4,6 +4,15 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.26.0 — 2026-06-15 — Revert to emoji icons + bigger shop (user request)
+- **Reverted the drawn-icon system** (v1.24 OpenMoji + v1.25 game-icons). Game renders native system emoji again, as originally. The icon IIFE is disabled (early `return`) and the twemoji CDN `<script>` removed. The dice roll animation/logic was never touched — the icon system's global styles were making it look off; the revert restores the original visuals.
+- **Shop +20 items, every category:** Board Themes 8→13 (Noir/Forest/Sunset/Rose Gold/Sakura), Dice Skins 12→17 (Bronze/Jade/Candy/Obsidian/Aqua), Premium Avatars 16→24 (Fox/Wolf/Sage/Lion/Kraken/Outlaw/Sprite/Phoenix), Power-Up Plays 6→8.
+- **2 new Power-Up Plays** (with logic): 💵 Side Hustle (`sidehustle` → instant +$2,500) and 💳 Credit Repair (`credit` → `boostCredit(25)`). Wired into PLAYS, `_applyPlay`, and SHOP_ITEMS.
+- Verified: 62 shop items, 0 dup ids, both new plays apply correctly (cash +2500, credit +25), dice roll runs clean, 0 syntax errors.
+
+## v1.25.1 — 2026-06-15 — Count Fast Track / outer-board rolls as turns (bugfix)
+- `G.turn` only incremented on inner-board landings, so escaping early then buying on the Fast Track showed an impossible "1 turn / 15 assets" win. Now `ftLand`/`obLand` increment turns too.
+
 ## v1.25.0 — 2026-06-15 — Drawn icon system (away from emoji) — game-icons.net
 - **Concept icons** (45 careers, money, real estate, deals, dreams, UI) now render as hand-drawn **game-icons.net** vectors instead of emoji. ~55 emoji→icon mappings, all names verified to exist.
 - **Tinting:** CSS `mask` + `currentColor` so each icon inherits its context's text colour — works on the dark board AND the light financial panel (a baked colour would vanish on one or the other). No per-icon colour decisions.

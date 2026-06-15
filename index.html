@@ -2804,8 +2804,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.25.1';
+const GAME_VERSION='1.26.0';
 const CHANGELOG=[
+  {v:'1.26.0', date:'2026-06-15', notes:[
+    '🎨 Reverted to the original colorful emoji icons (and the dice roll animation is back to normal).',
+    '🛍️ Bigger shop! 20 new items across every category — 5 board themes (Noir, Forest, Sunset, Rose Gold, Sakura), 5 dice skins (Bronze, Jade, Candy, Obsidian, Aqua), 8 premium avatars (Fox, Wolf, Sage, Lion, Kraken, Outlaw, Sprite, Phoenix), and 2 new Power-Up Plays: 💵 Side Hustle (instant +$2,500) and 💳 Credit Repair (+25 credit score).'
+  ]},
   {v:'1.25.1', date:'2026-06-15', notes:[
     '🐛 Fixed the turn counter: Fast Track rolls now count as turns. Before, escaping the Rat Race early and then buying everything on the Fast Track could show an impossible "1 turn / 15 assets" on the win screen. Your turn count (and grade) now reflects the whole run.'
   ]},
@@ -3718,6 +3722,8 @@ const PLAYS=[
   {id:'tip',   name:'Insider Tip',   icon:'🕵️',rarity:'epic',  desc:'Your next asset earns +25% cash flow.'},
   {id:'skip',  name:'Dodge Doodad',  icon:'🛡️',rarity:'common',desc:'Cancel your next doodad / setback.'},
   {id:'boom',  name:'Market Whisper',icon:'🚀',rarity:'epic',  desc:'Trigger a boom — cash flow +40% for 4 turns.'},
+  {id:'sidehustle',name:'Side Hustle',  icon:'💵',rarity:'common',desc:'Instant cash injection: +$2,500 right now.'},
+  {id:'credit',    name:'Credit Repair',icon:'💳',rarity:'rare',  desc:'Boost your credit score by 25 points.'},
 ];
 const MAX_HAND=4;
 function _playDef(id){return PLAYS.find(p=>p.id===id);}
@@ -3747,6 +3753,8 @@ function _applyPlay(i){
     case'skip':  G._skipDoodad=true;addLog('🛡️','Shield up — your next doodad/setback is cancelled.','gold');break;
     case'boom':  G._boomMult=1.4;G._boomTurns=4;try{updateUI();}catch(e){}addLog('🚀','Market Whisper — boom! Cash flow +40% for 4 turns.','g');try{spawnCoinBurst&&spawnCoinBurst(true);}catch(e){}break;
     case'deal':  addLog('🤝','Force a Deal — a fresh opportunity appears!','gold');try{if(typeof showDealEvent==='function'){G.rolling=true;showDealEvent('small');}}catch(e){}break;
+    case'sidehustle':G.cash=(G.cash||0)+2500;try{updateUI();}catch(e){}addLog('💵','Side Hustle — +$2,500 cash!','gold');try{spawnCoinBurst&&spawnCoinBurst(false);}catch(e){}break;
+    case'credit':try{boostCredit(25,'Credit Repair play');}catch(e){}addLog('💳','Credit Repair — credit score +25!','gold');break;
   }
   try{saveGame();}catch(e){}
 }
@@ -3876,6 +3884,11 @@ const SHOP_ITEMS=[
   {id:'th_royal',   cat:'Board Themes',icon:'👑',name:'Royal Felt',    cost:1000,rarity:'epic',  type:'theme',vals:{f1:'#3a1a5e',f2:'#220e3a',f3:'#120620'}},
   {id:'th_galaxy',  cat:'Board Themes',icon:'🌠',name:'Galaxy Felt',   cost:2000,rarity:'legendary',type:'theme',vals:{f1:'#2a1a5e',f2:'#140a35',f3:'#080418'}},
   {id:'th_midas',   cat:'Board Themes',icon:'🏆',name:'Midas Felt',    cost:3200,rarity:'mythic',type:'theme',vals:{f1:'#5a4508',f2:'#2a2004',f3:'#151000'}},
+  {id:'th_noir',    cat:'Board Themes',icon:'🖤',name:'Noir Felt',      cost:750, rarity:'rare',  type:'theme',vals:{f1:'#2a2a30',f2:'#16161a',f3:'#08080a'}},
+  {id:'th_forest',  cat:'Board Themes',icon:'🌲',name:'Forest Felt',    cost:900, rarity:'rare',  type:'theme',vals:{f1:'#143a26',f2:'#0a2014',f3:'#05100a'}},
+  {id:'th_sunset',  cat:'Board Themes',icon:'🌇',name:'Sunset Felt',    cost:900, rarity:'rare',  type:'theme',vals:{f1:'#5a2a2a',f2:'#301414',f3:'#180808'}},
+  {id:'th_rosegold',cat:'Board Themes',icon:'🌹',name:'Rose Gold Felt', cost:1400,rarity:'epic',  type:'theme',vals:{f1:'#5a3a2e',f2:'#301e16',f3:'#180e09'}},
+  {id:'th_sakura',  cat:'Board Themes',icon:'🌸',name:'Sakura Felt',    cost:1800,rarity:'legendary',type:'theme',vals:{f1:'#6a2a4a',f2:'#3a1428',f3:'#1e0a14'}},
   // ── Dice skins (drive BOTH the small HUD dice and the thrown 3D dice) ──
   {id:'di_gold',    cat:'Dice Skins',  icon:'🎲',name:'Gold Dice',     cost:600, rarity:'rare',  type:'dice', vals:{d1:'#7a5a08',d2:'#4a3404',db:'#f0c020',fd1:'#fff0b8',fd2:'#e0a818',fb:'#a8780a',fp:'#3a2a00'}},
   {id:'di_neon',    cat:'Dice Skins',  icon:'🎲',name:'Neon Dice',     cost:800, rarity:'rare',  type:'dice', vals:{d1:'#0a4d44',d2:'#06281f',db:'#22eecc',fd1:'#bafff0',fd2:'#1fd8b8',fb:'#0a8d77',fp:'#06281f'}},
@@ -3889,6 +3902,11 @@ const SHOP_ITEMS=[
   {id:'di_galaxy',  cat:'Dice Skins',  icon:'🌌',name:'Galaxy Dice',   cost:2000,rarity:'legendary',type:'dice',vals:{d1:'#2a1a5e',d2:'#0e0828',db:'#a060e0',fd1:'#d0a8ff',fd2:'#7040c0',fb:'#4a2a8a',fp:'#0e0828'}},
   {id:'di_diamond', cat:'Dice Skins',  icon:'💎',name:'Diamond Dice',  cost:2400,rarity:'legendary',type:'dice',vals:{d1:'#5a7a8a',d2:'#2a3a4a',db:'#dffaff',fd1:'#ffffff',fd2:'#bfe8f5',fb:'#8ab8c8',fp:'#3a5a6a'}},
   {id:'di_inferno', cat:'Dice Skins',  icon:'⚡',name:'Inferno Dice',  cost:3500,rarity:'mythic',type:'dice', vals:{d1:'#3a0000',d2:'#100000',db:'#ff3a00',fd1:'#ffc84a',fd2:'#ff2a00',fb:'#8a1500',fp:'#180000'}},
+  {id:'di_bronze',  cat:'Dice Skins',  icon:'🥉',name:'Bronze Dice',   cost:600, rarity:'common',type:'dice', vals:{d1:'#5a3a1a',d2:'#2a1c0a',db:'#c8862a',fd1:'#ffd9a0',fd2:'#d8962a',fb:'#8a5a14',fp:'#2a1c0a'}},
+  {id:'di_jade',    cat:'Dice Skins',  icon:'🟢',name:'Jade Dice',     cost:700, rarity:'rare',  type:'dice', vals:{d1:'#0a4a2a',d2:'#052818',db:'#3adf8a',fd1:'#bfffd8',fd2:'#2fd87a',fb:'#0a8d4a',fp:'#052818'}},
+  {id:'di_candy',   cat:'Dice Skins',  icon:'🍬',name:'Candy Dice',    cost:800, rarity:'rare',  type:'dice', vals:{d1:'#7a1a4a',d2:'#3a0c24',db:'#ff5aa8',fd1:'#ffc0e0',fd2:'#ff3a90',fb:'#a81a60',fp:'#3a0c24'}},
+  {id:'di_obsidian',cat:'Dice Skins',  icon:'⬛',name:'Obsidian Dice', cost:1500,rarity:'epic',  type:'dice', vals:{d1:'#1a1424',d2:'#0a0810',db:'#6a4a9a',fd1:'#b8a0e0',fd2:'#5a3a8a',fb:'#3a2858',fp:'#d8c8f0'}},
+  {id:'di_aqua',    cat:'Dice Skins',  icon:'🟦',name:'Aqua Dice',     cost:2000,rarity:'legendary',type:'dice',vals:{d1:'#0a3a4a',d2:'#051e28',db:'#2adfe8',fd1:'#bafaff',fd2:'#1fc8d8',fb:'#0a8d98',fp:'#051e28'}},
   // ── Premium avatars (selectable in the character creator once owned) ──
   {id:'av_clown',   cat:'Premium Avatars',icon:'🤡',name:'The Joker',    cost:300,rarity:'common',type:'avatar'},
   {id:'av_ninja',   cat:'Premium Avatars',icon:'🥷',name:'The Ninja',    cost:400,rarity:'common',type:'avatar'},
@@ -3906,6 +3924,14 @@ const SHOP_ITEMS=[
   {id:'av_demon',   cat:'Premium Avatars',icon:'👹',name:'The Oni',      cost:2000,rarity:'legendary',type:'avatar'},
   {id:'av_dragon',  cat:'Premium Avatars',icon:'🐉',name:'The Dragon',   cost:2200,rarity:'legendary',type:'avatar'},
   {id:'av_crown',   cat:'Premium Avatars',icon:'👑',name:'The Sovereign',cost:3500,rarity:'mythic',type:'avatar'},
+  {id:'av_fox',     cat:'Premium Avatars',icon:'🦊',name:'The Fox',      cost:400,rarity:'common',type:'avatar'},
+  {id:'av_wolf',    cat:'Premium Avatars',icon:'🐺',name:'The Wolf',     cost:450,rarity:'common',type:'avatar'},
+  {id:'av_owl',     cat:'Premium Avatars',icon:'🦉',name:'The Sage',     cost:550,rarity:'rare',  type:'avatar'},
+  {id:'av_lion',    cat:'Premium Avatars',icon:'🦁',name:'The Lion',     cost:700,rarity:'rare',  type:'avatar'},
+  {id:'av_octopus', cat:'Premium Avatars',icon:'🐙',name:'The Kraken',   cost:800,rarity:'rare',  type:'avatar'},
+  {id:'av_cowboy',  cat:'Premium Avatars',icon:'🤠',name:'The Outlaw',   cost:900,rarity:'epic',  type:'avatar'},
+  {id:'av_fairy',   cat:'Premium Avatars',icon:'🧚',name:'The Sprite',   cost:1200,rarity:'epic', type:'avatar'},
+  {id:'av_phoenix', cat:'Premium Avatars',icon:'🦅',name:'The Phoenix',  cost:2200,rarity:'legendary',type:'avatar'},
   // ── Power-Up Plays (consumable — buy into your stash; loaded into your hand next game) ──
   {id:'play_skip',  cat:'Power-Up Plays',icon:'🛡️',name:'Dodge Doodad',  cost:300, rarity:'common',type:'play',play:'skip'},
   {id:'play_double',cat:'Power-Up Plays',icon:'💰',name:'Double Payday',  cost:550, rarity:'rare',  type:'play',play:'double'},
@@ -3913,6 +3939,8 @@ const SHOP_ITEMS=[
   {id:'play_deal',  cat:'Power-Up Plays',icon:'🤝',name:'Force a Deal',   cost:600, rarity:'rare',  type:'play',play:'deal'},
   {id:'play_tip',   cat:'Power-Up Plays',icon:'🕵️',name:'Insider Tip',    cost:900, rarity:'epic',  type:'play',play:'tip'},
   {id:'play_boom',  cat:'Power-Up Plays',icon:'🚀',name:'Market Whisper', cost:900, rarity:'epic',  type:'play',play:'boom'},
+  {id:'play_hustle',cat:'Power-Up Plays',icon:'💵',name:'Side Hustle',    cost:450, rarity:'common',type:'play',play:'sidehustle'},
+  {id:'play_credit',cat:'Power-Up Plays',icon:'💳',name:'Credit Repair',  cost:650, rarity:'rare',  type:'play',play:'credit'},
 ];
 function rarityOf(id){const it=SHOP_ITEMS.find(i=>i.id===id);return (it&&it.rarity)||'common';}
 function _buyPlay(item){ // consumable — adds to the profile stash (re-buyable, no equip)
@@ -15754,22 +15782,11 @@ function endTutorial(){
   </div>
 </div>
 
-<!-- ✨ Drawn art direction — moves the UI AWAY from emoji entirely.
-     Layer 1 (concept icons): mapped game concepts (careers, money, real estate, deals, UI)
-       become hand-drawn game-icons.net vectors, tinted to the surrounding text colour via
-       CSS mask + currentColor (so they read correctly on dark AND light panels).
-     Layer 2 (everything else): any unmapped emoji falls back to OpenMoji (illustrated),
-       then to the original system emoji if offline. Never a broken glyph.
-     Engine = Twemoji parser for OpenMoji; a small text-scanner for the concept icons.
-     Fully reversible: delete this block. -->
-<style>
-  img.emoji{height:1em;width:1em;margin:0 .06em 0 .08em;vertical-align:-0.14em;display:inline-block;pointer-events:none}
-  .gi{display:inline-block;width:1em;height:1em;margin:0 .06em 0 .08em;vertical-align:-0.125em;background-color:currentColor;
-      -webkit-mask:var(--u) center/contain no-repeat;mask:var(--u) center/contain no-repeat;pointer-events:none}
-</style>
-<script src="https://cdn.jsdelivr.net/npm/@twemoji/api@15.1.0/dist/twemoji.min.js" crossorigin="anonymous"></script>
+<!-- (icon system reverted — game uses native system emoji, as before) -->
 <script>
+/* icon system reverted — game renders native system emoji, as it did originally */
 (function(){
+  return; // disabled: leaves the original emoji untouched
   var OM='https://cdn.jsdelivr.net/npm/openmoji@15.0.0/color/svg/';
   var GIB='https://api.iconify.design/game-icons:';
   // concept emoji -> game-icons name (all verified to exist). People/faces are NOT here — they
