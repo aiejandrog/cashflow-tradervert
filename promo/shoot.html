@@ -1,0 +1,33 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+  html,body{margin:0;padding:0;width:1280px;height:800px;overflow:hidden;background:#0b0a14}
+  iframe{width:1280px;height:800px;border:0;display:block}
+</style></head><body>
+<iframe id="g" src="../index.html"></iframe>
+<script>
+  // Drive the live game (same origin) to a target screen for a real screenshot.
+  // ?s=character|dream|game  (default: leave on menu)
+  var S=new URLSearchParams(location.search).get('s')||'';
+  var f=document.getElementById('g');
+  f.addEventListener('load',function(){
+    setTimeout(function(){
+      try{
+        var doc=f.contentDocument;
+        var code=''+
+          '(function(){try{'+
+          '  var scr='+JSON.stringify(S)+';'+
+          '  if(scr==="character"){ selectedProf=PROFS.find(function(p){return p.id==="softeng"})||PROFS[0]; buildCharacterScreen(); showScreen("character"); }'+
+          '  else if(scr==="dream"){ selectedProf=PROFS.find(function(p){return p.id==="dentist"})||PROFS[0]; selectedLocation=LOCATIONS[0]; buildDreamScreen(); showScreen("dream"); }'+
+          '  else if(scr==="game"){ selectedProf=PROFS.find(function(p){return p.id==="realtor"})||PROFS[0]; selectedLocation=LOCATIONS[0]; selectedIdentity={name:"Amara",avatar:"👩🏾",ethnicityLabel:"Black / African American",toneLabel:"Medium",gender:"f",ageStart:28,_typedName:true}; selectedDream=DREAMS.find(function(d){return d.id==="skyscraper"})||DREAMS[0]; window._nameQuipDone=true; startGame(selectedProf,selectedLocation);'+
+          '    var clickByText=function(re){var b=[].slice.call(document.querySelectorAll("button,.btn,[onclick]")).find(function(x){return x.offsetParent!==null&&re.test((x.textContent||"").trim())}); if(b){b.click();return true;} return false;};'+
+          '    setTimeout(function(){ try{ _chooseRival((RIVALS&&RIVALS[3]&&RIVALS[3].id)||(RIVALS&&RIVALS[0]&&RIVALS[0].id)); }catch(e){document.title="RIVAL_ERR:"+e.message;} }, 600);'+
+          '    setTimeout(function(){ clickByText(/skip tutorial/i); }, 1300);'+
+          '    setTimeout(function(){ clickByText(/next|got it|begin|play|continue/i); }, 1900);'+
+          '    setTimeout(function(){ try{ G.cash=8450; if(G.assets&&G.assets.push){} updateUI&&updateUI(); buildBoard&&buildBoard(); placeToken&&placeToken(G.position||0,false); forceFitBoard&&forceFitBoard(3000); }catch(e){} showScreen("game"); }, 2600);'+
+          '  }'+
+          '}catch(e){document.title="SHOOT_ERR:"+e.message;}})();';
+        var sc=doc.createElement('script'); sc.textContent=code; doc.body.appendChild(sc);
+      }catch(e){document.title='HARNESS_ERR:'+e.message;}
+    }, 1400);
+  });
+</script>
+</body></html>
