@@ -1833,6 +1833,7 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
   <div id="profile-strip" style="display:none;max-width:460px;margin:10px auto 0;text-align:center;font-size:.68rem;color:rgba(240,220,144,.85);font-family:Arial,sans-serif;font-weight:700;background:rgba(255,255,255,.04);border:1px solid rgba(240,192,32,.25);border-radius:10px;padding:7px 12px"></div>
   <div id="mp-setup-hdr"></div>
   <div class="rev-card" id="rev-card">
+    <div id="rev-mp-badge" style="display:none;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin:0 0 10px;padding:6px 10px;border-radius:9px;background:linear-gradient(135deg,rgba(34,211,238,.16),rgba(107,63,168,.18));border:1px solid rgba(34,211,238,.5);color:#bdeeff;font-family:Georgia,serif;font-weight:800;font-size:.78rem"></div>
     <div class="rev-hdr" id="rev-hdr">You Picked Your Path</div>
     <div class="rev-ico" id="rev-ico"></div>
     <div class="rev-name" id="rev-name"></div>
@@ -2777,8 +2778,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.18.2';
+const GAME_VERSION='1.18.3';
 const CHANGELOG=[
+  {v:'1.18.3', date:'2026-06-15', notes:[
+    '👥 The career reveal screen now shows a MULTIPLAYER badge when 2-4 players are picked — with a one-tap ↩ Single Player switch right there.'
+  ]},
   {v:'1.18.2', date:'2026-06-15', notes:[
     '↩️ Easy to undo multiplayer: the MULTIPLAYER SELECTED banner now has a “Back to Single Player” button, and the room setup’s cancel is now clearly labeled “← Back to Single Player.”'
   ]},
@@ -4706,8 +4710,17 @@ function changeProfession(){
   resetToSpin();
   setTimeout(()=>{try{doSpin();}catch(e){}},140);
 }
+function _revMpBadge(){ // show MP status + a one-tap switch back to single player on the reveal card
+  const b=document.getElementById('rev-mp-badge');if(!b)return;
+  if((typeof _mpCount!=='undefined'?_mpCount:1)>1){
+    b.innerHTML='<span>👥 MULTIPLAYER · '+_mpCount+' players</span>'
+      +'<button onclick="mpSetCount(1);_revMpBadge();" style="background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);border-radius:7px;color:#fff;font-family:Georgia,serif;font-weight:800;font-size:.68rem;padding:3px 10px;cursor:pointer">↩ Single Player</button>';
+    b.style.display='flex';
+  } else b.style.display='none';
+}
 function revealProf(p){
   selectedProf=p;
+  try{_revMpBadge();}catch(e){}
   const exp=p.taxes+p.mortgage+p.school+p.car+p.cc+p.retail+p.other+p.children;
   const cf=p.salary-exp;
   $('rev-ico').textContent=p.icon;

@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.18.3 — 2026-06-15 — MP badge + single-player switch on the reveal card (user-reported)
+- The reveal/post-spin card (`#rev-card`) showed no MP status and no way back to solo (the sp-card banner is hidden once the reveal shows). Added `#rev-mp-badge` + `_revMpBadge()` (called in `revealProf`): when `_mpCount>1` it shows "👥 MULTIPLAYER · N players" + a "↩ Single Player" button (→ `mpSetCount(1);_revMpBadge()`). Hidden in solo. Verified: badge shows in MP, revert sets count→1 + hides badge, solo shows nothing, 0 errors.
+
 ## v1.18.2 — 2026-06-15 — Back-to-single-player from MP (user-reported)
 - The `#mp-mode-banner` now includes a "↩ Back to Single Player" button (→ `mpSetCount(1)`); the room-setup Cancel is relabeled "← Back to Single Player"; `mpCancelRoomSetup` now also hides the banner (it set `_mpCount=1` but left the banner showing). Verified both revert paths: count→1, banner hidden, 1P active, room setup closed, 0 errors.
 
