@@ -2804,8 +2804,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.23.0';
+const GAME_VERSION='1.23.1';
 const CHANGELOG=[
+  {v:'1.23.1', date:'2026-06-15', notes:[
+    '🏦 Fixed confusing rental math: the property manager popup now shows the mortgage payment and a "Net cash flow" line, so the numbers actually add up. (The cash flow was always correct — it just wasn\'t showing the mortgage being subtracted, which made it look wrong.)'
+  ]},
   {v:'1.23.0', date:'2026-06-15', notes:[
     '🎭 Preset characters leveled up! Each of the one-tap quick-start characters now has a persona vibe (The Hustler, The Visionary, The Late Bloomer…), and there are 4 new faces from around the world — Trang, Emre, Kai, and João (14 total). Skip the creator and jump straight into your city.'
   ]},
@@ -9748,6 +9751,8 @@ function manageTenant(uid){
     rows:[
       [`${occupied}/${units} Occupied`,totalRent>0?'+$'+fmt(totalRent)+'/mo':'$0/mo'],
       ...(state.managed?[['👔 Property Manager','-$'+fmt(state.mgmtFee||0)+'/mo','red']]:[]),
+      ...((!a.isPrimaryHome&&(a.mortgagePmt||0)>0)?[['🏦 Mortgage payment','-$'+fmt(a.mortgagePmt)+'/mo','red']]:[]),
+      ['💰 Net cash flow','+$'+fmt(a.cf||0)+'/mo','green'],
       ...unitRows,
     ],
     actions:[
