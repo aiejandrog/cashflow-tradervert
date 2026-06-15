@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.18.4 — 2026-06-15 — Sync the reveal MP badge on re-select (user-reported)
+- Bug: revert to single player on the reveal card, then start a room again (e.g. from the Online Rooms box) → the reveal-card MP badge stayed hidden, because `mpSetCount` only refreshed the spin-card `#mp-mode-banner`, not `#rev-mp-badge`. Fix: `mpSetCount` (and `mpCancelRoomSetup`) now also call `_revMpBadge()`, so both indicators track `_mpCount` no matter which screen/control triggers the change. Verified the exact repro: reveal MP → single → re-select MP (no re-render) → badge reappears.
+
 ## v1.18.3 — 2026-06-15 — MP badge + single-player switch on the reveal card (user-reported)
 - The reveal/post-spin card (`#rev-card`) showed no MP status and no way back to solo (the sp-card banner is hidden once the reveal shows). Added `#rev-mp-badge` + `_revMpBadge()` (called in `revealProf`): when `_mpCount>1` it shows "👥 MULTIPLAYER · N players" + a "↩ Single Player" button (→ `mpSetCount(1);_revMpBadge()`). Hidden in solo. Verified: badge shows in MP, revert sets count→1 + hides badge, solo shows nothing, 0 errors.
 
