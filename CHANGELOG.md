@@ -4,6 +4,9 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.18.0 — 2026-06-15 — Anonymous session tracking (play time + progress)
+- **New telemetry (to answer "are people playing / how long"):** created Supabase table `public.cf_sessions` (RLS: anon INSERT only, no public SELECT — privacy) on project dddcfwbydgtxxwdsvsvt. Client logs one row per session: `duration_s`, `turns`, `won`, `prof`, `mode` (solo/mp), `ended` (win/bankrupt/resign/leave), `ver`, random `device` id (reuses `_deviceId()`, no PII/IP). `_sessionStart()` on startGame/mpLaunchGame/resumeGame; `logSession()` on win/bankruptcy/resign + a `pagehide` keepalive POST (captures players who just close the tab — the typical case). Read aggregates via Supabase MCP (`select avg(duration_s), avg(turns), win rate, count`). Verified end-to-end: test row inserted (dur 7s, turn 12, doctor/solo) then deleted. itch's own analytics has NO play-duration metric, hence this.
+
 ## v1.17.7 — 2026-06-14 — 4 new investment deals (content variety)
 - Added 4 small deals to `SMALL_DEALS` (now 30): Vending Machine Route (biz), Self-Storage Shares (biz), Solar Lease Royalty (note), Downtown Parking Lot (re/land). Unique non-numeric ids (`sd_*`) to avoid collisions with MARKETS asset refs. More passive-income options per run. Verified: pool=30, no dup ids, 6 deal events fired, buying adds an asset, passive finite, 0 errors.
 

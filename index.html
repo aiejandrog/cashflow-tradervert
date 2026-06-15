@@ -2773,8 +2773,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.17.7';
+const GAME_VERSION='1.18.0';
 const CHANGELOG=[
+  {v:'1.18.0', date:'2026-06-15', notes:[
+    '📊 Added anonymous play stats — just how long a run lasts and how far you get, with a random device tag. No names, no accounts, no personal data. It helps me see what to improve.',
+  ]},
   {v:'1.17.7', date:'2026-06-14', notes:[
     '💼 4 new investment deals to find — a vending route, self-storage shares, a solar royalty &amp; a downtown parking lot. More ways to build passive income.',
   ]},
@@ -3307,6 +3310,24 @@ async function _ipHash(){
   }catch(e){return null;}
 }
 function _profHdrs(){return{apikey:ROOMS_KEY,Authorization:'Bearer '+ROOMS_KEY,'Content-Type':'application/json'};}
+// ── 📊 SESSION TRACKING — anonymous: how long & how far players get (no PII; random device id) ──
+const SESSIONS_URL='https://dddcfwbydgtxxwdsvsvt.supabase.co/rest/v1/cf_sessions';
+function _sessionStart(){window._sessT0=Date.now();window._sessLogged=false;}
+function logSession(ended){
+  try{
+    if(!window._sessT0||window._sessLogged)return;
+    let dur=Math.round((Date.now()-window._sessT0)/1000);
+    if(dur<1||dur>86400)return; // ignore nonsense (clock jumps, <1s)
+    window._sessLogged=true;
+    const row={device:(typeof _deviceId==='function'?_deviceId():null),ver:GAME_VERSION,duration_s:dur,
+      turns:(typeof G!=='undefined'&&G)?(G.turn||0):0,won:!!(typeof G!=='undefined'&&G&&G._dreamWon),
+      prof:(typeof G!=='undefined'&&G&&G.prof)?G.prof.id:null,
+      mode:(typeof PLAYERS!=='undefined'&&PLAYERS&&PLAYERS.length>1)?'mp':'solo',ended:ended||'leave'};
+    fetch(SESSIONS_URL,{method:'POST',headers:_profHdrs(),body:JSON.stringify(row),keepalive:true}).catch(function(){});
+  }catch(e){}
+}
+// Most players just close the tab — keepalive POST on pagehide captures their play time + progress
+window.addEventListener('pagehide',function(){try{if(window._sessT0&&!window._sessLogged&&typeof _gameScreenActive==='function'&&_gameScreenActive())logSession('leave');}catch(e){}});
 function _mergeProfiles(a,b){ // a=local, b=cloud → richest of both
   if(!b)return a;
   const out={...a};
@@ -7665,6 +7686,7 @@ function checkBankruptcy(){
 function triggerBankruptcy(cause){
   if(!G||G._bankrupt)return;
   G._bankrupt=true;saveGame();
+  try{logSession('bankrupt');}catch(e){} // 📊 log the ended run
   checkTrophies('bankrupt');
   const reasons={
     cash:`You ran out of money with nowhere left to borrow. Cash hit $${fmt(G.cash)} and the bank stopped lending.`,
@@ -10693,6 +10715,7 @@ function openSettings(){
       }},
       {label:'🏳️ Resign Game (end this run)',cls:'btn-tan',fn:()=>{
         if(confirm('Resign this game and return to the menu? This run ends for good — but your ✦ credits and trophies are safe.')){
+          try{logSession('resign');}catch(e){} // 📊 log the resigned run
           clearSave();
           try{sessionStorage.removeItem('cf_in_game');}catch(e){}
           location.reload();
@@ -10868,6 +10891,7 @@ function checkOuterWin(){
   }
   ['wb0','wb1','wb2','wb3','wb4','wb5','wb6','wb7'].forEach(id=>{const el=$(id);if(el)el.classList.remove('show');});
   G._dreamWon=true;saveGame(); // persist final win state — reload lands on win screen not outer board
+  try{logSession('win');}catch(e){} // 📊 log the completed run
   if(PLAYERS.length>1)PLAYERS[ACTIVE_PLAYER_IDX].G=JSON.parse(JSON.stringify(G));
   showScreen('win');
   spawnWinConfetti();
@@ -13048,6 +13072,7 @@ function showScreen(id){
 
 // ── START GAME ────────────────────────────────────────
 function startGame(prof,loc){
+  try{_sessionStart();}catch(e){} // 📊 begin timing this play session
   // SOLO game — hard-reset any multiplayer state that leaked in from a loaded
   // MP save (boot loads the save for the Resume button; starting fresh solo
   // used to keep PLAYERS=2 and route turns through multiplayer logic)
@@ -13223,6 +13248,7 @@ function loadSave(key){
 }
 function clearSave(){localStorage.removeItem(SAVE_KEY);}
 function resumeGame(){
+  try{_sessionStart();}catch(e){} // 📊 refresh-into-game restarts the session timer
   try{sessionStorage.setItem('cf_in_game',PLAYERS.length>1?'mp':SAVE_KEY);}catch(e){}
   // Password gate: MP save with a room password must be unlocked first
   if(PLAYERS.length>1&&_mpRoomPass&&!_mpPassUnlocked){
@@ -13420,6 +13446,7 @@ function mpAfterDreamGo(){
 }
 
 function mpLaunchGame(){
+  try{_sessionStart();}catch(e){} // 📊 begin timing this play session (MP)
   _mpSetupIdx=0;
   ACTIVE_PLAYER_IDX=0;
   G=JSON.parse(JSON.stringify(PLAYERS[0].G));
