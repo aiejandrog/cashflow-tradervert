@@ -1,0 +1,48 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1280px;height:1000px;overflow:hidden}
+  body{font-family:Georgia,serif;background:linear-gradient(150deg,#0c0a16,#141027 50%,#0b1224);color:#fff;padding:34px 40px}
+  h1{font-size:34px;color:#f0c020;letter-spacing:.5px}
+  h1 small{display:block;font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#9fb0d8;letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+  h2{font-family:Arial,sans-serif;font-size:16px;color:#dcc9ff;letter-spacing:1px;text-transform:uppercase;margin:22px 0 12px;border-left:3px solid #6b3fa8;padding-left:10px}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .cell{width:128px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 8px;text-align:center}
+  .cell .old{font-size:30px;line-height:1;opacity:.8}
+  .cell .arr{font-family:Arial;font-size:13px;color:#5fd0a0;margin:5px 0}
+  .cell img.ic{width:54px;height:54px;display:block;margin:0 auto}
+  .cell .lab{font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#f3ecd0;margin-top:8px}
+  .styRow{display:flex;gap:26px;flex-wrap:wrap}
+  .sty{text-align:center}
+  .sty .avs{display:flex;gap:8px}
+  .sty .avs img{width:74px;height:74px;border-radius:14px;background:#1a1530;border:1.5px solid rgba(168,120,255,.3)}
+  .sty .nm{font-family:Arial,sans-serif;font-size:13px;font-weight:800;color:#f0dc90;margin-top:8px;letter-spacing:.5px}
+  .note{font-family:Arial,sans-serif;font-size:13px;color:#9fb0d8;margin-top:6px}
+</style></head><body>
+<header><h1>Freedom Race — New Art Direction<small>Drawn icons + drawn characters · zero emoji</small></h1></header>
+<main>
+  <h2>Concept icons — game-icons.net (tinted to your palette)</h2>
+  <section class="row" id="icons"></section>
+  <h2>Characters — DiceBear (pick a style)</h2>
+  <section class="styRow" id="styles"></section>
+  <p class="note">Every icon above is a real vector asset (free, CC-BY) — not emoji. Avatars are procedurally generated so every player/rival gets a unique, on-style character.</p>
+</main>
+<script>
+  var ICONS=[
+    ['💼','briefcase','Business','f0c020'],['💰','coins-pile','Money','5fd0a0'],['🏠','house','Real Estate','f0c020'],
+    ['🏆','trophy','Dream / Win','f0c020'],['🚚','truck','Trucker','9ad8ff'],['🔧','wrench','Mechanic','9ad8ff'],
+    ['🩺','doctor-face','Doctor','5fd0a0'],['🦈','shark-bite','Hedge Fund','dcc9ff'],['🎲','dice-six-faces-six','Roll','f0c020'],
+    ['❤️','health-normal','Health','ff8a8a'],['👑','crown-coin','Wealth','f0c020'],['📈','money-stack','Cash Flow','5fd0a0']
+  ];
+  document.getElementById('icons').innerHTML=ICONS.map(function(i){
+    return '<div class="cell"><div class="old">'+i[0]+'</div><div class="arr">▼ becomes</div>'+
+      '<img class="ic" alt="'+i[2]+'" src="https://api.iconify.design/game-icons:'+i[1]+'.svg?color=%23'+i[3]+'">'+
+      '<div class="lab">'+i[2]+'</div></div>';
+  }).join('');
+  var STYLES=[['notionists','Notionists'],['adventurer-neutral','Adventurer'],['micah','Micah'],['personas','Personas']];
+  var seeds=['Marcus','Sofia','Amara','Jack'];
+  document.getElementById('styles').innerHTML=STYLES.map(function(s){
+    var av=seeds.map(function(sd){return '<img alt="avatar" src="https://api.dicebear.com/9.x/'+s[0]+'/svg?seed='+sd+'&backgroundColor=transparent">';}).join('');
+    return '<div class="sty"><div class="avs">'+av+'</div><div class="nm">'+s[1]+'</div></div>';
+  }).join('');
+</script>
+</body></html>

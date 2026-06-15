@@ -4,6 +4,14 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.25.0 — 2026-06-15 — Drawn icon system (away from emoji) — game-icons.net
+- **Concept icons** (45 careers, money, real estate, deals, dreams, UI) now render as hand-drawn **game-icons.net** vectors instead of emoji. ~55 emoji→icon mappings, all names verified to exist.
+- **Tinting:** CSS `mask` + `currentColor` so each icon inherits its context's text colour — works on the dark board AND the light financial panel (a baked colour would vanish on one or the other). No per-icon colour decisions.
+- **Layering:** a small text-scanner swaps mapped concepts → `.gi` spans; everything else still falls through to OpenMoji (v1.24), then system emoji. Reactions/flavour stay illustrated. Never a broken glyph.
+- **Robust:** runs inside the existing MutationObserver (setTimeout flush) so dynamically-built DOM converts too; FE0F variation selectors normalised so `✈️`/`⚖️` etc. map correctly.
+- Verified: 839 icons converted on the menu, 0 mapped concepts left as raw emoji, all spans have valid mask URLs (no solid-square risk), light-panel icons render via currentColor.
+- **Next:** drawn DiceBear (Notionists) avatars to replace the emoji "people".
+
 ## v1.24.0 — 2026-06-15 — OpenMoji illustrated icon set (visual identity)
 - Replaced platform-default emoji with **OpenMoji** (hand-drawn, CC-BY) across the whole UI so it reads as *designed*, not generic — the #1 lever against the "AI slop / looks default" perception, with no artist budget.
 - **Engine:** Twemoji parser (bulletproof emoji detection); **assets:** OpenMoji. OpenMoji's uppercase, FE0F-stripped filenames match the parser's codepoints 1:1 (verified: `1F454`, `1F9D1-1F3FD`, `2764` all 200; `2764-FE0F` 404 → not used). Near-100% coverage incl. skin tones.

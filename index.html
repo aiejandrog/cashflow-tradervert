@@ -2804,8 +2804,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.24.0';
+const GAME_VERSION='1.25.0';
 const CHANGELOG=[
+  {v:'1.25.0', date:'2026-06-15', notes:[
+    '✏️ A real art direction — moving away from emoji! Careers, money, real estate, deals and UI now use hand-drawn line-art icons (game-icons.net), tinted to match the screen so they look intentional, not generic. Drawn character avatars are coming next.'
+  ]},
   {v:'1.24.0', date:'2026-06-15', notes:[
     '🎨 Fresh look! Every icon in the game now uses a consistent hand-drawn illustrated set (OpenMoji) instead of your device\'s default emoji — so the whole UI reads as designed, not generic. Same meanings, cleaner identity. Falls back to system emoji if you\'re offline.'
   ]},
@@ -15745,25 +15748,63 @@ function endTutorial(){
   </div>
 </div>
 
-<!-- ✨ Illustrated icon set — replaces platform-default emoji with OpenMoji's hand-drawn set
-     so the UI reads as DESIGNED, not "system default". Engine = Twemoji parser (bulletproof
-     emoji detection); assets = OpenMoji (its uppercase, FE0F-stripped filenames match the
-     parser's codepoints 1:1). Fully graceful: offline, or any missing glyph, falls straight
-     back to the original system emoji — never a broken image. Reversible: delete this block. -->
+<!-- ✨ Drawn art direction — moves the UI AWAY from emoji entirely.
+     Layer 1 (concept icons): mapped game concepts (careers, money, real estate, deals, UI)
+       become hand-drawn game-icons.net vectors, tinted to the surrounding text colour via
+       CSS mask + currentColor (so they read correctly on dark AND light panels).
+     Layer 2 (everything else): any unmapped emoji falls back to OpenMoji (illustrated),
+       then to the original system emoji if offline. Never a broken glyph.
+     Engine = Twemoji parser for OpenMoji; a small text-scanner for the concept icons.
+     Fully reversible: delete this block. -->
 <style>
   img.emoji{height:1em;width:1em;margin:0 .06em 0 .08em;vertical-align:-0.14em;display:inline-block;pointer-events:none}
+  .gi{display:inline-block;width:1em;height:1em;margin:0 .06em 0 .08em;vertical-align:-0.125em;background-color:currentColor;
+      -webkit-mask:var(--u) center/contain no-repeat;mask:var(--u) center/contain no-repeat;pointer-events:none}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@15.1.0/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <script>
 (function(){
   var OM='https://cdn.jsdelivr.net/npm/openmoji@15.0.0/color/svg/';
-  var fail=Object.create(null); // codepoints with no OpenMoji asset -> leave as text (no retry loop)
+  var GIB='https://api.iconify.design/game-icons:';
+  // concept emoji -> game-icons name (all verified to exist). People/faces are NOT here — they
+  // become drawn DiceBear avatars elsewhere; reactions/flavour stay on OpenMoji.
+  var GI={
+    '🩺':'stethoscope','⚖️':'scales','⚙️':'cog','💼':'briefcase','🏥':'medical-pack','📚':'open-book',
+    '👮':'police-badge','🚛':'truck','📋':'notebook','🧹':'broom','🔧':'wrench','🚿':'water-drop',
+    '🔩':'anvil','❄️':'snowflake-1','🔨':'claw-hammer','🎣':'fishing-pole','🚜':'farm-tractor','🦷':'tooth',
+    '💈':'scissors','🚍':'bus','🌳':'tree-branch','📦':'cardboard-box-closed','⚡':'lightning-arc',
+    '👨‍🍳':'chef-toque','🎯':'target-arrows','🏡':'house','🎖️':'medal','🔢':'abacus','🛵':'scooter',
+    '🚒':'fire','🏃':'running-shoe','📱':'smartphone','📐':'pencil-ruler','📉':'chart','🦈':'shark-bite',
+    '🔗':'linked-rings','🚀':'rocket','💻':'laptop','💊':'medicines','🐾':'paw','✈️':'commercial-airplane',
+    '💰':'money-stack','💵':'cash','🏠':'house','🏆':'trophy','🎲':'dice-six-faces-six','🏢':'modern-city',
+    '📈':'profit','💳':'pay-money','🏦':'bank','🎓':'graduate-cap','🛍️':'shopping-bag'
+  };
+  var GIN={}; Object.keys(GI).forEach(function(k){GIN[k.replace(/️/g,'')]=GI[k];});
+  var GK=Object.keys(GIN).sort(function(a,b){return b.length-a.length;}); // longest first
+  var GI_RE=new RegExp('('+GK.map(function(e){return e.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}).join('|')+')','g');
+  function giSpan(key){
+    var s=document.createElement('span');s.className='gi';s.setAttribute('role','img');s.setAttribute('aria-label',key);
+    s.style.setProperty('--u',"url('"+GIB+GIN[key]+".svg')");
+    return s;
+  }
+  function giReplace(root){
+    var el=root.nodeType===3?root.parentNode:root;
+    if(!el||el.nodeType!==1||(el.closest&&el.closest('.gi')))return;
+    var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null),tns=[],n;
+    while(n=w.nextNode())tns.push(n);
+    for(var t=0;t<tns.length;t++){
+      var tn=tns[t],v=tn.nodeValue; if(!v)continue;
+      var s=v.replace(/️/g,''); GI_RE.lastIndex=0; if(!GI_RE.test(s))continue;
+      var parts=s.split(GI_RE),frag=document.createDocumentFragment();
+      for(var i=0;i<parts.length;i++){var p=parts[i];if(!p)continue;frag.appendChild(GIN[p]?giSpan(p):document.createTextNode(p));}
+      if(tn.parentNode)tn.parentNode.replaceChild(frag,tn);
+    }
+  }
+  var fail=Object.create(null); // OpenMoji codepoints with no asset -> leave as text (no retry loop)
   var opts={className:'emoji',callback:function(icon){return fail[icon]?false:OM+icon.toUpperCase()+'.svg';}};
   var busy=false,queued=[],sched=false;
-  function parse(n){ if(!window.twemoji||!n)return; busy=true; try{twemoji.parse(n,opts);}catch(e){} busy=false; }
+  function parse(n){ if(!n)return; busy=true; try{giReplace(n); if(window.twemoji)twemoji.parse(n,opts);}catch(e){} busy=false; }
   function flush(){ sched=false; var q=queued; queued=[]; for(var i=0;i<q.length;i++){ if(q[i]&&q[i].isConnected)parse(q[i]); } }
-  // Rare OpenMoji 404 -> remember it, drop to the original system emoji. Capture phase so we
-  // win before twemoji's own onerror; populating `fail` stops the observer re-creating the img.
   document.addEventListener('error',function(e){
     var t=e.target;
     if(t&&t.tagName==='IMG'&&t.className==='emoji'){
@@ -15772,16 +15813,17 @@ function endTutorial(){
       if(t.parentNode)t.parentNode.replaceChild(document.createTextNode(t.alt||''),t);
     }
   },true);
+  var tries=0;
   function start(){
-    if(!window.twemoji){setTimeout(start,200);return;}
+    if(!window.twemoji&&tries++<12){setTimeout(start,200);return;} // wait briefly for twemoji, then proceed with icons regardless
     parse(document.body);
     new MutationObserver(function(muts){
-      if(busy)return; // ignore our own <img> insertions
+      if(busy)return; // ignore our own insertions
       for(var i=0;i<muts.length;i++){
         var a=muts[i].addedNodes;
         for(var j=0;j<a.length;j++){
           var n=a[j];
-          if(n.nodeType===1){ if(n.tagName==='IMG'&&n.className==='emoji')continue; queued.push(n); }
+          if(n.nodeType===1){ if((n.tagName==='IMG'&&n.className==='emoji')||(n.classList&&n.classList.contains('gi')))continue; queued.push(n); }
           else if(n.nodeType===3&&n.parentNode){ queued.push(n.parentNode); }
         }
       }
