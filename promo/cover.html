@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1260px;height:1000px;overflow:hidden}
+  body{
+    font-family:Georgia,'Times New Roman',serif;
+    background:
+      radial-gradient(1100px 700px at 78% 18%, rgba(107,63,168,.40), transparent 60%),
+      radial-gradient(900px 650px at 14% 88%, rgba(45,74,122,.45), transparent 60%),
+      radial-gradient(700px 500px at 50% 50%, rgba(240,192,32,.07), transparent 70%),
+      linear-gradient(150deg,#0c0a16 0%,#141027 45%,#0b1224 100%);
+    color:#fff;position:relative;
+  }
+  .grid{position:absolute;inset:0;background-image:
+      linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+    background-size:84px 84px;-webkit-mask:radial-gradient(circle at 50% 45%,#000 35%,transparent 80%)}
+  .wrap{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:70px 60px}
+  .kicker{font-family:Arial,Helvetica,sans-serif;font-weight:800;letter-spacing:7px;font-size:26px;
+    color:#f0dc90;text-transform:uppercase;opacity:.92;margin-bottom:10px;text-shadow:0 2px 14px rgba(240,192,32,.35)}
+  .title{font-weight:900;font-size:168px;line-height:.92;letter-spacing:-2px;text-align:center;
+    background:linear-gradient(180deg,#ffe57a 0%,#f0c020 42%,#d99a12 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 6px 0 rgba(120,80,8,.55)) drop-shadow(0 16px 34px rgba(240,192,32,.30));}
+  .sub{font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:40px;letter-spacing:.5px;color:#eaf0ff;
+    margin-top:18px;text-align:center;text-shadow:0 3px 18px rgba(0,0,0,.6)}
+  .sub b{color:#5fd0a0}
+  .chips{display:flex;gap:16px;margin-top:42px;flex-wrap:wrap;justify-content:center}
+  .chip{font-family:Arial,sans-serif;font-weight:800;font-size:25px;padding:13px 26px;border-radius:40px;
+    background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.16);color:#f3ecd0;backdrop-filter:blur(2px)}
+  .chip.g{border-color:rgba(95,208,160,.5);color:#a9f0cf;background:rgba(45,122,74,.16)}
+  .chip.p{border-color:rgba(168,120,255,.5);color:#dcc9ff;background:rgba(107,63,168,.18)}
+  .chip.b{border-color:rgba(110,170,255,.5);color:#cfe2ff;background:rgba(45,74,122,.22)}
+  .cta{margin-top:50px;display:flex;align-items:center;gap:18px}
+  .cta .badge{font-family:Arial,sans-serif;font-weight:900;font-size:30px;letter-spacing:.5px;
+    padding:20px 44px;border-radius:18px;color:#1a1206;
+    background:linear-gradient(180deg,#ffe57a,#f0c020 60%,#e0a818);
+    box-shadow:0 10px 0 #9a6e08, 0 22px 40px rgba(240,192,32,.34)}
+  .cta .free{font-family:Arial,sans-serif;font-weight:800;font-size:26px;color:#9fb0d8;letter-spacing:1px}
+  .em{position:absolute;filter:drop-shadow(0 10px 22px rgba(0,0,0,.55))}
+  .e1{top:64px;left:70px;font-size:128px;transform:rotate(-14deg)}
+  .e2{top:92px;right:84px;font-size:120px;transform:rotate(12deg)}
+  .e3{bottom:70px;left:96px;font-size:110px;transform:rotate(8deg)}
+  .e4{bottom:66px;right:104px;font-size:120px;transform:rotate(-10deg)}
+  .vig{position:absolute;inset:0;box-shadow:inset 0 0 220px 60px rgba(0,0,0,.6);pointer-events:none}
+</style></head><body>
+  <div class="grid"></div>
+  <div class="em e1">🎲</div>
+  <div class="em e2">💰</div>
+  <div class="em e3">🏠</div>
+  <div class="em e4">🏆</div>
+  <main class="wrap">
+    <header class="kicker">A Cashflow Board Game</header>
+    <div class="title">FREEDOM<br>RACE</div>
+    <div class="sub">Escape the rat race. Buy assets. <b>Beat the rival.</b></div>
+    <section class="chips">
+      <div class="chip g">45 Careers</div>
+      <div class="chip b">Real Estate · Stocks</div>
+      <div class="chip p">Online Multiplayer</div>
+      <div class="chip">Pets · Dreams</div>
+    </section>
+    <div class="cta">
+      <div class="badge">▶ PLAY FREE IN BROWSER</div>
+      <div class="free">no download · no signup</div>
+    </div>
+  </main>
+  <div class="vig"></div>
+</body></html>
