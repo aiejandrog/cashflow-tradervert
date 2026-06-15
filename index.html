@@ -2551,6 +2551,14 @@ const PROFS = [
   { id:'cryptodev',  name:'Crypto Developer',icon:'🔗',age:27, salary:11200, taxes:2600, mortgage:1400, school:0,    car:250, cc:180, retail:60, other:950,  children:0, ccDebt:4000,  carLoan:12000, mortgage_d:130000, schoolDebt:0,      savings:300, desc:'Self-taught, high ceiling, volatile income. Protocols fork, clients vanish, bear markets kill contracts. Stack passive income in bear markets.' },
   { id:'founder',    name:'Startup Founder', icon:'🚀', age:29, salary:3500,  taxes:640,  mortgage:1000, school:200,  car:180, cc:350, retail:80, other:850,  children:0, ccDebt:18000, carLoan:8000,  mortgage_d:95000,  schoolDebt:18000,  savings:50,  desc:'Low salary by choice — all in on equity. Burn rate is your countdown clock. Build passive income so you can wait for the right acquisition.' },
   { id:'ecomop',     name:'E-com Operator',  icon:'📦', age:28, salary:7500,  taxes:1600, mortgage:1050, school:0,    car:220, cc:280, retail:100,other:820,  children:0, ccDebt:9000,  carLoan:11000, mortgage_d:88000,  schoolDebt:0,      savings:200, desc:'Amazon ranking drops, Meta ads spike — revenue can fall 60% overnight. The operators who last build income stacks outside the store.' },
+  // ── More careers — medical, tech, aviation, service (added by request) ──
+  { id:'softeng',    name:'Software Engineer',icon:'💻',age:27, salary:9500,  taxes:2050, mortgage:1300, school:200,  car:230, cc:160, retail:50, other:780,  children:0, ccDebt:7000,  carLoan:13000, mortgage_d:125000, schoolDebt:30000,  savings:280, desc:'Big comp, golden handcuffs. RSUs vest slowly — passive income is how you actually walk away.' },
+  { id:'pharmacist', name:'Pharmacist',       icon:'💊', age:29, salary:10500, taxes:2400, mortgage:1450, school:250,  car:220, cc:150, retail:45, other:880,  children:0, ccDebt:6000,  carLoan:14000, mortgage_d:140000, schoolDebt:110000, savings:250, desc:'High pay, six-figure pharmacy-school debt. Discipline turns that salary into an asset machine.' },
+  { id:'dentist',    name:'Dentist',          icon:'🦷', age:31, salary:12000, taxes:3100, mortgage:1800, school:300,  car:350, cc:240, retail:50, other:1100, children:0, ccDebt:10000, carLoan:20000, mortgage_d:190000, schoolDebt:280000, savings:350, desc:'Top income, crushing school debt. Own the practice AND the building — that\'s where dentists get rich.' },
+  { id:'vet',        name:'Veterinarian',     icon:'🐾', age:28, salary:5800,  taxes:1100, mortgage:820,  school:180,  car:180, cc:110, retail:30, other:480,  children:0, ccDebt:6000,  carLoan:9000,  mortgage_d:78000,  schoolDebt:120000, savings:110, desc:'Love the animals, hate the debt — vet school rivals med school. One deal eases the squeeze.' },
+  { id:'pilot',      name:'Airline Pilot',    icon:'✈️', age:30, salary:9000,  taxes:1950, mortgage:1250, school:0,    car:220, cc:150, retail:45, other:760,  children:0, ccDebt:5000,  carLoan:12000, mortgage_d:120000, schoolDebt:60000,  savings:220, desc:'Great view, on-call life, expensive training. Layovers are deal-hunting time.' },
+  { id:'bartender',  name:'Bartender',        icon:'🍹', age:25, salary:2900,  taxes:420,  mortgage:460,  school:0,    car:90,  cc:55,  retail:25, other:270,  children:0, ccDebt:2600,  carLoan:5000,  mortgage_d:34000,  schoolDebt:0,      savings:50,  desc:'Cash tips, late nights, no debt. Invest the cash before the weekend does it for you.' },
+  { id:'socialwork', name:'Social Worker',    icon:'🫂', age:26, salary:2700,  taxes:410,  mortgage:440,  school:120,  car:95,  cc:50,  retail:15, other:250,  children:0, ccDebt:4000,  carLoan:5000,  mortgage_d:32000,  schoolDebt:28000,  savings:35,  desc:'Huge heart, tiny paycheck, real debt. Hard mode — but one property rewrites the whole story.' },
 ];
 
 // ══ EDUCATION ════════════════════════════════════════════════════════════
@@ -2567,7 +2575,8 @@ const EDU_LEVELS=[
 // The initial life-spin ignores this — you're born into a random career.
 const PROF_EDU_REQ={ doctor:3,lawyer:3,quant:3,hedgefund:3,
   engineer:2,accountant:2,hygienist:2,cryptodev:2,military:2,realtor:2,salesperson:2,teacher:2,nurse:2,
-  plumber:1,welder:1,hvac:1,carpenter:1,electrician:1,mechanic:1,barber:1,firefighter:1,police:1,chef:1,proptrader:1 };
+  plumber:1,welder:1,hvac:1,carpenter:1,electrician:1,mechanic:1,barber:1,firefighter:1,police:1,chef:1,proptrader:1,
+  dentist:3,pharmacist:3,vet:3,softeng:2,pilot:2,socialwork:2 };
 // One-line list of what each level newly unlocks (for the School modal hint).
 const EDU_UNLOCK_HINT=[
   'Entry & working jobs: McDonald’s-tier, gig, warehouse, trucking, trades-curious.',
@@ -2795,8 +2804,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.19.0';
+const GAME_VERSION='1.20.0';
 const CHANGELOG=[
+  {v:'1.20.0', date:'2026-06-15', notes:[
+    '💼 7 new careers (now 45 total)! Software Engineer, Pharmacist, Dentist, Veterinarian, Airline Pilot, Bartender, and Social Worker — each with its own salary, debt load, and starting story. High earners come with serious school debt; service jobs start lean but debt-free. Degree careers (Dentist, Pharmacist, Vet, Software Eng, Pilot) unlock through the School system.'
+  ]},
   {v:'1.19.0', date:'2026-06-15', notes:[
     '🏢 15 new investment deals across every niche! Small-cap: townhouse, lock-up garages, ATM route, billboard, tiny home, music royalties. Big plays: 50-unit complex, mobile-home park, motel, RV park, industrial NNN, drive-thru ground lease, mixed-use, laundromat chain, and a boutique hotel.'
   ]},

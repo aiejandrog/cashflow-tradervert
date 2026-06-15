@@ -4,6 +4,11 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.20.0 — 2026-06-15 — 7 new careers (content, user request)
+- **PROFS 38→45:** Software Engineer (💻 $9.5k, $30k school debt), Pharmacist (💊 $10.5k, $110k debt), Dentist (🦷 $12k, $280k debt), Veterinarian (🐾 $5.8k, $120k debt), Airline Pilot (✈️ $9k, $60k training debt), Bartender (🍹 $2.9k, debt-free), Social Worker (🫂 $2.7k, hard-mode low income).
+- **PROF_EDU_REQ:** degree careers gated in the Career Change machine — Dentist/Pharmacist/Vet require Master's/Doctorate (lvl 3); Software Eng/Pilot/Social Worker require Bachelor's (lvl 2). Initial spin still ignores edu req.
+- Each has a full expense/debt profile scaled to salary + a one-line starting story. Verified: 45 careers, no dup ids, all 7 present, edu gates correct, 0 syntax errors.
+
 ## v1.19.0 — 2026-06-15 — 15 new investment deals (content, user request)
 - **SMALL_DEALS 30→36:** townhouse rental, rental lock-up garages, ATM route, roadside billboard, tiny-home rental, music royalty share (`sd_town/garage/atm/bill/tiny/royalty`).
 - **BIG_DEALS 14→23:** 50-unit complex, mobile-home park, roadside motel, RV park, industrial warehouse (NNN), drive-thru QSR ground lease, mixed-use retail+apts, laundromat chain, boutique hotel (`b15`–`b23`) — scaling to $1.5M trophy assets.
