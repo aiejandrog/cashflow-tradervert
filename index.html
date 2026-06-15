@@ -2804,8 +2804,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.21.0';
+const GAME_VERSION='1.22.0';
 const CHANGELOG=[
+  {v:'1.22.0', date:'2026-06-15', notes:[
+    '🔮 The name-guesser got a brain upgrade! It now knows 25 cultural origins (Vietnam, Turkey, Netherlands, Pacific/Hawaii, Israel, Ethiopia, Thailand, Indonesia, Hungary + more) from 589 first names, and the pop-culture radar grew to 148 references — Frieren, Solo Leveling, Elden Ring, Severance, Yellowstone, Bluey, BLACKPINK, Genshin, Fallout and tons more. Bonus: fixed a bug where "Wallen" was misread as WALL-E. 😅'
+  ]},
   {v:'1.21.0', date:'2026-06-15', notes:[
     '🏆 6 MEGA dreams added (now 28 win-goals)! Chase a Skyscraper, an F1 Racing Team, a Space Tourism Seat, your own Unicorn startup, a Film Studio, or a Pro Sports Franchise — stretch goals up to $5M for the high-earner careers and late-game empires. Pick the dream that matches your hustle.'
   ]},
@@ -15010,6 +15013,15 @@ const _NAME_ORIGINS=[
  ['Greece','nikos yannis dimitris georgios kostas christos vasilis panagiotis stavros eleni katerina despina ioanna athina'],
  ['West Africa','chidi chinedu emeka obi adebayo oluwaseun olu kwame kofi kojo abena nia amara zola ngozi chioma adaeze femi tunde segun bola folake'],
  ['Portugal or Brazil','joao tiago rui nuno bruno rodrigo gustavo thiago mateus vinicius joaquim beatriz catarina leonor matilde'],
+ ['Vietnam','nguyen tran pham hoang phan vu dang bui ngo duong minh anh linh huong lan mai thao trang ngoc tuan hung nam son thanh dung quang phuc khanh thuy hieu'],
+ ['Turkey','mehmet mustafa ahmet hasan huseyin ibrahim emre burak cem deniz kerem mert baris yusuf kaan ozan fatma ayse emine hatice zeynep elif merve busra ozge ece selin'],
+ ['the Netherlands','daan sem finn milan bram thijs jasper bas sven joost willem dirk joris ruben fenna sanne anouk femke marieke saskia bram hendrik pieter'],
+ ['the Pacific Islands or Hawaii','kai koa leilani kalani makoa nalu lani kanoa ikaika keoni alani noelani maleko kekoa moana tane sione',],
+ ['Israel','noam itai yael tamar avi moshe yosef eitan shira noa maya talia ron gal omer amit yonatan ariel hadar tomer adi'],
+ ['East Africa (Ethiopia)','abebe tadesse getachew kebede dawit yonas haile teklu almaz tigist selam bethlehem hanna meron sara abel naod kalkidan'],
+ ['Thailand','somchai somsak anan chai ploy malee kanya ratana sukanya nattapong siriporn kamon arthit pim fah nong wichai prasert'],
+ ['Indonesia','budi agus putra dewi sari ayu wayan putu made eka andi rizki bambang sri adi joko wahyu indra ratna fitri'],
+ ['Hungary','laszlo attila zoltan gabor bela csaba tibor istvan ferenc sandor jozsef eszter ildiko zsuzsanna aniko reka boglarka csilla'],
 ];
 const _NAME_FIRST=(()=>{const m=new Map();for(const [region,s] of _NAME_ORIGINS){for(const nm of s.split(' '))if(nm&&!m.has(nm))m.set(nm,region);}return m;})();
 // Anchored surname/ending fallbacks (applied to the full name) — far fewer false
@@ -15023,6 +15035,8 @@ const _NAME_PATTERNS=[
   [/(ese|ini|etti|otti|ino|elli)$/,'Italy'],
   [/(eau|oux|aux)$/,'France'],
   [/(eke|ola|chukwu|nna)$/,'West Africa'],
+  [/(oglu)$/,'Turkey'],
+  [/(^|\s)van\s(der\s)?/,'the Netherlands'],
 ];
 function _guessNameOrigin(name){
   const full=(name||'').trim().toLowerCase();
@@ -15101,7 +15115,7 @@ const _FAMOUS_NAMES=[
   // ── Movies ──
   [/\bneo\b\s|morpheus|matrix/, 'The Matrix', 'Take the red pill: passive income is real. 💊'],
   [/jack\s*dawson|rose\s*dewitt/, 'Titanic', 'There WAS room on that door — and in that emergency fund. 🚢'],
-  [/buzz\s*lightyear|woody\s*the|lightning\s*mcqueen|wall-?e/, 'Pixar', 'To infinity… and beyond your savings goal. 🚀'],
+  [/buzz\s*lightyear|woody\s*the|lightning\s*mcqueen|wall-?e\b/, 'Pixar', 'To infinity… and beyond your savings goal. 🚀'],
   [/moana|\bariel\b|mulan|rapunzel|pocahontas|\btiana\b/, 'Disney', 'Someday your dividends will come. 👑'],
   [/\bjoker\b|harley\s*quinn|superman|clark\s*kent|wonder\s*woman|aquaman/, 'DC', 'Why so serious? About your credit score. 🃏'],
   [/\bthor\b|\bhulk\b|\bloki\b|thanos|\bgroot\b|captain\s*america|black\s*panther|scarlet\s*witch|doctor\s*strange/, 'Marvel', 'Avengers… assemble a portfolio. 🛡️'],
@@ -15163,6 +15177,41 @@ const _FAMOUS_NAMES=[
   [/sigma\s*(male|grindset)|skibidi|\bgyatt\b|\brizz\b|mewing/, 'meme royalty', 'Sigma grindset: net worth over clout. 🗿'],
   [/\bpepe\b|wojak|stonks/, 'meme royalty', 'Stonks only go up… eventually. Stay invested. 📈'],
   [/steph\s*curry|mahomes|ohtani|shohei|serena\s*williams|tiger\s*woods/, 'sports legend territory', 'GOATs invest the prize money. 🐐'],
+  // ── Trending shows (2023–2026) ──
+  [/severance|\blumon\b|mark\s*scout/, 'Severance', 'Your work self and money self should BOTH prosper. 🧠'],
+  [/\bshogun\b|toranaga|blackthorne/, 'Shōgun', 'Patience and position win wars — and markets. ⛩️'],
+  [/house\s*of\s*the\s*dragon|rhaenyra|daemon\s*targaryen/, 'House of the Dragon', 'Fire and blood — and a diversified treasury. 🔥'],
+  [/yellowstone|john\s*dutton|rip\s*wheeler|beth\s*dutton/, 'Yellowstone', 'Land is the original asset. 🐎'],
+  [/bridgerton|\bpenelope\s*featherington\b|colin\s*bridgerton/, 'Bridgerton', 'Dearest reader, diversify thy holdings. 💌'],
+  [/fallout|vault\s*dweller|lucy\s*maclean/, 'Fallout', 'War never changes. Compound interest never sleeps. ☢️'],
+  [/invincible|mark\s*grayson|omni-?man/, 'Invincible', 'Think, Mark — about your retirement plan. 🟡'],
+  [/\bbluey\b|bingo\s*heeler|bandit\s*heeler/, 'Bluey', 'For real life — invest for real, life. 🐶'],
+  [/beetlejuice/, 'Beetlejuice', 'Say "dividends" three times. 🪲'],
+  [/\bandor\b|cassian\s*andor/, 'Andor', 'Rebellions are built on… emergency funds. 🌌'],
+  // ── More anime (current) ──
+  [/frieren/, 'Frieren', 'A journey measured in decades — like real wealth. 🧝'],
+  [/sung\s*jin-?woo|solo\s*leveling/, 'Solo Leveling', 'Arise — and so will your net worth. ⚔️'],
+  [/\bgeto\b|megumi\s*fushiguro|nobara/, 'Jujutsu Kaisen', 'Domain expansion: your portfolio. 🌀'],
+  [/\bguts\b\s*(of\s*)?berserk|\bberserk\b|griffith/, 'Berserk', 'Carry a giant sword AND a Roth IRA. 🗡️'],
+  [/thorfinn|vinland\s*saga/, 'Vinland Saga', 'I have no enemies — only assets. 🪓'],
+  [/senku|dr\.?\s*stone/, 'Dr. Stone', 'Get excited — about compound interest. 🧪'],
+  [/dandadan|momo\s*ayase|okarun/, 'Dandadan', 'Aliens, ghosts, and a solid savings rate. 👽'],
+  [/\bsanji\b|portgas|\bace\b\s*one\s*piece|whitebeard/, 'One Piece', 'The real treasure was the portfolio. 🏴‍☠️'],
+  // ── More games (current) ──
+  [/elden\s*ring|tarnished|malenia|radahn|messmer/, 'Elden Ring', 'Become Elden Lord of your own balance sheet. 🗡️'],
+  [/black\s*myth|\bwukong\b/, 'Black Myth: Wukong', '72 transformations — all into income streams. 🐒'],
+  [/stardew\s*valley|stardew/, 'Stardew Valley', 'Plant assets, harvest freedom. 🌱'],
+  [/the\s*sims|\bsimlish\b|motherlode/, 'The Sims', 'Motherlode is a cheat — budgeting is the real one. 🟢'],
+  [/\broblox\b|robux/, 'Roblox', 'Robux today, real returns tomorrow. 🎮'],
+  [/skyrim|dragonborn|dovahkiin|tamriel/, 'Skyrim', 'Fus Ro Dough — shout your way to wealth. 🐉'],
+  [/genshin|\bpaimon\b|\bzhongli\b|raiden\s*shogun|hu\s*tao/, 'Genshin Impact', 'Pull for assets, not just characters. ✨'],
+  [/ezio|altair|assassin'?s\s*creed/, "Assassin's Creed", 'Nothing is true; everything is… tax-deductible. 🗡️'],
+  // ── More music (current) ──
+  [/blackpink|\bjennie\b|\bjisoo\b/, 'BLACKPINK', 'In your area — and in your portfolio. 🖤💗'],
+  [/morgan\s*wallen|zach\s*bryan|luke\s*combs/, 'country music', 'Boots, trucks, and a fat retirement account. 🤠'],
+  [/chappell\s*roan/, 'Chappell Roan', 'Hot to go — straight to the index fund. 💋'],
+  [/playboi\s*carti|metro\s*boomin|\b21\s*savage\b/, 'hip-hop royalty', 'Own the masters. Literally. 🎤'],
+  [/karol\s*g|peso\s*pluma|feid\b|rauw\s*alejandro/, 'Latin music', 'Reggaetón royalties hit different. 🌴'],
 ];
 function _famousName(name){
   const n=(name||'').toLowerCase();

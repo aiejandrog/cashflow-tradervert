@@ -4,6 +4,13 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.22.0 — 2026-06-15 — Name-guesser expansion (content + bug fix, user request)
+- **Origins 15→25 regions** (`_NAME_ORIGINS`), now 589 first names: added Vietnam, Turkey, Netherlands, Pacific Islands/Hawaii, Israel, East Africa (Ethiopia), Thailand, Indonesia, Hungary.
+- **Pop-culture radar ~117→148** (`_FAMOUS_NAMES`): trending shows (Severance, Shōgun, House of the Dragon, Yellowstone, Bridgerton, Fallout, Invincible, Bluey, Andor), anime (Frieren, Solo Leveling, Berserk, Vinland Saga, Dr. Stone, Dandadan), games (Elden Ring, Black Myth Wukong, Stardew, Sims, Roblox, Skyrim, Genshin, AC), music (BLACKPINK, country, Chappell Roan, Latin).
+- **Surname patterns:** added `oglu$`→Turkey, ` van (der )`→Netherlands.
+- **Bug fix:** `wall-?e` matched "wallen" → Morgan Wallen mis-tagged as Pixar. Anchored to `wall-?e\b`.
+- Verified: 0 syntax errors; all new origins resolve correctly; famous radar hits new entries; false-positive guard clean (Brian/Adrian/Damian/Mark/Rose/Ivanka/Sullivan all correctly NOT matched); Wallen now → country music.
+
 ## v1.21.0 — 2026-06-15 — 6 mega dreams (content, balance)
 - **DREAMS 22→28:** Own a Skyscraper ($1.5M), F1 Racing Team ($2.2M), Space Tourism Seat ($2.8M), Build a Unicorn ($3.5M), Own a Film Studio ($4.2M), Pro Sports Franchise ($5M) — a "MEGA" stretch tier (`skyscraper/f1team/spaceflight/unicorn/filmstudio/franchise`).
 - Closes the balance gap opened by v1.19.0 ($1.5M big deals) + v1.20.0 (elite careers like $12k dentist): old dream ceiling was $1.2M, now $5M for true bragging-rights wins. Cost range $200k–$5M.
