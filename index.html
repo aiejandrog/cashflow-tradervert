@@ -2804,8 +2804,15 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.26.0';
+const GAME_VERSION='1.27.0';
 const CHANGELOG=[
+  {v:'1.27.0', date:'2026-06-16', notes:[
+    '🏁 Multiplayer now plays to the FINISH — escaping the Rat Race puts you on the Fast Track, and you only WIN by reaching a ⭐ corner and buying your dream (no more instant win the moment you escape).',
+    '🐛 Reconnect fix: drop and rejoin and you get YOUR game back, not another player\'s life. Players are matched by a stable per-tab ID now, never by name.',
+    '🎵 Music queue! Everyone can line up YouTube songs — they play in order and auto-advance the instant one ends (so dead air / unskippable ads never linger). New on-screen "now playing" bar with ➕ to add a song and ⏭ to skip.',
+    '🔮 Smarter name oracle — it now shrugs off accents and typos, takes a second "closer" guess, tells you how confident it is, and tracks its running accuracy.',
+    '🏆 Final Standings no longer blurs the screen: drag the card aside to study the board and everyone\'s final stats.'
+  ]},
   {v:'1.26.0', date:'2026-06-15', notes:[
     '🎨 Reverted to the original colorful emoji icons (and the dice roll animation is back to normal).',
     '🛍️ Bigger shop! 20 new items across every category — 5 board themes (Noir, Forest, Sunset, Rose Gold, Sakura), 5 dice skins (Bronze, Jade, Candy, Obsidian, Aqua), 8 premium avatars (Fox, Wolf, Sage, Lion, Kraken, Outlaw, Sprite, Phoenix), and 2 new Power-Up Plays: 💵 Side Hustle (instant +$2,500) and 💳 Credit Repair (+25 credit score).'
@@ -3373,6 +3380,16 @@ function _deviceId(){
     if(!d){d=(crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36)).replace(/-/g,'').slice(0,10);localStorage.setItem('cf_device',d);}
     return d;
   }catch(e){return 'nodev';}
+}
+// Per-TAB stable id (sessionStorage: unique per tab, survives F5 reload) used to reclaim the
+// correct MP slot on reconnect. Deliberately NOT _deviceId (localStorage) — that is shared
+// across tabs and would collide in same-browser hotseat.
+function _mpClientId(){
+  try{
+    let d=sessionStorage.getItem('cf_mpclient');
+    if(!d){d='mc_'+((crypto.randomUUID?crypto.randomUUID().replace(/-/g,''):(Math.random().toString(36).slice(2)+Date.now().toString(36))).slice(0,12));sessionStorage.setItem('cf_mpclient',d);}
+    return d;
+  }catch(e){return window._mpClientFallback||(window._mpClientFallback='mc_'+Math.random().toString(36).slice(2,14));}
 }
 async function _ipHash(){
   if(_ipHashCache)return _ipHashCache;
@@ -5222,7 +5239,10 @@ function _ytEnsurePlayer(cb){
       playerVars:{autoplay:1,controls:0,disablekb:1,playsinline:1,rel:0},
       events:{
         'onReady':function(){window._ytPlayerReady=true;try{if(window._muted)window._ytPlayer.mute();}catch(e){}(window._ytReadyPlayerCbs||[]).forEach(function(f){try{f(window._ytPlayer);}catch(e){}});window._ytReadyPlayerCbs=[];},
-        'onError':function(){try{showToast('🎵 That video can\'t be embedded — try another link','#7a1f1f',3500,true);}catch(e){}}
+        'onStateChange':function(e){try{if(e&&e.data===0){ // ENDED → auto-advance the queue (host/solo drives; joiners follow host state)
+            if(typeof musicAdvance==='function'&&(PLAYERS.length<=1||!_bcRole||_bcRole==='host'))musicAdvance();
+          }window._ytBuffering=!!(e&&e.data===3);if(typeof _renderMusicNow==='function')_renderMusicNow();}catch(err){}},
+        'onError':function(){try{showToast('🎵 That video can\'t be embedded — skipping','#7a1f1f',3000,true);}catch(e){}try{if(typeof musicAdvance==='function'&&(PLAYERS.length<=1||!_bcRole||_bcRole==='host'))musicAdvance();}catch(e){}}
       }});
   });
 }
@@ -5239,17 +5259,17 @@ function jukeboxPlay(id,broadcast){
 }
 function jukeboxStop(broadcast){
   try{if(window._ytPlayer)window._ytPlayer.stopVideo();}catch(e){}
-  window._ytCurrent=null;
+  window._ytCurrent=null;window._ytCurrentName='';window._mpQueue=[]; // stop clears the whole queue
   if(broadcast&&PLAYERS.length>1&&_bcRole&&typeof netSend==='function'){try{netSend({type:'music',action:'stop',from:_bcMyIdx});}catch(e){}}
+  try{_renderMusicNow();}catch(e){}
   try{_refreshMusicMenu();}catch(e){}
 }
 function jukeboxPrompt(){
   const u=prompt('Paste a YouTube link to play for the room:');if(u===null)return;
   const id=_ytParseId(u);
   if(!id){try{showToast('🎵 Couldn\'t read that link — paste a full YouTube URL','#7a1f1f',3200,true);}catch(e){}return;}
-  jukeboxPlay(id,true);
+  musicRequest(id); // plays now if nothing's going, else adds to the per-player queue
   try{const m=document.getElementById('music-menu');if(m)m.remove();}catch(e){}
-  try{showToast('🎵 Now playing for the room — 🔊 mute anytime','linear-gradient(135deg,#3a1d6b,#6b3fa8)',2600);}catch(e){}
 }
 function _ytTapToHear(){
   if(document.getElementById('yt-tap'))return;
@@ -5258,6 +5278,65 @@ function _ytTapToHear(){
   b.onclick=function(){try{window._ytPlayer&&window._ytPlayer.unMute&&!window._muted&&window._ytPlayer.unMute();window._ytPlayer&&window._ytPlayer.playVideo();}catch(e){}b.remove();};
   document.body.appendChild(b);
   setTimeout(function(){if(b.parentNode)b.remove();},9000);
+}
+// ══ 🎵 MUSIC QUEUE — per-player, host-authoritative ══════════════════════
+// Layered on the YouTube jukebox: each player can QUEUE songs; they play in order
+// and AUTO-ADVANCE when one ends — so post-song dead air and unskippable YouTube
+// ads never linger (the next track just starts). YouTube ads can't be removed via
+// the embed API (and skipping them violates YouTube ToS), so this is the honest fix.
+// If nothing's playing and the queue is empty, a pick starts immediately (old behavior).
+window._mpQueue=window._mpQueue||[];
+window._ytCurrentName=window._ytCurrentName||'';
+function _musicHostOrSolo(){return PLAYERS.length<=1||!_bcRole||_bcRole==='host';}
+function _musMyName(){return (typeof PLAYERS!=='undefined'&&PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].name)||('Player '+((_bcMyIdx|0)+1));}
+function _mesc(s){return String(s==null?'':s).replace(/[<>&"]/g,'');}
+function musicRequest(vid,name,from){
+  if(!vid)return;
+  name=name||_musMyName(); from=(typeof from==='number')?from:(_bcMyIdx|0);
+  if(_musicHostOrSolo()){
+    if(!window._ytCurrent){ window._ytCurrentName=name; jukeboxPlay(vid,false); _musicAfterChange(); }
+    else{
+      const mine=window._mpQueue.filter(q=>q.from===from).length;
+      if(PLAYERS.length>1&&mine>=2){try{showToast('🎵 You already have 2 in the queue — wait your turn','#7a1f1f',2600,true);}catch(e){}return;}
+      window._mpQueue.push({vid:vid,name:name,from:from}); _musicAfterChange();
+      try{showToast('🎵 Queued — #'+window._mpQueue.length+' up','linear-gradient(135deg,#3a1d6b,#6b3fa8)',2200);}catch(e){}
+    }
+  }else{
+    try{netSend({type:'music',action:'queue',vid:vid,name:name,from:from});}catch(e){}
+    try{showToast('🎵 Sent to the room queue','linear-gradient(135deg,#3a1d6b,#6b3fa8)',2000);}catch(e){}
+  }
+}
+function musicAdvance(){
+  if(!_musicHostOrSolo())return;
+  const next=window._mpQueue.shift();
+  if(next){window._ytCurrent=null;window._ytCurrentName=next.name;jukeboxPlay(next.vid,false);}
+  else{window._ytCurrent=null;window._ytCurrentName='';try{if(window._ytPlayer)window._ytPlayer.stopVideo();}catch(e){}}
+  _musicAfterChange();
+}
+function musicSkip(){if(_musicHostOrSolo())musicAdvance();}
+function _musicAfterChange(){
+  if(PLAYERS.length>1&&_bcRole==='host'&&typeof netSend==='function'){
+    try{netSend({type:'music',action:'state',current:window._ytCurrent?{vid:window._ytCurrent,name:window._ytCurrentName}:null,queue:window._mpQueue.map(q=>({vid:q.vid,name:q.name,from:q.from}))});}catch(e){}
+  }
+  try{_renderMusicNow();}catch(e){}
+  try{_refreshMusicMenu();}catch(e){}
+}
+// Visible on-screen now-playing + queue widget (bottom-left). ➕ queues a YouTube link.
+function _renderMusicNow(){
+  let el=document.getElementById('music-now');
+  const playing=!!window._ytCurrent, q=window._mpQueue||[];
+  if(!playing&&(!q||q.length===0)){if(el)el.style.display='none';return;}
+  if(!el){el=document.createElement('div');el.id='music-now';el.style.cssText='position:fixed;left:8px;bottom:14px;z-index:40;max-width:240px;background:linear-gradient(160deg,rgba(58,29,107,.96),rgba(30,12,60,.93));border:1px solid rgba(160,120,255,.5);border-radius:12px;padding:7px 10px;box-shadow:0 4px 18px rgba(0,0,0,.5);font-family:Georgia,serif;color:#e9ddff;font-size:.72rem;line-height:1.35';document.body.appendChild(el);}
+  el.style.display='block';
+  const buf=window._ytBuffering?' <span style="opacity:.75">⏳ ad/buffering…</span>':'';
+  const cur=playing?('🎵 <b>'+_mesc(window._ytCurrentName||'A song')+'</b>'+(buf||' <span style="opacity:.7">playing</span>')):'🎵 <span style="opacity:.7">idle</span>';
+  const up=(q&&q.length)?('<div style="opacity:.82;margin-top:3px">⏭ up next: '+q.length+' · '+_mesc(q[0].name||'')+'’s pick</div>'):'';
+  el.innerHTML='<div style="display:flex;align-items:flex-start;gap:6px;justify-content:space-between">'
+    +'<span style="flex:1;min-width:0">'+cur+up+'</span>'
+    +'<span style="display:flex;gap:4px;flex-shrink:0">'
+    +'<button onclick="jukeboxPrompt()" title="Queue a YouTube song" style="cursor:pointer;background:rgba(160,120,255,.3);border:1px solid rgba(160,120,255,.5);border-radius:7px;color:#fff;font-weight:800;font-size:.78rem;padding:2px 7px">➕</button>'
+    +((playing&&_musicHostOrSolo())?'<button onclick="musicSkip()" title="Skip to next" style="cursor:pointer;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:7px;color:#fff;font-weight:800;font-size:.78rem;padding:2px 7px">⏭</button>':'')
+    +'</span></div>';
 }
 function _closeMusicMenuOnce(e){const m=document.getElementById('music-menu');if(m&&!m.contains(e.target)&&!(e.target.closest&&e.target.closest('#btn-music'))){m.remove();document.removeEventListener('pointerdown',_closeMusicMenuOnce,true);}}
 function toggleMusicMenu(){
@@ -10868,7 +10947,7 @@ function toggleModal(id,fn){
   window._modalOpener=id;
   fn();
 }
-function openModal({band,title,desc,rows,actions,customInput,_noFS}){
+function openModal({band,title,desc,rows,actions,customInput,_noFS,noBlur}){
   _ensureMboxStructure(); // never crash on a corrupted/foreign modal box
   // ALWAYS preserve the turn's resume. openModal dialogs are side-trips (FS
   // Sell/Refi/Manage/Pay, board events, Leisure, etc.) — _resumeFn is set to
@@ -10876,7 +10955,7 @@ function openModal({band,title,desc,rows,actions,customInput,_noFS}){
   // value. Without this, opening Manage/Refi/Sell during a turn left _resumeFn
   // pointing at the dialog, so ROLL/Finish kept re-opening it (stuck turn).
   if(window._sideResumeSaved===undefined)window._sideResumeSaved=_resumeFn;
-  _resumeFn=()=>openModal({band,title,desc,rows,actions,customInput,_noFS});
+  _resumeFn=()=>openModal({band,title,desc,rows,actions,customInput,_noFS,noBlur});
   if(!_noFS)openFS();
   $('mb-band').textContent=title;
   $('mb-band').className='mbox-band '+(band||'gray');
@@ -10895,6 +10974,9 @@ function openModal({band,title,desc,rows,actions,customInput,_noFS}){
   const acts=$('mb-acts');acts.innerHTML='';
   actions.forEach(a=>{const btn=document.createElement('button');if(a.locked){btn.className='btn-og btn-locked';btn.textContent='🔒 '+a.label;btn.disabled=true;}else{btn.className='btn-og '+(a.cls||'btn-tan');btn.textContent=a.label;btn.onclick=()=>{closeModal();a.fn();};}acts.appendChild(btn);});
   $('modal').classList.add('vis');$('modal-bg').classList.add('vis');
+  // noBlur: don't blur/darken the background so players can read the board & their stats
+  // behind the modal (used by Final Standings — the box stays draggable to peek around).
+  {const _mbg=$('modal-bg');if(_mbg){if(noBlur){_mbg.style.backdropFilter='none';_mbg.style.webkitBackdropFilter='none';_mbg.style.background='rgba(0,0,0,.18)';}else{_mbg.style.backdropFilter='';_mbg.style.webkitBackdropFilter='';_mbg.style.background='';}}}
   requestAnimationFrame(()=>makeDraggable(document.querySelector('.mbox'),$('mb-band')));
 }
 function closeModal(){
@@ -10902,6 +10984,7 @@ function closeModal(){
   window._modalOpener=null; // clear toggle tracker so popups never re-toggle wrongly
   if(window._sideResumeSaved!==undefined){_resumeFn=window._sideResumeSaved;delete window._sideResumeSaved;}
   $('modal').classList.remove('vis');$('modal-bg').classList.remove('vis');
+  {const _mbg=$('modal-bg');if(_mbg){_mbg.style.backdropFilter='';_mbg.style.webkitBackdropFilter='';_mbg.style.background='';}} // reset any noBlur override
   $('fs-panel').classList.remove('open');
   ['event-modal','event-modal-bg','modal','modal-bg'].forEach(id=>{const el=$(id);if(el)el.style.paddingLeft='';});
   // Restore .mbox if fsPayModal had replaced its content
@@ -10914,6 +10997,12 @@ function closeModal(){
 }
 
 // ── WIN ───────────────────────────────────────────────
+// MP win now requires COMPLETING THE FAST TRACK (escape the rat race → ride the outer ring →
+// land a ⭐ corner with your dream's cash and BUY IT), not just escaping. Enabled globally; this
+// only affects multiplayer — every _mpFastTrack read is gated behind PLAYERS.length>1, so
+// single-player is untouched. (Cross-device render of an opponent ON the ring is a known visual
+// follow-up; the win LOGIC and hotseat play work.)
+window._mpFastTrack=true;
 function checkWin(){
   const pass=passiveIncome(),exp=expenses().total;
   const threshold=1.0;
@@ -13763,7 +13852,7 @@ function mpShowFinalResults(){
     netSend({type:'game-over',standings:ranked.map(p=>({name:p.name,won:!!p.won,
       pass:p.G?(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0):0,cash:p.G?p.G.cash||0:0}))});
   }
-  openModal({band:'gold',title:'🏆 Final Standings',desc:'Here\'s how everyone finished.',rows,
+  openModal({band:'gold',title:'🏆 Final Standings',desc:'Here\'s how everyone finished. (Drag this card aside to view the board & your stats.)',rows,noBlur:true,
     actions:[{label:'Play Again',cls:'btn-gold',fn:()=>{PLAYERS=[];ACTIVE_PLAYER_IDX=0;_mpCount=1;_mpSetupIdx=0;clearSave();location.reload();}}]});
 }
 
@@ -13892,7 +13981,7 @@ function peerJoinStart(roomName){
         },12000);}
       // Re-send join-request over the remote pipe (no-op if a local host already approved us)
       if(_bc&&_bc._pendingReqId){
-        conn.send({type:'join-request',reqId:_bc._pendingReqId,pass:_pendingJoinPass,playerName:_pendingJoinName,_mid:_msgId()});
+        conn.send({type:'join-request',reqId:_bc._pendingReqId,pass:_pendingJoinPass,playerName:_pendingJoinName,clientId:_mpClientId(),_mid:_msgId()});
       }
     });
     conn.on('data',d=>_netRecv(d));
@@ -13930,7 +14019,7 @@ function _sbStart(roomName){
         if(_bcRole==='host'){_setLobbyNetStatus('🌐 Online — friends can join from anywhere');window._peerOnline=true;}
         // Joiner: the seat request may have gone out before this pipe opened — resend it here
         if(_bcRole==='joiner'&&_bc&&_bc._pendingReqId){
-          _sbSend({type:'join-request',reqId:_bc._pendingReqId,pass:_pendingJoinPass,playerName:_pendingJoinName,_mid:_msgId()});
+          _sbSend({type:'join-request',reqId:_bc._pendingReqId,pass:_pendingJoinPass,playerName:_pendingJoinName,clientId:_mpClientId(),_mid:_msgId()});
         }
       }
     });
@@ -14219,22 +14308,38 @@ function bcHostHandleJoinRequest(msg){
     netSend({type:'join-response',reqId:msg.reqId,approved:false,reason:'Wrong password.'});
     return;
   }
-  // Rejoin: same player name on an already-claimed slot reclaims it (refresh recovery)
+  // Rejoin identity: match by STABLE per-tab clientId first. Names are mutable and
+  // non-unique (default "Guest", prefilled from local profile, overwritten on every
+  // ping), so name-based reclaim handed reconnecting players the WRONG slot — i.e. the
+  // OTHER player's entire game-state (G), their "life." clientId is collision-proof.
   let slot=-1;
-  if(msg.playerName){
+  // 0) Paused player rejoining during the grace window → give back EXACTLY their slot.
+  if(window._mpPaused&&typeof window._mpPaused.idx==='number'){
+    const pi=window._mpPaused.idx;
+    if(PLAYERS[pi]&&msg.clientId&&PLAYERS[pi]._clientId===msg.clientId)slot=pi;
+  }
+  // 1) Stable clientId reclaim (reliable path for refresh / network-blip rejoin).
+  if(slot===-1&&msg.clientId){
+    for(let i=1;i<PLAYERS.length;i++){
+      if(PLAYERS[i]&&PLAYERS[i]._clientId===msg.clientId){slot=i;break;}
+    }
+  }
+  // 2) Legacy fallback: name reclaim ONLY for old clients that send no clientId.
+  if(slot===-1&&!msg.clientId&&msg.playerName){
     for(let i=1;i<PLAYERS.length;i++){
       if(_bcJoinedSlots.has(i)&&PLAYERS[i].name===msg.playerName){slot=i;break;}
     }
   }
-  // Otherwise find a free slot
+  // 3) Otherwise a genuinely free slot (never claimed, or already left for good).
   if(slot===-1){
-    for(let i=1;i<PLAYERS.length;i++){if(!_bcJoinedSlots.has(i)){slot=i;break;}}
+    for(let i=1;i<PLAYERS.length;i++){if(!_bcJoinedSlots.has(i)||PLAYERS[i]._left){slot=i;break;}}
   }
   if(slot===-1){
     netSend({type:'join-response',reqId:msg.reqId,approved:false,reason:'Room is full.'});
     return;
   }
   _bcJoinedSlots.add(slot);
+  if(PLAYERS[slot]&&msg.clientId)PLAYERS[slot]._clientId=msg.clientId; // stamp stable identity for future reclaim
   if(PLAYERS[slot])PLAYERS[slot]._profileReady=false; // joined the room, still building their life
   if(PLAYERS[slot])PLAYERS[slot]._left=false; // rejoining clears any "left the game" mark
   window._lastPing=window._lastPing||{};window._lastPing[slot]=Date.now();
@@ -14322,7 +14427,7 @@ function mpSubmitJoin(){
   const reqId='req_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
   _bc._pendingReqId=reqId;
   _pendingJoinPass=pass;_pendingJoinName=playerName;
-  netSend({type:'join-request',reqId,pass,playerName});
+  netSend({type:'join-request',reqId,pass,playerName,clientId:_mpClientId()});
   peerJoinStart(roomName); // also search for the host over the internet
   _sbStart(roomName);      // and over the websocket relay (resends the request on subscribe)
   // 30s: cross-internet WebRTC (broker signup + ICE + TURN fallback + retries)
@@ -14358,10 +14463,22 @@ function bcHandleMessage(msg){
     if(_bcRole==='host')netRelay(msg);
     return;
   }
-  if(msg.type==='music'){ // 🎧 jukebox — play/stop the same song for everyone
-    if(msg.from!==_bcMyIdx){
+  if(msg.type==='music'){ // 🎧 jukebox + per-player queue, host-authoritative
+    if(msg.action==='queue'){ // a joiner asked the host to queue a song
+      if(_bcRole==='host'&&msg.vid){try{musicRequest(msg.vid,msg.name,msg.from);}catch(e){}}
+    } else if(msg.action==='state'){ // host → everyone: canonical now-playing + queue
+      if(_bcRole!=='host'){
+        window._mpQueue=Array.isArray(msg.queue)?msg.queue:[];
+        const cur=msg.current;
+        if(cur&&cur.vid){
+          if(cur.vid!==window._ytCurrent){window._ytCurrentName=cur.name||'';try{_renderChatRow(cur.name||'Someone','🎵 now playing');}catch(e){}try{jukeboxPlay(cur.vid,false);}catch(e){}}
+          window._ytCurrentName=cur.name||window._ytCurrentName;
+        } else if(window._ytCurrent){try{if(window._ytPlayer)window._ytPlayer.stopVideo();}catch(e){}window._ytCurrent=null;window._ytCurrentName='';}
+        try{_renderMusicNow();}catch(e){}try{_refreshMusicMenu();}catch(e){}
+      }
+    } else if(msg.from!==_bcMyIdx){ // legacy play/stop (back-compat)
       if(msg.action==='stop'){try{jukeboxStop(false);}catch(e){}}
-      else if(msg.vid){try{_renderChatRow(msg.name||('Player '+((msg.from|0)+1)),'🎵 started a song');}catch(e){}try{jukeboxPlay(msg.vid,false);}catch(e){}}
+      else if(msg.vid){try{_renderChatRow(msg.name||('Player '+((msg.from|0)+1)),'🎵 started a song');}catch(e){}window._ytCurrentName=msg.name||'';try{jukeboxPlay(msg.vid,false);}catch(e){}try{_renderMusicNow();}catch(e){}}
     }
     if(_bcRole==='host')netRelay(msg);
     return;
@@ -14633,9 +14750,9 @@ function bcJoinerHandleAlive(msg){
 function bcJoinerHandleGameOver(msg){
   clearInterval(_bcHeartbeatTimer);
   $('mp-wait').style.display='none';hideSpectateToken(); // clear waiting screen so standings are visible
-  openModal({band:'gold',title:'🏆 Final Standings',desc:'Game over!',
+  openModal({band:'gold',title:'🏆 Final Standings',desc:'Game over! (Drag this card aside to view the board & your stats.)',noBlur:true,
     rows:(msg.standings||[]).map((p,i)=>[`${['🥇','🥈','🥉','  '][i]||'  '} ${p.name}`,
-      `$${fmt(p.pass)}/mo${p.won?' 🏆':''}`]),
+      `$${fmt(p.pass)}/mo · $${fmt(p.cash||0)} cash${p.won?' 🏆':''}`]),
     actions:[{label:'New Game',cls:'btn-gold',fn:()=>location.reload()}]});
 }
 
@@ -15091,12 +15208,47 @@ const _NAME_PATTERNS=[
   [/(oglu)$/,'Turkey'],
   [/(^|\s)van\s(der\s)?/,'the Netherlands'],
 ];
+// Accent-fold so "José"/"Søren"/"Łukasz" resolve like their plain-ASCII forms.
+function _normName(s){return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toLowerCase();}
+// Tiny edit-distance (bails when lengths differ by >2) — used only when an exact lookup misses,
+// so a typo or spelling variant ("alejandr0","cathrine") still lands near the right region.
+function _editDist(a,b){
+  if(a===b)return 0;const m=a.length,n=b.length;if(Math.abs(m-n)>2)return 9;
+  let prev=Array.from({length:n+1},(_,i)=>i);
+  for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++){cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));}prev=cur;}
+  return prev[n];
+}
+// Adjacent-region clusters → the oracle takes a SECOND, "closer" guess before conceding.
+const _REGION_CLUSTERS=[
+  ['Latin America or Spain','Portugal or Brazil','Italy','France'],
+  ['Italy','France','Greece','Portugal or Brazil'],
+  ['Germany','Scandinavia','the Netherlands','Eastern Europe','Hungary'],
+  ['China','Japan','Korea','Vietnam','Thailand','Indonesia'],
+  ['Ireland or Scotland','England'],
+  ['the Middle East','Turkey','Israel','Greece'],
+  ['West Africa','East Africa (Ethiopia)'],
+  ['South Asia (India)','the Middle East'],
+];
+function _secondGuess(region){
+  for(const c of _REGION_CLUSTERS){const i=c.indexOf(region);if(i>=0){const alt=c.filter(r=>r!==region);if(alt.length)return alt[Math.floor(Math.random()*alt.length)];}}
+  return null;
+}
+// Running "name oracle" accuracy, persisted locally so guessing right finally MEANS something.
+function _oracleStat(){try{return JSON.parse(localStorage.getItem('cf_oracle')||'{"hits":0,"misses":0}');}catch(e){return {hits:0,misses:0};}}
+function _oracleRecord(hit){const s=_oracleStat();if(hit)s.hits++;else s.misses++;try{localStorage.setItem('cf_oracle',JSON.stringify(s));}catch(e){}return s;}
+function _oracleLine(){const s=_oracleStat();const t=s.hits+s.misses;if(t<=0)return '';const pct=Math.round(100*s.hits/t);return 'Oracle’s now '+s.hits+'/'+t+' ('+pct+'%).';}
+// Returns {region, conf:'high'|'med'|'low'} — confidence drives the quip + a possible second guess.
 function _guessNameOrigin(name){
-  const full=(name||'').trim().toLowerCase();
+  const full=_normName(name);
   const first=full.split(/\s+/)[0]||full;
-  if(_NAME_FIRST.has(first))return _NAME_FIRST.get(first);
-  for(const [re,region] of _NAME_PATTERNS){if(re.test(full))return region;}
-  return 'the good ol\' USA';
+  if(_NAME_FIRST.has(first))return {region:_NAME_FIRST.get(first),conf:'high'};
+  if(first.length>=4){
+    let best=null,bd=9;const tol=first.length>=7?2:1;
+    for(const k of _NAME_FIRST.keys()){if(Math.abs(k.length-first.length)>tol)continue;const d=_editDist(first,k);if(d<bd){bd=d;best=k;if(d===0)break;}}
+    if(best&&bd<=tol)return {region:_NAME_FIRST.get(best),conf:'med'};
+  }
+  for(const [re,region] of _NAME_PATTERNS){if(re.test(full))return {region,conf:'med'};}
+  return {region:'the good ol\' USA',conf:'low'};
 }
 // Pop-culture name radar — checked BEFORE the country guesser. Each entry:
 // [regex, where it's from, optional custom "yes" reaction]
@@ -15318,17 +15470,22 @@ $('btn-char-go').addEventListener('click',()=>{
         ],_noFS:true});
       return;
     }
-    const origin=_guessNameOrigin(nm);
+    const g=_guessNameOrigin(nm);
+    const lead=g.conf==='high'?'I’d bet my circuits on this —':g.conf==='med'?'I’m fairly sure —':'Total shot in the dark, but —';
+    const done=(title)=>openModal({band:'life',title:'🔮 '+title,desc:(_oracleLine()+' Go pick where '+nm+' lives.').trim(),rows:[],actions:[{label:'Continue →',cls:'btn-gold',fn:proceed}],_noFS:true});
     openModal({band:'life',title:'🔮 Hold up — '+nm+'?',
-      desc:`Quick gut check: is that name from ${origin}?`,rows:[],
+      desc:`${lead} is that name from ${g.region}?`,rows:[],
       actions:[
-        {label:'😏 Yes, actually',cls:'btn-gold',fn:()=>{
-          openModal({band:'life',title:'🔮 '+pick(_NAME_QUIP_YES),desc:'Anyway. Go pick where '+nm+' lives.',rows:[],
-            actions:[{label:'Continue →',cls:'btn-gold',fn:proceed}],_noFS:true});
-        }},
+        {label:'😏 Yes, actually',cls:'btn-gold',fn:()=>{_oracleRecord(true);done(pick(_NAME_QUIP_YES));}},
         {label:'🙃 Nope',cls:'btn-tan',fn:()=>{
-          openModal({band:'life',title:'🔮 '+pick(_NAME_QUIP_NO),desc:'Moving on. Go pick where '+nm+' lives.',rows:[],
-            actions:[{label:'Continue →',cls:'btn-gold',fn:proceed}],_noFS:true});
+          const alt=_secondGuess(g.region);
+          if(alt){
+            openModal({band:'life',title:'🔮 Hmm, okay —',desc:`Then I’d guess it leans ${alt}. Closer?`,rows:[],
+              actions:[
+                {label:'😏 Yeah, closer',cls:'btn-gold',fn:()=>{_oracleRecord(true);done('Partial credit — I’ll take it. 🌍');}},
+                {label:'🙃 Still no',cls:'btn-tan',fn:()=>{_oracleRecord(false);done(pick(_NAME_QUIP_NO));}},
+              ],_noFS:true});
+          }else{_oracleRecord(false);done(pick(_NAME_QUIP_NO));}
         }},
       ],_noFS:true});
     return;
