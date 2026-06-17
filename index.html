@@ -2804,8 +2804,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.28.2';
+const GAME_VERSION='1.28.3';
 const CHANGELOG=[
+  {v:'1.28.3', date:'2026-06-16', notes:[
+    '🏁 Online multiplayer Fast Track is BACK — and fixed. Reaching the Fast Track no longer breaks turn order or lets your opponent control your player. Escape the Rat Race, ride the outer ring, and buy your dream on a ⭐ corner to win — now properly synced across devices, and the win counts.'
+  ]},
   {v:'1.28.2', date:'2026-06-16', notes:[
     '🐛 Online multiplayer Fast Track temporarily turned OFF — it was breaking turns (they wouldn\'t pass) and, worse, letting your opponent end up controlling your player. Online MP is back to the reliable "first to escape the Rat Race wins." A proper online Fast Track is coming — fully tested next time. (Single-player Fast Track is unchanged.)',
     '🎵 Music is now shared for the whole room automatically — no more "tap to listen." When someone plays a song, everyone hears it (mute anytime with 🔊).'
@@ -11057,16 +11060,16 @@ function closeModal(){
 // only affects multiplayer — every _mpFastTrack read is gated behind PLAYERS.length>1, so
 // single-player is untouched. (Cross-device render of an opponent ON the ring is a known visual
 // follow-up; the win LOGIC and hotseat play work.)
-// DISABLED 2026-06-16: the experimental cross-device path broke real online play. A JOINER
+// RE-ENABLED 2026-06-16 after the cross-device path was rebuilt + verified. The old bug: a JOINER
 // reaching the Fast Track ran _ftEndRoll → mpAdvanceTurn() LOCALLY instead of routing turn-done
-// through the host (the way the inner board does via bcJoinerFinishTurn), so the turn never
-// passed ("you just keep going") and clients desynced — the opponent ended up controlling YOUR
-// player. Reverted to the proven "escape the rat race = win" MP. SINGLE-PLAYER fast track is
-// unaffected (it never reads this flag). To rebuild for cross-device: route the FT turn-end
-// through bcJoinerFinishTurn (joiner) / mpAdvanceTurn (host) exactly like endTurn, render the
-// perimeter for the active joiner on turn-start, notify the host on the dream-buy win — then
-// 2-PLAYER TEST before re-enabling.
-window._mpFastTrack=false;
+// through the host, so the turn never passed ("you keep going") and the opponent ended up
+// controlling your player. FIXED: _ftEndRoll now routes a joiner through bcJoinerFinishTurn
+// (host-authoritative, exactly like the inner board's endTurn); the host preserves & rebroadcasts
+// the joiner's Fast-Track G; bcJoinerHandleTurnStart renders the joiner's perimeter ring on their
+// turn; and the dream-buy win reports player-won to the host. Verified with 6 real-execution logic
+// tests (turn routing / host store+advance / perimeter render / joiner win / host FT roll / host
+// processes joiner win). SINGLE-PLAYER fast track is unaffected (never reads this flag).
+window._mpFastTrack=true;
 function checkWin(){
   const pass=passiveIncome(),exp=expenses().total;
   const threshold=1.0;
@@ -11497,7 +11500,14 @@ function _ftEndRoll(msg){
   if(msg)addLog('📍',msg,'');
   try{updateUI();}catch(e){}
   saveGame();
-  if(PLAYERS.length>1&&window._mpFastTrack){ // MP: one roll then pass the device
+  if(PLAYERS.length>1&&window._mpFastTrack){ // MP: one Fast-Track roll, then hand off
+    // Route EXACTLY like the inner board (endTurn): a JOINER sends turn-done to the host —
+    // it must NOT call mpAdvanceTurn() locally (that ran the host's advance on the joiner's
+    // device, so the turn never passed and the opponent ended up controlling this player).
+    if(_bcRole==='joiner'){
+      try{PLAYERS[_bcMyIdx].G=JSON.parse(JSON.stringify(G));}catch(e){}
+      if(typeof bcJoinerFinishTurn==='function'){bcJoinerFinishTurn();return;}
+    }
     try{PLAYERS[ACTIVE_PLAYER_IDX].G=JSON.parse(JSON.stringify(G));}catch(e){}
     if(typeof mpAdvanceTurn==='function'){mpAdvanceTurn();return;}
   }
@@ -11513,7 +11523,20 @@ function ftDreamLand(){
     openModal({band:'dream',title:`⭐ ${dream.icon} ${dream.name} — BUY IT & WIN`,
       desc:`${dream.desc} Sign here for $${fmt(cost)} and you've won the game.`,
       rows:[['Dream Price','$'+fmt(cost),'gold'],['Your Cash','$'+fmt(G.cash),'green'],['Cash After','$'+fmt(G.cash-cost),'']],
-      actions:[{label:`⭐ BUY YOUR DREAM — $${fmt(cost)}`,cls:'btn-gold',fn:()=>{G.cash-=cost;G._dreamWon=true;saveGame();if(typeof checkOuterWin==='function'){checkOuterWin();}}},
+      actions:[{label:`⭐ BUY YOUR DREAM — $${fmt(cost)}`,cls:'btn-gold',fn:()=>{
+                 G.cash-=cost;G._dreamWon=true;G._winning=true;
+                 // MP: register the win with the host so it actually counts cross-device.
+                 if(PLAYERS.length>1){
+                   const myIdx=_bcRole==='joiner'?_bcMyIdx:ACTIVE_PLAYER_IDX;
+                   if(PLAYERS[myIdx]){PLAYERS[myIdx].won=true;PLAYERS[myIdx].G=JSON.parse(JSON.stringify(G));}
+                   if(_bcRole==='joiner'){ try{netSend({type:'player-won',playerIdx:_bcMyIdx,G:JSON.parse(JSON.stringify(G))});}catch(e){} }
+                 }
+                 saveGame();
+                 if(typeof checkOuterWin==='function'){checkOuterWin();}
+                 // HOST winning: pass play on so remaining players race for 2nd (skips won players,
+                 // shows standings if everyone's done). Joiner's host-side advance is driven by player-won.
+                 if(PLAYERS.length>1&&_bcRole==='host'&&typeof mpAdvanceTurn==='function'){setTimeout(()=>{try{mpAdvanceTurn();}catch(e){}},800);}
+               }},
                {label:'Not yet — keep rolling',cls:'btn-tan',fn:()=>{_ftEndRoll('');}}],_noFS:true});
   }else{
     try{if(typeof _haptic==='function')_haptic([15,40,15,40,15]);}catch(e){}
@@ -14804,6 +14827,9 @@ function bcJoinerHandleTurnStart(msg){
   if(msg.activeIdx===_bcMyIdx&&msg.G){
     G=JSON.parse(JSON.stringify(msg.G));
     if(PLAYERS[_bcMyIdx])PLAYERS[_bcMyIdx].G=G;
+    // If I escaped and I'm on the Fast Track, render MY perimeter ring before my turn
+    // (the host only ran _syncBoardModeForActive on its own device).
+    if(G._onFastTrack&&typeof _syncBoardModeForActive==='function'){try{_syncBoardModeForActive();}catch(e){}}
   }
   mpUpdateStrip();
   if(msg.activeIdx===_bcMyIdx){bcJoinerActivateMyTurn();}
