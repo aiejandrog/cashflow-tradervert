@@ -2804,8 +2804,12 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.28.1';
+const GAME_VERSION='1.28.2';
 const CHANGELOG=[
+  {v:'1.28.2', date:'2026-06-16', notes:[
+    '🐛 Online multiplayer Fast Track temporarily turned OFF — it was breaking turns (they wouldn\'t pass) and, worse, letting your opponent end up controlling your player. Online MP is back to the reliable "first to escape the Rat Race wins." A proper online Fast Track is coming — fully tested next time. (Single-player Fast Track is unchanged.)',
+    '🎵 Music is now shared for the whole room automatically — no more "tap to listen." When someone plays a song, everyone hears it (mute anytime with 🔊).'
+  ]},
   {v:'1.28.1', date:'2026-06-16', notes:[
     '🐛 Multiplayer turn fix: if your turn ran long, or your connection blipped while you were paying/deciding, coming back could reset your turn "as if you never paid." The host now tracks your moves LIVE during your turn — so reconnects and time-outs keep your cash, deals and payments intact. Also stopped a case where a timed-out player could be handed the wrong game state.'
   ]},
@@ -5288,7 +5292,12 @@ function jukeboxPlay(id,broadcast){
       try{netSend({type:'music',action:'play',vid:id,from:_bcMyIdx,name:myName});}catch(e){}
       try{_renderChatRow(myName,'🎵 started a song',true);}catch(e){}
     }
-  }else if(!window._muted){_ytTapToHear();} // remote-started: offer tap-to-hear if autoplay is blocked
+  }else if(!window._muted){
+    // remote-started: NO tap-to-hear gate — when someone plays a song it's shared for the whole
+    // room and just plays. Players are mid-game (already interacted) so autoplay is permitted;
+    // anyone who wants silence uses the 🔊 mute button.
+    _ytEnsurePlayer(function(p){try{p.unMute&&p.unMute();p.setVolume&&p.setVolume(65);p.playVideo&&p.playVideo();}catch(e){}});
+  }
 }
 function jukeboxStop(broadcast){
   try{if(window._ytPlayer)window._ytPlayer.stopVideo();}catch(e){}
@@ -11048,7 +11057,16 @@ function closeModal(){
 // only affects multiplayer — every _mpFastTrack read is gated behind PLAYERS.length>1, so
 // single-player is untouched. (Cross-device render of an opponent ON the ring is a known visual
 // follow-up; the win LOGIC and hotseat play work.)
-window._mpFastTrack=true;
+// DISABLED 2026-06-16: the experimental cross-device path broke real online play. A JOINER
+// reaching the Fast Track ran _ftEndRoll → mpAdvanceTurn() LOCALLY instead of routing turn-done
+// through the host (the way the inner board does via bcJoinerFinishTurn), so the turn never
+// passed ("you just keep going") and clients desynced — the opponent ended up controlling YOUR
+// player. Reverted to the proven "escape the rat race = win" MP. SINGLE-PLAYER fast track is
+// unaffected (it never reads this flag). To rebuild for cross-device: route the FT turn-end
+// through bcJoinerFinishTurn (joiner) / mpAdvanceTurn (host) exactly like endTurn, render the
+// perimeter for the active joiner on turn-start, notify the host on the dream-buy win — then
+// 2-PLAYER TEST before re-enabling.
+window._mpFastTrack=false;
 function checkWin(){
   const pass=passiveIncome(),exp=expenses().total;
   const threshold=1.0;
