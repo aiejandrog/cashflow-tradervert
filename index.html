@@ -2804,8 +2804,11 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.28.0';
+const GAME_VERSION='1.28.1';
 const CHANGELOG=[
+  {v:'1.28.1', date:'2026-06-16', notes:[
+    '🐛 Multiplayer turn fix: if your turn ran long, or your connection blipped while you were paying/deciding, coming back could reset your turn "as if you never paid." The host now tracks your moves LIVE during your turn — so reconnects and time-outs keep your cash, deals and payments intact. Also stopped a case where a timed-out player could be handed the wrong game state.'
+  ]},
   {v:'1.28.0', date:'2026-06-16', notes:[
     '🔒 Privacy fix: progress could leak between people on the same network (or when opening a downloaded copy) — you might see a stranger\'s trophies, credits or unlocks. Your progress is now private to you, full stop.',
     '🔗 New Cloud Sync code (Settings → 🔗 Cloud Sync): copy your private code and paste it on another device — itch, GitHub, or a downloaded build — to carry YOUR progress across all of them. Same code = same progress; everyone else stays separate.'
@@ -13395,6 +13398,7 @@ function saveGame(){
     }else{
       localStorage.setItem(SAVE_KEY,JSON.stringify(save));
     }
+    if(PLAYERS.length>1&&_bcRole==='joiner')try{bcJoinerPushState();}catch(e){} // keep host's copy live during my turn
   }catch(e){}
 }
 function loadSave(key){
@@ -13774,8 +13778,13 @@ function _mpTallySkip(fromIdx){ // HOST authority
   }
 }
 function mpAdvanceTurn(){
-  // Snapshot current G back into PLAYERS
-  PLAYERS[ACTIVE_PLAYER_IDX].G=JSON.parse(JSON.stringify(G));
+  // Snapshot current G back into PLAYERS — but ONLY into the LOCAL player's own slot.
+  // When the HOST advances a REMOTE joiner's turn (e.g. the AFK watchdog skip), `G` is the
+  // HOST's own state and must never overwrite the joiner's slot — that wiped the joiner's
+  // progress. Their slot is kept current by their own turn-done + live state-sync instead.
+  if(!(_bc&&_bcRole==='host'&&ACTIVE_PLAYER_IDX!==_bcMyIdx&&_bcJoinedSlots.has(ACTIVE_PLAYER_IDX))){
+    PLAYERS[ACTIVE_PLAYER_IDX].G=JSON.parse(JSON.stringify(G));
+  }
   // Find next active (non-won) player
   const total=PLAYERS.length;
   let nextIdx=(ACTIVE_PLAYER_IDX+1)%total;
@@ -14412,6 +14421,18 @@ function bcHostHandleTurnDone(msg){
   mpAdvanceTurn();
 }
 
+// HOST: live mid-turn state from the active joiner. Keeps the host's authoritative copy of
+// that player CURRENT, so a reconnect / pause-resume / AFK skip hands them back what they
+// actually have — not their last completed turn (the "it reset as if I never paid" bug).
+// Only accepted for the currently-active player; never advances or re-broadcasts.
+function bcHostHandleStateSync(msg){
+  if(!_bc||_bcRole!=='host')return;
+  const idx=msg.playerIdx;
+  if(typeof idx!=='number'||idx<=0||idx>=PLAYERS.length)return;
+  if(ACTIVE_PLAYER_IDX!==idx)return; // ignore late syncs after their turn already passed
+  if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
+}
+
 // ── HOST: a joiner submitted their own profile ──────────
 function bcHostHandlePlayerProfile(msg){
   if(_bcRole!=='host')return;
@@ -14581,6 +14602,7 @@ function bcHandleMessage(msg){
   if(_bcRole==='host'){
     if(msg.type==='join-request')bcHostHandleJoinRequest(msg);
     if(msg.type==='turn-done')bcHostHandleTurnDone(msg);
+    if(msg.type==='state-sync')bcHostHandleStateSync(msg);
     if(msg.type==='skip-request')_mpTallySkip(msg.from);
     if(msg.type==='player-won')bcHostHandlePlayerWon(msg);
     if(msg.type==='player-profile')bcHostHandlePlayerProfile(msg);
@@ -14898,9 +14920,20 @@ function bcRefreshWaitScores(){
 // ── Joiner finish turn → broadcast ──────────────────────
 function bcJoinerFinishTurn(){
   if(!_bc||_bcRole!=='joiner')return false;
+  clearTimeout(window._statePushTimer); // turn-done carries the final state; cancel any pending mid-turn sync
   netSend({type:'turn-done',playerIdx:_bcMyIdx,G:JSON.parse(JSON.stringify(G))});
   bcShowWaiting('...');
   return true;
+}
+// JOINER: push live state to the host AS the turn progresses (debounced), so the host's copy
+// never lags behind the player's payments/deals. Without this the host only learned the joiner's
+// state at turn-done, so any mid-turn re-sync (reconnect / AFK skip) reverted their money.
+function bcJoinerPushState(){
+  if(_bcRole!=='joiner'||!_bc||PLAYERS.length<=1||ACTIVE_PLAYER_IDX!==_bcMyIdx)return;
+  clearTimeout(window._statePushTimer);
+  window._statePushTimer=setTimeout(()=>{
+    try{ if(_bcRole==='joiner'&&ACTIVE_PLAYER_IDX===_bcMyIdx&&G&&typeof netSend==='function')netSend({type:'state-sync',playerIdx:_bcMyIdx,G:JSON.parse(JSON.stringify(G))}); }catch(e){}
+  },900);
 }
 
 // (mpAdvanceTurn and mpLaunchGame patched in their definitions below)
