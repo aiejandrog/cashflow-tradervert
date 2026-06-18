@@ -2804,8 +2804,14 @@ const CAR_SEGMENTS=[
 // Single source of truth. Bump on every update: patch (1.0.x)=fixes, minor
 // (1.x.0)=features, major (x.0.0)=overhauls. Add a CHANGELOG entry too, then
 // deploy + post an itch devlog (see PUBLISH.md "Release Ritual").
-const GAME_VERSION='1.28.3';
+const GAME_VERSION='1.29.0';
 const CHANGELOG=[
+  {v:'1.29.0', date:'2026-06-18', notes:[
+    '🏦 Bank Loan: borrow ANY custom amount now (not just $1k/$5k/$10k) — type it in. The modal also spells out the recurring monthly payment that comes out every Cashflow Day and pays the loan down over time.',
+    '⭐ Fast Track: you can now BUY YOUR DREAM from any tile the moment you can afford it — no more needing to land exactly on a ⭐ corner. A live "$X to go (Y%)" tracker shows how close you are every turn.',
+    '🎲 Fast Track: every tile now does something — side gigs, interest, referral checks, goodwill — no more dead spaces on your victory lap.',
+    '🐛 Multiplayer fixes: closed a hole where a waiting player could win out of turn, and fixed a case where the host could skip a player after someone won.'
+  ]},
   {v:'1.28.3', date:'2026-06-16', notes:[
     '🏁 Online multiplayer Fast Track is BACK — and fixed. Reaching the Fast Track no longer breaks turn order or lets your opponent control your player. Escape the Rat Race, ride the outer ring, and buy your dream on a ⭐ corner to win — now properly synced across devices, and the win counts.'
   ]},
@@ -9263,6 +9269,22 @@ function showTurnDialog(){
     const borrow=document.createElement('button');borrow.className='bti-btn';borrow.textContent='🏦 Borrow';
     borrow.onclick=()=>{closeEvPopup();openBorrow();};
     acts.appendChild(repay);acts.appendChild(borrow);
+    // ── FAST TRACK: live dream-progress tracker + buy-from-any-tile button ──
+    if(G&&G._onFastTrack){
+      const _dream=G.dream||DREAMS[0];const _dcost=_dream.cost||400000;
+      const _toGo=Math.max(0,_dcost-(G.cash||0));
+      const _pctTo=Math.max(0,Math.min(100,Math.round((G.cash||0)/_dcost*100)));
+      const _canBuy=(G.cash||0)>=_dcost;
+      // Override the inner-board payday message with Fast-Track dream progress
+      $('bti-msg').textContent=_canBuy
+        ?`⭐ You can BUY YOUR DREAM now (${_dream.icon} ${_dream.name}) — tap Buy Dream to WIN!`
+        :`🏁 Fast Track — ${_dream.icon} ${_dream.name}: $${fmt(_toGo)} to go (${_pctTo}%). Land a ⭐ corner or tap Buy Dream once you can afford it.`;
+      $('bti-stats').innerHTML+=`<span class="bti-chip ${_canBuy?'good':'gold'}">⭐ ${_pctTo}% to dream</span>`;
+      const buy=document.createElement('button');buy.className='bti-btn';
+      if(_canBuy){buy.textContent='⭐ Buy Dream — WIN!';buy.style.fontWeight='900';buy.style.background='linear-gradient(135deg,#b8860b,#ffd700)';buy.style.color='#3a2a00';buy.onclick=()=>{closeEvPopup();ftBuyDreamPrompt();};}
+      else{buy.textContent=`⭐ Dream — $${fmt(_toGo)} to go`;buy.disabled=true;buy.style.opacity='.5';}
+      acts.appendChild(buy);
+    }
   }
   const pill=$('center-roll-btn');if(pill)pill.classList.add('go');
   return; // parchment dialog retired — everything below was its old body
@@ -10547,11 +10569,15 @@ function openBorrow(){
       ?{label:`Borrow $${actual<amt?fmt(actual)+' (cap)':fmt(amt)} → $${fmt(Math.round((G.bankLoan+actual)*rate))}/mo`,cls:'btn-gold',fn:()=>borrow(amt)}
       :{label:`Borrow $${fmt(amt)} — Cap reached ($${fmt(MAX_BANK_LOAN)} limit)`,locked:true};
   };
-  openModal({band:'green',title:'Bank Loan',
-    desc:`Credit Score: ${G.creditScore} (${tier.label}) — ${pct}%/yr. Cap: $${fmt(MAX_BANK_LOAN)}. Room: $${fmt(loanRoom)}.`,
+  // Custom-field bounds adapt to remaining room so min never exceeds max (e.g. near the cap,
+  // when room < $500). Default to ~half the room, snapped to the step and clamped into range.
+  const _cMin=Math.min(500,loanRoom||500), _cStep=loanRoom>=500?500:50;
+  const defAmt=loanRoom>0?Math.min(loanRoom,Math.max(_cMin,Math.round(loanRoom/2/_cStep)*_cStep||_cMin)):0;
+  openModal({band:'green',title:'🏦 Bank Loan',
+    desc:`Credit Score: ${G.creditScore} (${tier.label}) — ${pct}%/yr. Cap: $${fmt(MAX_BANK_LOAN)}, room $${fmt(loanRoom)}. Type any amount, or tap a preset. The monthly payment is auto-deducted EVERY CASHFLOW DAY and the loan pays itself down over time.`,
     rows:[
       ['Current Loan','$'+fmt(G.bankLoan)],
-      ['Current Pmt','$'+fmt(G.extraBankPmt)+'/mo'],
+      ['Recurring Pmt','$'+fmt(G.extraBankPmt)+'/mo (every payday)'],
       ['Loan Room','$'+fmt(loanRoom)+' remaining'],
       ['Your Cash','$'+fmt(G.cash)],
       ['─────','─────'],
@@ -10559,7 +10585,11 @@ function openBorrow(){
       previewRow(5000),
       previewRow(10000),
     ],
+    customInput:{label:'Custom $',min:_cMin,max:loanRoom||500,value:defAmt,step:_cStep},
     actions:[
+      loanRoom>0
+        ?{label:'💵 Borrow Custom Amount ↵',cls:'btn-gold',fn:()=>{const v=Math.floor(parseInt(($('mb-custom-inp')||{value:'0'}).value)||0);if(v>0)borrow(v);}}
+        :{label:`Cap reached — $${fmt(MAX_BANK_LOAN)} limit`,locked:true},
       mkAction(1000),
       mkAction(5000),
       mkAction(10000),
@@ -10568,6 +10598,7 @@ function openBorrow(){
   });
 }
 function borrow(amt){
+  amt=Math.floor(amt||0);if(amt<=0)return; // whole dollars only — never carry cents into the loan balance
   const loanRoom=Math.max(0,MAX_BANK_LOAN-(G.bankLoan||0));
   if(loanRoom<=0){openModal({band:'red',title:'Loan Cap Reached',desc:`Bank loan limit is $${fmt(MAX_BANK_LOAN)}. Pay down existing balance to borrow more.`,rows:[['Current Loan','$'+fmt(G.bankLoan)],['Cap','$'+fmt(MAX_BANK_LOAN)]],actions:[{label:'Got it',cls:'btn-tan',fn:()=>{}}]});return;}
   const actual=Math.min(amt,loanRoom);
@@ -11475,6 +11506,26 @@ function ftShowMarket(){
     rows:[[e.good?'Gain':'Loss',(e.amt>=0?'+$':'-$')+fmt(Math.abs(e.amt)),e.good?'green':'red'],['New Cash','$'+fmt(G.cash),'']],
     actions:[{label:'Continue →',cls:'btn-gold',fn:()=>{_ftEndRoll('');}}],_noFS:true});
 }
+// Neutral Fast-Track tiles used to be dead space (just "end roll"). Now every tile does
+// SOMETHING — a small victory-lap micro-event — so no roll feels wasted. Amounts are modest
+// (scaled to passive income) and mostly positive; the Fast Track is the lap after you've
+// already escaped the rat race, with one occasional small splurge for texture.
+function ftNeutralTile(){
+  const base=Math.max(800,Math.round((passiveIncome()||1200)*0.5));
+  const evs=[
+    {m:`💼 A side consulting gig pays out — +$${fmt(base)}.`,amt:base},
+    {m:`🪙 Idle cash swept interest into your account — +$${fmt(Math.round(base*0.6))}.`,amt:Math.round(base*0.6)},
+    {m:`📈 You trimmed a winning position — +$${fmt(Math.round(base*0.85))}.`,amt:Math.round(base*0.85)},
+    {m:`🤝 A past deal sends a referral check — +$${fmt(Math.round(base*1.2))}.`,amt:Math.round(base*1.2)},
+    {m:`❤️ You mentored a beginner — credit +3, goodwill banked.`,amt:0,cr:3},
+    {m:`🛍️ A small victory-lap splurge — -$${fmt(Math.round(base*0.5))}.`,amt:-Math.round(base*0.5)},
+  ];
+  // weight the splurge as the rare one (~1 in 6); the rest are positive/neutral
+  const e=evs[Math.floor(Math.random()*evs.length)];
+  if(e.amt){G.cash=Math.max(0,(G.cash||0)+e.amt);try{if(e.amt>0){if(typeof sfxCash==='function')sfxCash();spawnCoinBurst&&spawnCoinBurst(false);}else if(typeof sfxDownturn==='function')sfxDownturn();}catch(_e){}}
+  if(e.cr){try{boostCredit(e.cr,'fast track goodwill');}catch(_e){}}
+  _ftEndRoll(e.m);
+}
 function ftLand(){
   G.turn=(G.turn||0)+1; // Fast Track rolls count as turns too — otherwise an early escape + lots of
                         // Fast Track buying shows an impossible "1 turn / 15 assets" on the win screen
@@ -11493,7 +11544,7 @@ function ftLand(){
     case'charity':try{if(typeof boostCredit==='function')boostCredit(5,'charity on the Fast Track');}catch(e){}_ftEndRoll('❤️ Charity — credit +5, goodwill banked.');return;
     case'deal':ftShowDeal();return;
     case'market':ftShowMarket();return;
-    default:_ftEndRoll('');return; // neutral corner
+    default:ftNeutralTile();return; // neutral tile — now always does something
   }
 }
 function _ftEndRoll(msg){
@@ -11513,6 +11564,49 @@ function _ftEndRoll(msg){
   }
   if(document.hidden){showTurnDialog();}else{setTimeout(()=>showTurnDialog(),350);}
 }
+// ── Shared Fast-Track DREAM PURCHASE (the WIN). Used by both the ⭐-corner landing
+// and the new "Buy Dream from any tile" turn-dialog button. Single source of truth so
+// the fragile cross-device (MP) win routing never drifts between the two entry points.
+function ftBuyDream(){
+  const dream=G.dream||DREAMS[0];const cost=dream.cost||400000;
+  if((G.cash||0)<cost)return false; // guard — never let cash go negative on a buy
+  try{if(typeof sfxWinSting==='function')sfxWinSting();spawnWinConfetti&&spawnWinConfetti();}catch(e){}
+  try{if(typeof _haptic==='function')_haptic([60,40,60,40,140]);}catch(e){}
+  G.cash-=cost;G._dreamWon=true;G._winning=true;
+  addLog('⭐',`BOUGHT YOUR DREAM: ${dream.icon} ${dream.name} for $${fmt(cost)} — YOU WIN THE FREEDOM RACE!`,'gold');
+  // MP: register the win with the host so it actually counts cross-device.
+  if(PLAYERS.length>1){
+    const myIdx=_bcRole==='joiner'?_bcMyIdx:ACTIVE_PLAYER_IDX;
+    if(PLAYERS[myIdx]){PLAYERS[myIdx].won=true;PLAYERS[myIdx].G=JSON.parse(JSON.stringify(G));}
+    if(_bcRole==='joiner'){ try{netSend({type:'player-won',playerIdx:_bcMyIdx,G:JSON.parse(JSON.stringify(G))});}catch(e){} }
+  }
+  saveGame();
+  if(typeof checkOuterWin==='function'){checkOuterWin();}
+  // HOST advance is driven SOLELY by the "▶ Continue for N other players…" button that
+  // checkOuterWin() → mpMarkPlayerWon() injects on the win screen (it does showScreen('game')
+  // then mpAdvanceTurn()). Do NOT also schedule mpAdvanceTurn() here — the old code did, which
+  // double-advanced and SKIPPED whichever player was handed the turn. Joiner advance is host-
+  // driven via the player-won message (bcHostHandlePlayerWon).
+  return true;
+}
+// Buy-from-any-tile prompt — fired by the Fast-Track turn-dialog "Buy Dream" button so a
+// high-cost dream ($1.5M–$5M) is reachable without having to land EXACTLY on a ⭐ corner.
+// Landing a corner is still the celebrated path (auto-prompts + FX); this just removes the
+// "exact corner" RNG wall once you can actually afford it.
+function ftBuyDreamPrompt(){
+  // Buying the dream WINS the game and advances the turn — it is a TURN action, so it must
+  // be gated by _mpNotMyTurn() (the real off-turn guard). _mpLocked() is a permanent no-op
+  // meant only for self-management (pay/shop/sell on your own file); using it here would let
+  // a waiting opponent click a leftover "Buy Dream" button and win out of turn.
+  if(typeof _mpNotMyTurn==='function'&&_mpNotMyTurn()){if(typeof _mpLockToast==='function')_mpLockToast();return;}
+  const dream=G.dream||DREAMS[0];const cost=dream.cost||400000;
+  if((G.cash||0)<cost){if(typeof showToast==='function')showToast(`Need $${fmt(cost-(G.cash||0))} more for ${dream.name}`,'#8b1a1a',2600,true);return;}
+  openModal({band:'dream',title:`⭐ ${dream.icon} ${dream.name} — BUY IT & WIN`,
+    desc:`${dream.desc} Pay $${fmt(cost)} now and you've won the Freedom Race.`,
+    rows:[['Dream Price','$'+fmt(cost),'gold'],['Your Cash','$'+fmt(G.cash),'green'],['Cash After','$'+fmt(G.cash-cost),'']],
+    actions:[{label:`⭐ BUY YOUR DREAM — $${fmt(cost)}`,cls:'btn-gold',fn:()=>{ftBuyDream();}},
+             {label:'Not yet — keep playing',cls:'btn-tan',fn:()=>{if(G&&G._onFastTrack&&!G.rolling&&!G._dreamWon)showTurnDialog();}}],_noFS:true});
+}
 function ftDreamLand(){
   const dream=G.dream||DREAMS[0];const cost=dream.cost||400000;
   const tile=document.getElementById('ft-'+G._ftPos);
@@ -11523,20 +11617,7 @@ function ftDreamLand(){
     openModal({band:'dream',title:`⭐ ${dream.icon} ${dream.name} — BUY IT & WIN`,
       desc:`${dream.desc} Sign here for $${fmt(cost)} and you've won the game.`,
       rows:[['Dream Price','$'+fmt(cost),'gold'],['Your Cash','$'+fmt(G.cash),'green'],['Cash After','$'+fmt(G.cash-cost),'']],
-      actions:[{label:`⭐ BUY YOUR DREAM — $${fmt(cost)}`,cls:'btn-gold',fn:()=>{
-                 G.cash-=cost;G._dreamWon=true;G._winning=true;
-                 // MP: register the win with the host so it actually counts cross-device.
-                 if(PLAYERS.length>1){
-                   const myIdx=_bcRole==='joiner'?_bcMyIdx:ACTIVE_PLAYER_IDX;
-                   if(PLAYERS[myIdx]){PLAYERS[myIdx].won=true;PLAYERS[myIdx].G=JSON.parse(JSON.stringify(G));}
-                   if(_bcRole==='joiner'){ try{netSend({type:'player-won',playerIdx:_bcMyIdx,G:JSON.parse(JSON.stringify(G))});}catch(e){} }
-                 }
-                 saveGame();
-                 if(typeof checkOuterWin==='function'){checkOuterWin();}
-                 // HOST winning: pass play on so remaining players race for 2nd (skips won players,
-                 // shows standings if everyone's done). Joiner's host-side advance is driven by player-won.
-                 if(PLAYERS.length>1&&_bcRole==='host'&&typeof mpAdvanceTurn==='function'){setTimeout(()=>{try{mpAdvanceTurn();}catch(e){}},800);}
-               }},
+      actions:[{label:`⭐ BUY YOUR DREAM — $${fmt(cost)}`,cls:'btn-gold',fn:()=>{ftBuyDream();}},
                {label:'Not yet — keep rolling',cls:'btn-tan',fn:()=>{_ftEndRoll('');}}],_noFS:true});
   }else{
     try{if(typeof _haptic==='function')_haptic([15,40,15,40,15]);}catch(e){}
@@ -14876,6 +14957,7 @@ function bcJoinerActivateMyTurn(){
 
 // ── JOINER: show waiting screen ──────────────────────────
 function bcShowWaiting(playerName){
+  try{closeEvPopup();}catch(e){} // tear down any stale turn dialog (e.g. a leftover Fast-Track "Buy Dream" button) so it can't sit clickable over the spectate view
   const nameEl=$('mp-wait-name'),subEl=$('mp-wait-sub');
   const iWon=PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].won;
   if(iWon){

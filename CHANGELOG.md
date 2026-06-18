@@ -4,6 +4,14 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## v1.29.0 — 2026-06-18 — Custom borrow amount + Fast Track upgrades
+- **Bank Loan — custom amount:** `openBorrow` now has a custom `$` input (adaptive bounds so min never exceeds max near the $75k cap) alongside the $1k/$5k/$10k presets; `borrow()` floors to whole dollars. The modal spells out the recurring monthly payment (auto-deducted every Cashflow Day, auto-pays-down) — the mechanic always existed (`expenses().bankPmt`), it just wasn't surfaced.
+- **Fast Track — buy your dream from any tile:** extracted the dream-purchase/WIN into a shared `ftBuyDream()` (single source of truth for the fragile cross-device win routing); a new "⭐ Buy Dream — WIN!" button in the FT turn dialog (`ftBuyDreamPrompt`) lets you claim the dream the moment you can afford it, not only by landing exactly on a ⭐ corner. Corner landing still auto-prompts.
+- **Fast Track — live dream tracker:** `showTurnDialog` shows "$X to go (Y%)" + a "⭐ Y% to dream" chip every FT turn (FT-scoped — never leaks onto the inner board).
+- **Fast Track — every tile does something:** `ftNeutralTile()` gives neutral tiles a small victory-lap micro-event (side gig / interest / referral / +credit / rare splurge), cash clamped at $0.
+- **MP fixes (caught in adversarial review):** the new Buy-Dream button is gated by `_mpNotMyTurn()` (not the no-op `_mpLocked()`) so a waiting opponent can't win out of turn; `bcShowWaiting` tears down any stale turn dialog; removed a host double-advance (`ftBuyDream` no longer pairs `setTimeout(mpAdvanceTurn)` with `checkOuterWin`'s Continue button) that skipped a player.
+- Verified: solo + simulated-MP logic tests via `preview_eval`, 0 console errors. **Online MP fast-track still wants a real 2-device playtest** per standing rule.
+
 ## v1.26.0 — 2026-06-15 — Revert to emoji icons + bigger shop (user request)
 - **Reverted the drawn-icon system** (v1.24 OpenMoji + v1.25 game-icons). Game renders native system emoji again, as originally. The icon IIFE is disabled (early `return`) and the twemoji CDN `<script>` removed. The dice roll animation/logic was never touched — the icon system's global styles were making it look off; the revert restores the original visuals.
 - **Shop +20 items, every category:** Board Themes 8→13 (Noir/Forest/Sunset/Rose Gold/Sakura), Dice Skins 12→17 (Bronze/Jade/Candy/Obsidian/Aqua), Premium Avatars 16→24 (Fox/Wolf/Sage/Lion/Kraken/Outlaw/Sprite/Phoenix), Power-Up Plays 6→8.
