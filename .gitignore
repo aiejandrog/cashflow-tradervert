@@ -10,3 +10,4 @@ node_modules/
 .agent-logs/
 .claude/settings.local.json
 tools/out/
+tools/out*/
