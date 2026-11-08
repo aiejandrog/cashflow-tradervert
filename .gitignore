@@ -5,3 +5,8 @@ _zt/
 .butler/
 
 .itch-stage/
+
+node_modules/
+.agent-logs/
+.claude/settings.local.json
+tools/out/

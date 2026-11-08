@@ -1,0 +1,15 @@
+{
+  "name": "freedom-race",
+  "version": "1.29.0",
+  "private": true,
+  "description": "Freedom Race - Tradervert Edition. Single-file board game (index.html). package.json exists only for dev tooling; the game itself has no build and no runtime dependencies.",
+  "scripts": {
+    "test": "node game.test.js",
+    "smoke": "node tools/smoke.cjs",
+    "zip": "node build-zip.cjs",
+    "serve": "npx -y http-server -p 8742 -c-1"
+  },
+  "devDependencies": {
+    "playwright": "1.65.0"
+  }
+}
