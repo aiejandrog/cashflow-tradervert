@@ -20,17 +20,61 @@ const mockEl = () => ({
   firstChild: null,
   remove: () => {},
   getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }),
-  disabled: false,
+  disabled: false, dataset: {}, contains: () => false, querySelector: () => null, querySelectorAll: () => [],
+  setAttribute: () => {}, getAttribute: () => null, removeAttribute: () => {}, focus: () => {}, blur: () => {}, click: () => {},
+  scrollIntoView: () => {}, closest: () => null, parentNode: null, offsetWidth: 0, offsetHeight: 0, value: '',
+  // canvas + Web Animations: confetti / dice / deal cards draw and animate on buy
+  width: 300, height: 150,
+  getContext: () => new Proxy({}, { get: (t, k) => (k === 'canvas' ? mockEl() : typeof k === 'string' && /^(measureText)$/.test(k) ? () => ({ width: 0 }) : () => {}) }),
+  animate: () => ({ finished: Promise.resolve(), cancel: () => {}, pause: () => {}, play: () => {}, onfinish: null }),
 });
+const bodyEl = mockEl(); bodyEl.dataset = {}; bodyEl.contains = () => false;
 global.document = {
   getElementById: () => mockEl(),
   querySelectorAll: () => [],
   createElement: () => mockEl(),
+  createTextNode: (t) => ({ textContent: t }),
+  createDocumentFragment: () => mockEl(),
   querySelector: () => mockEl(),
-  body: { appendChild: () => {}, classList: { add:()=>{}, remove:()=>{} } },
+  body: bodyEl,
+  head: mockEl(),
+  documentElement: Object.assign(mockEl(), { dataset: {}, clientWidth: 1280, clientHeight: 800, scrollWidth: 1280 }),
+  activeElement: null, hidden: false, visibilityState: 'visible', readyState: 'complete', title: '',
+  addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true,
+  fonts: { ready: Promise.resolve(), load: async () => [] },
+  hasFocus: () => true, execCommand: () => false,
 };
-global.window = { innerWidth: 1280, innerHeight: 800 };
-global.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+// window / navigator / storage mocks: the script registers listeners and reads storage at top level,
+// so every API it touches on load must exist here or the harness dies before the first test.
+const noop = () => {};
+const memStore = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k), clear: () => m.clear(), key: i => [...m.keys()][i] ?? null, get length() { return m.size; } }; };
+global.window = {
+  innerWidth: 1280, innerHeight: 800,
+  addEventListener: noop, removeEventListener: noop, dispatchEvent: () => true,
+  matchMedia: () => ({ matches: false, addEventListener: noop, removeEventListener: noop, addListener: noop, removeListener: noop }),
+  location: { href: 'http://localhost/', search: '', hash: '', hostname: 'localhost', protocol: 'http:', origin: 'http://localhost' },
+  history: { replaceState: noop, pushState: noop },
+  scrollTo: noop, requestAnimationFrame: cb => typeof cb === 'function' && cb(), cancelAnimationFrame: noop,
+  setTimeout, clearTimeout, setInterval, clearInterval,
+};
+global.sessionStorage = memStore();
+global.navigator = { userAgent: 'node-test', language: 'en-US', onLine: false, clipboard: { writeText: async () => {} }, share: undefined, vibrate: noop, maxTouchPoints: 0 };
+global.location = global.window.location;
+global.history = global.window.history;
+global.BroadcastChannel = function () { return { postMessage: noop, close: noop, addEventListener: noop, removeEventListener: noop, onmessage: null }; };
+global.Peer = undefined;
+global.fetch = async () => ({ ok: false, status: 0, json: async () => ({}), text: async () => '' });
+global.Audio = function () { return { play: async () => {}, pause: noop, load: noop, addEventListener: noop, removeEventListener: noop, volume: 1, currentTime: 0, loop: false, muted: false }; };
+global.Image = function () { return { addEventListener: noop, removeEventListener: noop, set src(v) {} }; };
+global.MutationObserver = function () { return { observe: noop, disconnect: noop, takeRecords: () => [] }; };
+global.ResizeObserver = function () { return { observe: noop, unobserve: noop, disconnect: noop }; };
+global.IntersectionObserver = function () { return { observe: noop, unobserve: noop, disconnect: noop }; };
+global.speechSynthesis = { speak: noop, cancel: noop, getVoices: () => [] };
+global.SpeechSynthesisUtterance = function () {};
+global.screen = { width: 1280, height: 800, orientation: { type: 'landscape-primary', addEventListener: noop } };
+global.devicePixelRatio = 1;
+global.visualViewport = { width: 1280, height: 800, addEventListener: noop, removeEventListener: noop };
+global.localStorage = memStore();
 global.AudioContext = function(){ return {
   createOscillator:()=>({connect:()=>{},start:()=>{},stop:()=>{},type:'',frequency:{setValueAtTime:()=>{}}}),
   createGain:()=>({connect:()=>{},gain:{setValueAtTime:()=>{},exponentialRampToValueAtValue:()=>{}}}),
