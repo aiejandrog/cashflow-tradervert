@@ -38,7 +38,7 @@ global.document = {
   querySelector: () => mockEl(),
   body: bodyEl,
   head: mockEl(),
-  documentElement: Object.assign(mockEl(), { dataset: {}, clientWidth: 1280, clientHeight: 800, scrollWidth: 1280 }),
+  documentElement: Object.assign(mockEl(), { style: { setProperty: () => {}, removeProperty: () => {} }, dataset: {}, clientWidth: 1280, clientHeight: 800, scrollWidth: 1280 }),
   activeElement: null, hidden: false, visibilityState: 'visible', readyState: 'complete', title: '',
   addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true,
   fonts: { ready: Promise.resolve(), load: async () => [] },
@@ -96,6 +96,8 @@ if(typeof MARKETS!=='undefined')global.MARKETS=MARKETS;
 if(typeof RD_TIPS!=='undefined')global.RD_TIPS=RD_TIPS;
 if(typeof fmt!=='undefined')global.fmt=fmt;
 if(typeof expressMode!=='undefined')global.expressMode=expressMode;
+if(typeof SAVE_SLOTS!=='undefined')global.SAVE_SLOTS=SAVE_SLOTS;
+Object.defineProperty(global,'SAVE_KEY',{get:function(){return SAVE_KEY},set:function(v){SAVE_KEY=v},configurable:true});
 // Expose G as a getter/setter on global so tests can set G = {...}
 Object.defineProperty(global,'G',{
   get:function(){return(typeof G!=='undefined'?G:null)},
@@ -445,6 +447,35 @@ describe('fmt() — number formatting', () => {
   });
   test('0 formats as 0', () => {
     expect(fmt(0)).toBe('0');
+  });
+});
+
+describe('new life never erases a saved life (F-qa-01)', () => {
+  // startGame's board/UI work is not under test (and overflows the DOM mock): stub it for this block only
+  { const n = () => {}; showScreen = n; buildBoard = n; updateUI = n; forceFitBoard = n; setDieVal = n; syncDie2Lock = n; showTurnDialog = n; _rivalGameStart = n; showToast = n; _sessionStart = n; }
+  const seed = () => { localStorage.clear(); SAVE_KEY = SAVE_SLOTS[0]; localStorage.setItem(SAVE_SLOTS[0], JSON.stringify({ G: { prof: { name: 'Saved Sam' }, cash: 123 }, ts: 1 })); };
+  const slot1Intact = () => { const s = JSON.parse(localStorage.getItem(SAVE_SLOTS[0]) || 'null'); return !!(s && s.G && s.G.prof && s.G.prof.name === 'Saved Sam' && s.G.cash === 123); };
+  test('Quick Match leaves slot 1 intact and writes another slot', () => {
+    seed();
+    startQuickMatch();
+    saveGame();
+    expect(slot1Intact()).toBeTruthy();
+    expect(SAVE_KEY).toBe(SAVE_SLOTS[1]);
+    expect(!!localStorage.getItem(SAVE_SLOTS[1])).toBeTruthy();
+  });
+  test('Daily run leaves slot 1 intact and writes another slot', () => {
+    seed();
+    startDailyRun();
+    expect(slot1Intact()).toBeTruthy();
+    expect(SAVE_KEY).toBe(SAVE_SLOTS[1]);
+  });
+  test('all five slots full: new life still starts in the active slot (unchanged behaviour)', () => {
+    localStorage.clear();
+    SAVE_SLOTS.forEach((k, i) => localStorage.setItem(k, JSON.stringify({ G: { prof: { name: 'S' + i }, cash: 1 }, ts: i + 1 })));
+    SAVE_KEY = SAVE_SLOTS[0];
+    startGame(PROFS[0], LOCATIONS[0]);
+    expect(SAVE_KEY).toBe(SAVE_SLOTS[0]);
+    expect(G.prof.name).toBe(PROFS[0].name);
   });
 });
 
