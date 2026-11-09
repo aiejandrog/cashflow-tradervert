@@ -540,6 +540,64 @@ describe('Multiplayer off-turn purchase sync (F-alex-02)', () => {
   });
 });
 
+describe('Multiplayer final standings and waiting ROLL (F-mp-10, F-mp-13)', () => {
+  const pl=(name,won,seq,cf)=>({name,won,_winSeq:seq,G:{assets:[{cf}],cash:0}});
+  test('first escaper ranks first even with lower passive income', () => {
+    const r=_mpRankPlayers([pl('Ana',false,undefined,9000),pl('Joel',true,1,2000),pl('Mei',true,2,5000)]);
+    expect(r.map(p=>p.name).join(',')).toBe('Joel,Mei,Ana');
+  });
+  test('winners keep win order, not passive order', () => {
+    const r=_mpRankPlayers([pl('A',true,2,100),pl('B',true,1,1),pl('C',true,3,999)]);
+    expect(r.map(p=>p.name).join(',')).toBe('B,A,C');
+  });
+  test('non-winners and ties: passive income desc, stable', () => {
+    const r=_mpRankPlayers([pl('A',false,undefined,500),pl('B',false,undefined,900),pl('C',false,undefined,500)]);
+    expect(r.map(p=>p.name).join(',')).toBe('B,A,C');
+  });
+  test('no winners and missing G do not throw', () => {
+    const r=_mpRankPlayers([{name:'X',won:false},pl('Y',false,undefined,10)]);
+    expect(r[0].name).toBe('Y');
+  });
+  test('won player without a win order ranks after ordered winners, before non-winners', () => {
+    const r=_mpRankPlayers([pl('A',false,undefined,9),pl('H',true,undefined,1),pl('J',true,1,1)]);
+    expect(r.map(p=>p.name).join(',')).toBe('J,H,A');
+  });
+  test('_mpRankPlayers does not reorder its input', () => {
+    const a=[pl('A',false,undefined,1),pl('B',true,1,1)];
+    _mpRankPlayers(a);
+    expect(a[0].name).toBe('A');
+  });
+  test('host stamps win order on each joiner escape', () => {
+    initGame(PROFS[0],LOCATIONS[0]);
+    const mk=(n)=>({name:n,G:JSON.parse(JSON.stringify(G))});
+    MP.players=[mk('Host'),mk('Joel'),mk('Mei')];
+    MP.role='host';MP.me=0;MP.active=2;MP.bc={postMessage(){},close(){}};
+    MP.joined.clear();MP.joined.add(1);MP.joined.add(2);
+    try{bcHostHandlePlayerWon({playerIdx:2,G:{cash:1}});}catch(e){}
+    expect(MP.players[2]._winSeq).toBe(1);
+    MP.active=1;
+    try{bcHostHandlePlayerWon({playerIdx:1,G:{cash:1}});}catch(e){}
+    expect(MP.players[1]._winSeq).toBe(2);
+  });
+  test('_mpLockToast shows a toast', () => {
+    const real=showToast;let got=null;
+    showToast=(m)=>{got=m;};
+    try{_mpLockToast();}finally{showToast=real;}
+    expect(/not your turn/i.test(got||'')).toBe(true);
+  });
+  test('_mpSyncRollBtn disables ROLL only when it is not my turn', () => {
+    const el={disabled:false,style:{}};
+    const real=document.getElementById;
+    document.getElementById=(id)=>id==='center-roll-btn'?el:real(id);
+    try{
+      MP.players=[{name:'A'},{name:'B'}];MP.role='joiner';MP.me=1;MP.active=0;
+      _mpSyncRollBtn();expect(el.disabled).toBe(true);
+      MP.active=1;
+      _mpSyncRollBtn();expect(el.disabled).toBe(false);
+    }finally{document.getElementById=real;}
+  });
+});
+
 // ── Summary ───────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);

@@ -5816,7 +5816,14 @@ function _mpNotMyTurn(){
 // active player's, so paying your bills or shopping while you wait is safe.
 function _mpLocked(){ return false; }
 function _mpLockToast(){
-  addLog('⏳','Not your turn yet — but you can still manage your own money (pay debts, shop, sell).','');
+  try{showToast('⏳ Not your turn yet — you can still pay debts, shop and sell.','#7a5a12',2600,true);}catch(e){}
+}
+// ROLL button looks (and is) disabled while someone else has the turn.
+function _mpSyncRollBtn(){
+  const b=document.getElementById('center-roll-btn');
+  if(!b)return;
+  const off=!!_mpNotMyTurn();
+  b.disabled=off;b.style.opacity=off?'.45':'';
 }
 function rollDice(){
   if(G&&G._bankrupt){return;} // dead game — block any chained/doubles roll under the bankruptcy overlay
@@ -9245,6 +9252,7 @@ function spacesToNextPayday(){
 }
 function showTurnDialog(){
   _resumeFn=()=>showTurnDialog(); // ROLL button can restore this if dismissed
+  try{_mpSyncRollBtn();}catch(e){} // my turn: ROLL is live again
   const cf=monthlyCF(),pass=passiveIncome(),dist=spacesToNextPayday();
   const _epExp=expenses().total,_epGap=Math.max(0,_epExp-pass);
   const info=$('bc-turn-info');
@@ -14010,12 +14018,14 @@ function mpMarkPlayerWon(){
   },1200);
 }
 
+// Final order: escapers first (in the order they escaped), then everyone else by passive income.
+function _mpRankPlayers(players){
+  const pass=p=>p.G?((p.G.assets||[]).reduce((s,x)=>s+(x.cf>0?x.cf:0),0)):0;
+  const seq=p=>p.won?(typeof p._winSeq==='number'?p._winSeq:1e9):2e9;
+  return [...players].sort((a,b)=>(seq(a)-seq(b))||(pass(b)-pass(a)));
+}
 function mpShowFinalResults(){
-  const ranked=[...PLAYERS].sort((a,b)=>{
-    const pa=(a.G?((a.G.assets||[]).reduce((s,x)=>s+(x.cf>0?x.cf:0),0)):0);
-    const pb=(b.G?((b.G.assets||[]).reduce((s,x)=>s+(x.cf>0?x.cf:0),0)):0);
-    return pb-pa;
-  });
+  const ranked=_mpRankPlayers(PLAYERS);
   const rows=ranked.map((p,i)=>{
     const pass=p.G?(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0):0;
     const cash=p.G?p.G.cash||0:0;
@@ -14577,6 +14587,7 @@ function bcHostHandlePlayerWon(msg){
   if(PLAYERS[idx].won)return; // duplicate message — already processed
   if(idx!==ACTIVE_PLAYER_IDX&&!(PLAYERS[idx].G&&PLAYERS[idx].G._dreamWon))return; // not their turn and no recorded win
   PLAYERS[idx].won=true;
+  PLAYERS[idx]._winSeq=PLAYERS.filter(p=>p.won).length; // escape order for the final standings
   if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
   addLog('🏆',PLAYERS[idx].name+' escaped the Rat Race!','gold');
   mpUpdateStrip();saveGame();
@@ -14974,6 +14985,7 @@ function bcShowWaiting(playerName){
     if(subEl)subEl.textContent='"'+_mpRoomName+'" · Watching live...';
   }
   bcRefreshWaitScores();
+  _mpSyncRollBtn();
   // Keep the GAME board on screen behind the HUD so the spectator watches live.
   // (Earlier the blackout overlay hid everything.) Ensure the board is built and
   // showing MY own state; the opponent rides the separate #spectate-token.
