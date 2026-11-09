@@ -3695,6 +3695,7 @@ function showRivalPick(){
 }
 function _chooseRival(id){
   const ov=document.getElementById('rival-pick');if(ov)ov.remove();
+  if(!localStorage.getItem('cf_tut_done'))setTimeout(startTutorial,900); // first-time only: opens once the picker is gone, so ROLL is on screen
   if(id==='solo'||id==='none'){
     G._rival=null;
     const row=$('rival-row');if(row)row.style.display='none';
@@ -13475,7 +13476,6 @@ function startGame(prof,loc){
   $('die-3').style.display='none';
   syncDie2Lock();
   const badge=$('express-badge');if(badge)badge.style.display=expressMode?'':'none';
-  if(!localStorage.getItem('cf_tut_done'))setTimeout(startTutorial,900); // first-time only
   const pct=Math.round(G.cash/prof.savings*100);
   const startMsg=pct<=20?`💸 BROKE START — only $${fmt(G.cash)} to your name.`:
     pct<=50?`😬 Rough start — $${fmt(G.cash)} in the bank. Borrow wisely.`:

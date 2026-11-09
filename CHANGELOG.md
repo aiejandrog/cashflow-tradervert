@@ -5,6 +5,7 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
 ## Unreleased
+- The first-time tutorial now starts after you pick your rival, so "Tap ROLL" shows over the board instead of the rival screen. (I-02)
 - The profession card now says in one line what "escape" means, and the Change Path button only shows when you have the credits for it. (I-03)
 - Player names and reactions can no longer inject page code, and joiner names are capped at 16 characters (F-sec-01, F-sec-02, F-mp-05)
 - Room names now drop apostrophes, & and other symbols when you create the room (max 24 characters), so the name in the room list always matches the room you join. (F-sec-07)
