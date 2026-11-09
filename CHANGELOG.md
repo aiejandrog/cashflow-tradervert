@@ -5,6 +5,8 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
 ## Unreleased
+- **Multiplayer:** waiting on someone else's turn, you can no longer roll the Fast Track dice or buy your dream out of turn, and a stray end-turn or win message can no longer overwrite another player's board. (F-mp-01, F-mp-02, F-mp-03)
+- **Multiplayer:** houses and rentals you buy while it is not your turn are no longer wiped when your turn starts, for the host and for guests. (F-alex-02)
 - **Selling a property:** the buyers and offers you see now stay the same for the whole turn, so re-opening SELL no longer lets you re-roll for a better price; a new turn brings new buyers (F-alex-03)
 - **Stocks:** tapping ROLL after dismissing a stock price card no longer re-rolls the price move and stacks it on your shares (F-balance-01)
 - **Mystery Box:** tapping ROLL after opening a box claims your prize instead of letting you open a second one (F-balance-08)

@@ -99,6 +99,15 @@ if(typeof esc!=='undefined')global.esc=esc;
 if(typeof _capName!=='undefined')global._capName=_capName;
 global.__hostStandingsRows=function(pl){const keep=openModal,kp=PLAYERS;let rows=null;openModal=function(o){rows=o.rows;};PLAYERS=pl;try{mpShowFinalResults();}finally{openModal=keep;PLAYERS=kp;}return rows;};
 if(typeof expressMode!=='undefined')global.expressMode=expressMode;
+// MP state accessors (let-declared in the script) so turn-guard tests can set a room up
+global.MP={
+  get players(){return PLAYERS},set players(v){PLAYERS=v},
+  get active(){return ACTIVE_PLAYER_IDX},set active(v){ACTIVE_PLAYER_IDX=v},
+  get role(){return _bcRole},set role(v){_bcRole=v},
+  get me(){return _bcMyIdx},set me(v){_bcMyIdx=v},
+  get bc(){return _bc},set bc(v){_bc=v},
+  get joined(){return _bcJoinedSlots}
+};
 // _resumeFn is a top-level let: expose it read-only so resume-closure tests can call it
 Object.defineProperty(global,'_resumeFn',{get:function(){return _resumeFn},configurable:true});
 if(typeof SAVE_SLOTS!=='undefined')global.SAVE_SLOTS=SAVE_SLOTS;
@@ -479,6 +488,89 @@ describe('fmt() — number formatting', () => {
   });
   test('0 formats as 0', () => {
     expect(fmt(0)).toBe('0');
+  });
+});
+
+describe('Multiplayer turn guards (F-mp-01 / F-mp-02 / F-mp-03 guard)', () => {
+  function room(role, me, active){
+    const mk=(n)=>{initGame(PROFS[0],LOCATIONS[0]);G.cash=900000;G._onFastTrack=true;G._ftPos=3;G.rolling=false;G._marker=n;return {name:n,G:JSON.parse(JSON.stringify(G))};};
+    MP.players=[mk('Host'),mk('Joel'),mk('Mei')];
+    MP.role=role;MP.me=me;MP.active=active;MP.bc={postMessage(){},close(){}};
+    G=JSON.parse(JSON.stringify(MP.players[me].G));
+  }
+  test('off-turn joiner rollDice() on Fast Track does not move or lock', () => {
+    room('joiner',2,1);
+    rollDice();
+    expect(G._ftPos).toBe(3);
+    expect(G.rolling).toBe(false);
+  });
+  test('off-turn ftRoll() does not start a roll', () => {
+    room('joiner',2,1);
+    ftRoll();
+    expect(G.rolling).toBe(false);
+  });
+  test('off-turn ftBuyDream() returns false and keeps cash', () => {
+    room('joiner',2,1);
+    expect(ftBuyDream()).toBe(false);
+    expect(G.cash).toBe(900000);
+    expect(!!G._dreamWon).toBe(false);
+  });
+  test('host ignores turn-done claiming the host seat', () => {
+    room('host',0,1);
+    const before=JSON.stringify(MP.players[0].G);
+    bcHostHandleTurnDone({playerIdx:0,G:{cash:1,_marker:'forged'}});
+    expect(JSON.stringify(MP.players[0].G)).toBe(before);
+    expect(MP.active).toBe(1);
+  });
+  test('host ignores turn-done from a seat that is not active', () => {
+    room('host',0,1);
+    const before=JSON.stringify(MP.players[2].G);
+    bcHostHandleTurnDone({playerIdx:2,G:{cash:1,_marker:'forged'}});
+    expect(JSON.stringify(MP.players[2].G)).toBe(before);
+    expect(MP.active).toBe(1);
+  });
+  test('host ignores player-won from a non-active seat that has not won', () => {
+    room('host',0,1);
+    bcHostHandlePlayerWon({playerIdx:2,G:{cash:1}});
+    expect(!!MP.players[2].won).toBe(false);
+  });
+  test('host ignores player-won for the host seat', () => {
+    room('host',0,1);
+    bcHostHandlePlayerWon({playerIdx:0,G:{cash:1}});
+    expect(!!MP.players[0].won).toBe(false);
+  });
+});
+
+describe('Multiplayer off-turn purchase sync (F-alex-02)', () => {
+  function room(role, me, active){
+    const mk=(n)=>{initGame(PROFS[0],LOCATIONS[0]);G._marker=n;return {name:n,G:JSON.parse(JSON.stringify(G))};};
+    MP.players=[mk('Host'),mk('Joel'),mk('Mei')];
+    MP.role=role;MP.me=me;MP.active=active;MP.bc={postMessage(){},close(){}};
+    MP.joined.clear();MP.joined.add(1);MP.joined.add(2);
+    G=JSON.parse(JSON.stringify(MP.players[me].G));
+  }
+  test('_mpAcceptStateSync rejects host seat and out-of-range seats', () => {
+    expect(_mpAcceptStateSync(0,3)).toBe(false);
+    expect(_mpAcceptStateSync(3,3)).toBe(false);
+    expect(_mpAcceptStateSync(-1,3)).toBe(false);
+    expect(_mpAcceptStateSync('1',3)).toBe(false);
+  });
+  test('_mpAcceptStateSync accepts any in-range joiner seat (no active-seat rule)', () => {
+    expect(_mpAcceptStateSync(1,3)).toBe(true);
+    expect(_mpAcceptStateSync(2,3)).toBe(true);
+  });
+  test('host stores an off-turn state-sync without touching the turn', () => {
+    room('host',0,1);
+    bcHostHandleStateSync({playerIdx:2,G:{cash:4242,assets:[1,2],_marker:'Mei'}});
+    expect(MP.players[2].G.cash).toBe(4242);
+    expect(MP.active).toBe(1);
+  });
+  test('host own off-turn buy survives a joiner turn-done', () => {
+    room('host',0,1);
+    G.assets=G.assets.concat([{name:'House',cost:1}]);
+    const n=G.assets.length;
+    try{bcHostHandleTurnDone({playerIdx:1,G:JSON.parse(JSON.stringify(MP.players[1].G))});}catch(e){} // UI half of mpAdvanceTurn needs a real DOM
+    expect(MP.players[0].G.assets.length).toBe(n);
   });
 });
 
