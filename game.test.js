@@ -97,6 +97,7 @@ if(typeof RD_TIPS!=='undefined')global.RD_TIPS=RD_TIPS;
 if(typeof fmt!=='undefined')global.fmt=fmt;
 if(typeof esc!=='undefined')global.esc=esc;
 if(typeof _capName!=='undefined')global._capName=_capName;
+global.__hostStandingsRows=function(pl){const keep=openModal,kp=PLAYERS;let rows=null;openModal=function(o){rows=o.rows;};PLAYERS=pl;try{mpShowFinalResults();}finally{openModal=keep;PLAYERS=kp;}return rows;};
 if(typeof expressMode!=='undefined')global.expressMode=expressMode;
 // Expose G as a getter/setter on global so tests can set G = {...}
 Object.defineProperty(global,'G',{
@@ -450,6 +451,14 @@ describe('esc() / _capName() — peer text safety (F-sec-01/02)', () => {
   });
   test('_capName keeps a short name and survives non-strings', () => {
     expect(_capName('Mia') + _capName(7)).toBe('Mia7');
+  });
+});
+
+describe('host final standings — hostile names (F-sec-01 completeness)', () => {
+  test('standings row of a hostile name has no angle bracket', () => {
+    const rows = __hostStandingsRows([{ name: '<i onclick=a()>', G: { cash: 5, assets: [] } }, { name: 'Mia', G: { cash: 1, assets: [] } }]);
+    expect(rows && rows.length).toBe(2);
+    expect(rows.some(r => r[0].includes('<'))).toBe(false);
   });
 });
 

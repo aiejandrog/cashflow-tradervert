@@ -14021,7 +14021,7 @@ function mpShowFinalResults(){
     const pass=p.G?(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0):0;
     const cash=p.G?p.G.cash||0:0;
     const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'  ';
-    return[`${medal} ${p.name}`,`$${fmt(pass)}/mo · $${fmt(cash)} cash${p.won?' 🏆':''}`,p.won?'green':''];
+    return[`${medal} ${esc(p.name)}`,`$${fmt(pass)}/mo · $${fmt(cash)} cash${p.won?' 🏆':''}`,p.won?'green':''];
   });
   // BC host: every joiner tab gets the final standings too
   if(_bc&&_bcRole==='host'){
@@ -14324,7 +14324,7 @@ setInterval(()=>{
     }
     if(elapsed>MP_TURN_LIMIT_MS){
       window._afkWarned=false;
-      addLog('⏱',(PLAYERS[idx]?.name||'Player')+' ran out of time — turn skipped','r');
+      addLog('⏱',esc(PLAYERS[idx]?.name||'Player')+' ran out of time — turn skipped','r');
       try{netSend({type:'turn-event',icon:'⏱',txt:(PLAYERS[idx]?.name||'Player')+' ran out of time — turn skipped',from:_bcMyIdx});}catch(e){}
       window._turnStartTs=null;
       mpAdvanceTurn();
@@ -14441,7 +14441,7 @@ function bcHostCheckPresence(){
     } else if(now>window._mpPaused.until){
       // grace expired — they didn't return; skip them and carry on
       const wasTurn=ACTIVE_PLAYER_IDX===pi;
-      if(PLAYERS[pi]){PLAYERS[pi]._left=true;_bcJoinedSlots.delete(pi);addLog('🚪',PLAYERS[pi].name+" didn't return — their turns are skipped now.",'b');mpUpdateStrip();saveGame();}
+      if(PLAYERS[pi]){PLAYERS[pi]._left=true;_bcJoinedSlots.delete(pi);addLog('🚪',esc(PLAYERS[pi].name)+" didn't return — their turns are skipped now.",'b');mpUpdateStrip();saveGame();}
       _mpResumeGame();
       if(wasTurn&&PLAYERS[pi]){G=JSON.parse(JSON.stringify(PLAYERS[pi].G));mpAdvanceTurn();}
     }
@@ -14456,7 +14456,7 @@ function bcHostCheckPresence(){
 function _mpPauseGame(i){
   window._mpPaused={idx:i,name:PLAYERS[i].name,until:Date.now()+MP_RECONNECT_GRACE_MS};
   _mpShowPauseBanner(PLAYERS[i].name,Math.round(MP_RECONNECT_GRACE_MS/1000));
-  addLog('⏸',PLAYERS[i].name+' dropped — game paused, waiting up to '+(MP_RECONNECT_GRACE_MS/1000)+'s for them to rejoin…','b');
+  addLog('⏸',esc(PLAYERS[i].name)+' dropped — game paused, waiting up to '+(MP_RECONNECT_GRACE_MS/1000)+'s for them to rejoin…','b');
   try{netSend({type:'mp-pause',idx:i,name:PLAYERS[i].name,until:window._mpPaused.until});}catch(e){}
   try{saveGame();}catch(e){}
 }
@@ -14576,7 +14576,7 @@ function bcHostHandlePlayerWon(msg){
   if(PLAYERS[idx].won)return; // duplicate message — already processed
   PLAYERS[idx].won=true;
   if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
-  addLog('🏆',PLAYERS[idx].name+' escaped the Rat Race!','gold');
+  addLog('🏆',esc(PLAYERS[idx].name)+' escaped the Rat Race!','gold');
   mpUpdateStrip();saveGame();
   const remaining=PLAYERS.filter(p=>!p.won);
   if(remaining.length===0){mpShowFinalResults();return;}
@@ -14713,12 +14713,12 @@ function bcHandleMessage(msg){
       window._lastPing[msg.playerIdx]=Date.now();
       // Paused for this player? They're back — resume the game immediately.
       if(window._mpPaused&&window._mpPaused.idx===msg.playerIdx){
-        addLog('🔄',PLAYERS[msg.playerIdx].name+' reconnected — resuming!','gold');_mpResumeGame();mpUpdateStrip();
+        addLog('🔄',esc(PLAYERS[msg.playerIdx].name)+' reconnected — resuming!','gold');_mpResumeGame();mpUpdateStrip();
       }
       // A "left" player whose pings resume is back (e.g. tab was suspended, not closed)
       if(PLAYERS[msg.playerIdx]&&PLAYERS[msg.playerIdx]._left){
         PLAYERS[msg.playerIdx]._left=false;PLAYERS[msg.playerIdx]._profileReady=true;_bcJoinedSlots.add(msg.playerIdx);
-        addLog('🔄',PLAYERS[msg.playerIdx].name+' reconnected!','gold');mpUpdateStrip();
+        addLog('🔄',esc(PLAYERS[msg.playerIdx].name)+' reconnected!','gold');mpUpdateStrip();
       }
     }
     return;
