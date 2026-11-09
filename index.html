@@ -1840,6 +1840,7 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     <div class="rev-sal" id="rev-sal"></div>
     <div class="rev-cf" id="rev-cf2"></div>
     <div class="rev-desc" id="rev-desc"></div>
+    <div id="rev-esc" class="rev-desc" style="color:rgba(255,255,255,.78)">To escape: earn more passive income (money that arrives without you working) than your monthly bills.</div>
     <div class="rev-btns">
       <button class="btn-og btn-tan" onclick="resetToSpin()" title="Back to the main menu — doesn't change your path, just returns to the menu">← Main Menu</button>
       <button class="btn-og btn-tan" id="btn-change-prof" style="display:none" onclick="changeProfession()">🔄 Change Path</button>
@@ -3694,6 +3695,7 @@ function showRivalPick(){
 }
 function _chooseRival(id){
   const ov=document.getElementById('rival-pick');if(ov)ov.remove();
+  if(!localStorage.getItem('cf_tut_done'))setTimeout(startTutorial,900); // first-time only: opens once the picker is gone, so ROLL is on screen
   if(id==='solo'||id==='none'){
     G._rival=null;
     const row=$('rival-row');if(row)row.style.display='none';
@@ -4480,7 +4482,6 @@ function startDailyRun(){
   selectedLocation=LOCATIONS[(h>>3)%LOCATIONS.length];
   selectedDream=DREAMS[(h>>6)%DREAMS.length];
   selectedIdentity=selectedIdentity&&selectedIdentity.name?selectedIdentity:{name:'Daily Runner',avatar:'🧑🏽',ethnicityLabel:'',toneLabel:'Medium',ageStart:Math.min(40,Math.max(18,selectedProf.age||25))};
-  clearSave();
   startGame(selectedProf,selectedLocation);
   G._dailyDate=date;saveGame();
   addLog('📅',`DAILY RUN ${date}: ${selectedProf.icon} ${selectedProf.name} in ${selectedLocation.name}, dream: ${selectedDream.name}`,'gold');
@@ -4503,7 +4504,6 @@ function startQuickMatch(){
     try{mpShowRoomSetup();}catch(e){}
     return;
   }
-  clearSave();
   startGame(selectedProf,selectedLocation);
   try{showToast('🎲 Quick Match: '+selectedProf.icon+' '+selectedProf.name+' in '+selectedLocation.name,'linear-gradient(135deg,#3a1d6b,#6b3fa8)',2800);}catch(e){}
 }
@@ -4887,7 +4887,7 @@ function revealProf(p){
   const _cp=$('btn-change-prof');
   if(_cp){
     const cr=(loadProfile().credits||0);
-    _cp.style.display='inline-block';
+    _cp.style.display=cr>=CHANGE_PROF_COST?'inline-block':'none';
     _cp.textContent=`🔄 Change Path — ✦${CHANGE_PROF_COST}`;
     _cp.style.opacity=cr>=CHANGE_PROF_COST?'1':'.5';
     _cp.title=cr>=CHANGE_PROF_COST?`Spend ✦${CHANGE_PROF_COST} to spin a new profession`:`Need ✦${CHANGE_PROF_COST} (you have ✦${fmt(cr)})`;
@@ -5341,6 +5341,8 @@ window._ytCurrentName=window._ytCurrentName||'';
 function _musicHostOrSolo(){return PLAYERS.length<=1||!_bcRole||_bcRole==='host';}
 function _musMyName(){return (typeof PLAYERS!=='undefined'&&PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].name)||('Player '+((_bcMyIdx|0)+1));}
 function _mesc(s){return String(s==null?'':s).replace(/[<>&"]/g,'');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function _capName(n){return String(n==null?'':n).slice(0,16);}
 function musicRequest(vid,name,from){
   if(!vid)return;
   name=name||_musMyName(); from=(typeof from==='number')?from:(_bcMyIdx|0);
@@ -8191,24 +8193,27 @@ function buyDeal(deal,opts){
 // ── STOCK DEAL (quantity-aware) ───────────────────────
 let _stockDeal=null, _stockQty=0, _buyFromFS=false;
 
-function showStockDealEvent(deal){
+function showStockDealEvent(deal,_rolled){
   // If player already owns this stock, it appreciates — show sell/buy-more screen
   const owned=G.assets.filter(a=>a.id===deal.id&&a.type==='stock');
   if(owned.length>0){
-    const cur=G._stockPrices[deal.id]||deal.cost;
+    // _rolled: a resume re-shows the SAME already-applied move (no re-roll, no second price write)
+    const cur=_rolled?_rolled.cur:(G._stockPrices[deal.id]||deal.cost);
     // Two-sided news event: 50% surge (+15–35%), 50% dip (−15–30%).
     // (Was a guaranteed pop — a riskless money pump that broke game balance.)
-    const isUp=Math.random()<0.5;
-    const move=(isUp?(0.15+Math.random()*0.20):-(0.15+Math.random()*0.15))*(G._stockVolMult||1); // Trader: bigger swings
-    const newPx=Math.max(Math.round(deal.cost*0.15*100)/100,Math.round(cur*(1+move)*100)/100);
+    const isUp=_rolled?_rolled.isUp:Math.random()<0.5;
+    const move=_rolled?_rolled.move:(isUp?(0.15+Math.random()*0.20):-(0.15+Math.random()*0.15))*(G._stockVolMult||1); // Trader: bigger swings
+    const newPx=_rolled?_rolled.newPx:Math.max(Math.round(deal.cost*0.15*100)/100,Math.round(cur*(1+move)*100)/100);
+    if(!_rolled){
     G._stockPrices[deal.id]=newPx;
     saveGame(); // persist price update before card — crash during card replays move on reload
+    }
     const totalShares=owned.reduce((s,a)=>s+(a.shares||0),0);
     const oldVal=Math.round(cur*totalShares);
     const newVal=Math.round(newPx*totalShares);
     const gain=newVal-oldVal;
     const pct=Math.round(Math.abs(move)*100);
-    _resumeFn=()=>showStockDealEvent(deal);
+    _resumeFn=()=>showStockDealEvent(deal,{cur,isUp,move,newPx});
     $('ecm-band').className='ecm-band '+(isUp?'opportunity':'setback');
     $('ecm-band').textContent=isUp?`📈 ${deal.name} — Price Surge!`:`📉 ${deal.name} — Price Drop!`;
     $('ecm-story').textContent=isUp
@@ -9469,6 +9474,7 @@ const BUYER_TYPES=[
 const MIN_HOLD_TURNS=8;
 const MIN_REFI_TURNS=5;
 
+const _sellQuotes={}; // uid -> {g,turn,cost,fairMarket,offs}; see sellREAsset
 function sellREAsset(uid){
   if(_mpLocked()){_mpLockToast();return;} // spectators look, never touch — YOUR file is yours alone
   const a=G.assets.find(x=>x.uid===uid);if(!a||a.type==='stock')return;
@@ -9492,17 +9498,23 @@ function sellREAsset(uid){
   // Build buyer/exit pool
   const origCost=a.totalCost||a.cost||0;
   // Biz + note assets: value based on CF multiple (~14×); RE: market appreciation
-  const fairMarket=isLiquid
-    ?Math.round((a.cf||0)*14/100)*100||origCost  // ~14× monthly CF multiple
-    :Math.round(origCost*(1.15+Math.random()*0.15)/1000)*1000;
+  // Quote is rolled once per asset per turn (module-level cache, not on G): re-clicking SELL reuses it
+  let _q=_sellQuotes[uid];
+  if(!_q||_q.g!==G||_q.turn!==G.turn||_q.cost!==origCost){
+    const fm=isLiquid
+      ?Math.round((a.cf||0)*14/100)*100||origCost  // ~14× monthly CF multiple
+      :Math.round(origCost*(1.15+Math.random()*0.15)/1000)*1000;
+    const sh=[...BUYER_TYPES].sort(()=>Math.random()-.5).slice(0,3);
+    const offs=sh.map(b=>{
+      const pct=b.pctLow+Math.random()*(b.pctHigh-b.pctLow);
+      return{...b,offer:Math.round(fm*pct/1000)*1000};
+    }).sort((x,y)=>x.offer-y.offer); // lowest first, best last
+    _q=_sellQuotes[uid]={g:G,turn:G.turn,cost:origCost,fairMarket:fm,offs};
+  }
+  const fairMarket=_q.fairMarket;
   const liabAmt=a.liability||0;
   const cfLost=a.cf||0;
-  const shuffled=[...BUYER_TYPES].sort(()=>Math.random()-.5).slice(0,3);
-  const buyers=shuffled.map(b=>{
-    const pct=b.pctLow+Math.random()*(b.pctHigh-b.pctLow);
-    const offer=Math.round(fairMarket*pct/1000)*1000;
-    return{...b,offer,equity:Math.max(0,offer-liabAmt)};
-  }).sort((x,y)=>x.offer-y.offer); // lowest first, best last
+  const buyers=_q.offs.map(b=>({...b,equity:Math.max(0,b.offer-liabAmt)}));
   let idx=0;
   function showBuyer(){
     if(idx>=buyers.length){
@@ -13095,7 +13107,7 @@ function _showTurnEvent(msg){
   const row=document.createElement('div');
   row.style.cssText='font-size:.72rem;color:rgba(240,232,200,.85);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:5px 10px;font-family:Arial,sans-serif;animation:fadeIn .25s ease';
   const who=PLAYERS[msg.from]?.name||'They';
-  row.innerHTML=`<span style="margin-right:5px">${msg.icon||'•'}</span><b style="color:#f0c020">${who}:</b> ${msg.txt||''}`;
+  row.innerHTML=`<span style="margin-right:5px">${esc(msg.icon||'•')}</span><b style="color:#f0c020">${esc(who)}:</b> ${esc(msg.txt||'')}`;
   feed.insertBefore(row,feed.firstChild);
   while(feed.children.length>8)feed.removeChild(feed.lastChild);
 }
@@ -13149,8 +13161,8 @@ function _renderReaction(name,emo){
     const x=window.innerWidth*0.5+(Math.random()*160-80);
     const el=document.createElement('div');
     el.style.cssText='position:fixed;left:'+x+'px;bottom:120px;z-index:9400;pointer-events:none;text-align:center;will-change:transform,opacity';
-    el.innerHTML='<div style="font-size:2.6rem;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))">'+emo+'</div>'+
-      '<div style="font-size:.6rem;font-weight:800;color:rgba(255,255,255,.85);font-family:Arial,sans-serif;text-shadow:0 1px 3px #000">'+String(name).replace(/</g,'&lt;')+'</div>';
+    el.innerHTML='<div style="font-size:2.6rem;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))">'+esc(emo)+'</div>'+
+      '<div style="font-size:.6rem;font-weight:800;color:rgba(255,255,255,.85);font-family:Arial,sans-serif;text-shadow:0 1px 3px #000">'+esc(name)+'</div>';
     document.body.appendChild(el);
     el.animate([
       {transform:'translateY(0) scale(.6)',opacity:0},
@@ -13158,7 +13170,7 @@ function _renderReaction(name,emo){
       {transform:'translateY(-200px) scale(1)',opacity:1,offset:.75},
       {transform:'translateY(-280px) scale(.9)',opacity:0}
     ],{duration:2200,easing:'ease-out'}).onfinish=()=>el.remove();
-    addLog(emo,name+' reacted','');
+    addLog(esc(emo),esc(name)+' reacted','');
     if(!window._muted)try{_tone(880+Math.random()*220,.1,'sine',.08,0);}catch(e){}
   }catch(e){}
 }
@@ -13475,7 +13487,6 @@ function startGame(prof,loc){
   $('die-3').style.display='none';
   syncDie2Lock();
   const badge=$('express-badge');if(badge)badge.style.display=expressMode?'':'none';
-  if(!localStorage.getItem('cf_tut_done'))setTimeout(startTutorial,900); // first-time only
   const pct=Math.round(G.cash/prof.savings*100);
   const startMsg=pct<=20?`💸 BROKE START — only $${fmt(G.cash)} to your name.`:
     pct<=50?`😬 Rough start — $${fmt(G.cash)} in the bank. Borrow wisely.`:
@@ -13487,7 +13498,7 @@ function startGame(prof,loc){
     G.creditScore>=620?`Credit ${G.creditScore} (${tier.label}) — pay debts to improve your rate.`:
     `Credit ${G.creditScore} (${tier.label}) — high loan rates. Priority: clear those debts fast.`;
   if(document.hidden){showTurnDialog();}
-  else{setTimeout(()=>{$('fs-panel').classList.add('open');setTimeout(()=>showTurnDialog(),400);},200);}
+  else{setTimeout(()=>showTurnDialog(),600);}
   addLog('🎮',startMsg,'gold');
   setTimeout(()=>addLog('📊',creditMsg,tier.color==='#2a8a2a'?'g':'b'),400);
   if(G.transport){
@@ -13702,7 +13713,7 @@ function mpRefreshSetupHdr(){
   if(!hdr||_mpCount<=1)return;
   const name=_mpPlayerNames[0]||'Player 1';
   const roomTag=_mpRoomName?`<span style="color:rgba(200,175,120,.5);font-weight:400"> · ${_mpRoomName}</span>`:'';
-  hdr.innerHTML=`<span style="color:${MP_COLORS[0]};font-weight:900">● ${name}</span>${roomTag} — choose YOUR profession, city &amp; dream. Friends pick theirs when they join.`;
+  hdr.innerHTML=`<span style="color:${MP_COLORS[0]};font-weight:900">● ${esc(name)}</span>${roomTag} — choose YOUR profession, city &amp; dream. Friends pick theirs when they join.`;
   hdr.style.display='';
   const btn=$('btn-dream-go');
   if(btn)btn.textContent='Create Room — Open Lobby →';
@@ -13734,10 +13745,12 @@ function mpShowRoomSetup(){
   setTimeout(()=>{const inp=$('mp-room-name-inp');if(inp){inp.focus();inp.select();}},80);
 }
 
+function _normRoomName(r){return String(r||'').replace(/[^A-Za-z0-9 _-]/g,'').trim().slice(0,24).trim()||'Game Night';}
+
 function mpConfirmRoomSetup(){
   const nameInp=$('mp-room-name-inp');
   const passInp=$('mp-room-pass-inp');
-  _mpRoomName=(nameInp?nameInp.value.trim():'')||'Game Night';
+  _mpRoomName=_normRoomName(nameInp?nameInp.value:'');
   _mpRoomPass=passInp?passInp.value:'';
   const hostInp=document.getElementById('mp-rs-name-0');
   _mpPlayerNames=Array.from({length:_mpCount},(_,i)=>
@@ -13959,7 +13972,7 @@ function mpShowHandoff(){
       const cash=pl.G?pl.G.cash||0:0;
       const turn=pl.G?pl.G.turn||0:0;
       return`<div class="mp-ho-score" style="${isActive?'border:1.5px solid '+pl.color:''}">
-        <span style="color:${pl.color};font-size:.65rem">● ${pl.name}${pl.won?' 🏆':''}</span>
+        <span style="color:${pl.color};font-size:.65rem">● ${esc(pl.name)}${pl.won?' 🏆':''}</span>
         <strong>$${fmt(cash)}</strong>
         <span style="color:rgba(200,175,120,.65);font-size:.6rem">$${fmt(pass)}/mo · T${turn}</span>
       </div>`;
@@ -13981,7 +13994,7 @@ function mpUpdateStrip(){
   if(!strip)return;
   if(PLAYERS.length<=1){strip.style.display='none';return;}
   strip.style.display='flex';
-  strip.innerHTML=PLAYERS.map((p,i)=>`<div class="mp-pip${i===ACTIVE_PLAYER_IDX?' active':''}" style="color:${p.color}"><div class="mp-pip-dot"></div>${p.name}${p.won?' 🏆':''}</div>`).join('');
+  strip.innerHTML=PLAYERS.map((p,i)=>`<div class="mp-pip${i===ACTIVE_PLAYER_IDX?' active':''}" style="color:${p.color}"><div class="mp-pip-dot"></div>${esc(p.name)}${p.won?' 🏆':''}</div>`).join('');
 }
 
 function mpMarkPlayerWon(){
@@ -14020,7 +14033,7 @@ function mpShowFinalResults(){
     const pass=p.G?(p.G.assets||[]).reduce((s,a)=>s+(a.cf>0?a.cf:0),0):0;
     const cash=p.G?p.G.cash||0:0;
     const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'  ';
-    return[`${medal} ${p.name}`,`$${fmt(pass)}/mo · $${fmt(cash)} cash${p.won?' 🏆':''}`,p.won?'green':''];
+    return[`${medal} ${esc(p.name)}`,`$${fmt(pass)}/mo · $${fmt(cash)} cash${p.won?' 🏆':''}`,p.won?'green':''];
   });
   // BC host: every joiner tab gets the final standings too
   if(_bc&&_bcRole==='host'){
@@ -14323,7 +14336,7 @@ setInterval(()=>{
     }
     if(elapsed>MP_TURN_LIMIT_MS){
       window._afkWarned=false;
-      addLog('⏱',(PLAYERS[idx]?.name||'Player')+' ran out of time — turn skipped','r');
+      addLog('⏱',esc(PLAYERS[idx]?.name||'Player')+' ran out of time — turn skipped','r');
       try{netSend({type:'turn-event',icon:'⏱',txt:(PLAYERS[idx]?.name||'Player')+' ran out of time — turn skipped',from:_bcMyIdx});}catch(e){}
       window._turnStartTs=null;
       mpAdvanceTurn();
@@ -14354,7 +14367,7 @@ function bcUpdateLobbySlots(){
     return`<div class="mp-lobby-slot${joined?' joined':''}"
       style="--slot-color:${p.color}">
       <div class="mp-lobby-slot-dot"></div>
-      <div class="mp-lobby-slot-name">${p.name}${isMe?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
+      <div class="mp-lobby-slot-name">${esc(p.name)}${isMe?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
       <div class="mp-lobby-slot-status">${statusTxt}</div>
     </div>`;
   }).join('');
@@ -14440,7 +14453,7 @@ function bcHostCheckPresence(){
     } else if(now>window._mpPaused.until){
       // grace expired — they didn't return; skip them and carry on
       const wasTurn=ACTIVE_PLAYER_IDX===pi;
-      if(PLAYERS[pi]){PLAYERS[pi]._left=true;_bcJoinedSlots.delete(pi);addLog('🚪',PLAYERS[pi].name+" didn't return — their turns are skipped now.",'b');mpUpdateStrip();saveGame();}
+      if(PLAYERS[pi]){PLAYERS[pi]._left=true;_bcJoinedSlots.delete(pi);addLog('🚪',esc(PLAYERS[pi].name)+" didn't return — their turns are skipped now.",'b');mpUpdateStrip();saveGame();}
       _mpResumeGame();
       if(wasTurn&&PLAYERS[pi]){G=JSON.parse(JSON.stringify(PLAYERS[pi].G));mpAdvanceTurn();}
     }
@@ -14455,7 +14468,7 @@ function bcHostCheckPresence(){
 function _mpPauseGame(i){
   window._mpPaused={idx:i,name:PLAYERS[i].name,until:Date.now()+MP_RECONNECT_GRACE_MS};
   _mpShowPauseBanner(PLAYERS[i].name,Math.round(MP_RECONNECT_GRACE_MS/1000));
-  addLog('⏸',PLAYERS[i].name+' dropped — game paused, waiting up to '+(MP_RECONNECT_GRACE_MS/1000)+'s for them to rejoin…','b');
+  addLog('⏸',esc(PLAYERS[i].name)+' dropped — game paused, waiting up to '+(MP_RECONNECT_GRACE_MS/1000)+'s for them to rejoin…','b');
   try{netSend({type:'mp-pause',idx:i,name:PLAYERS[i].name,until:window._mpPaused.until});}catch(e){}
   try{saveGame();}catch(e){}
 }
@@ -14518,7 +14531,7 @@ function bcHostHandleJoinRequest(msg){
   if(PLAYERS[slot])PLAYERS[slot]._profileReady=false; // joined the room, still building their life
   if(PLAYERS[slot])PLAYERS[slot]._left=false; // rejoining clears any "left the game" mark
   window._lastPing=window._lastPing||{};window._lastPing[slot]=Date.now();
-  if(msg.playerName&&PLAYERS[slot])PLAYERS[slot].name=msg.playerName;
+  if(msg.playerName&&PLAYERS[slot])PLAYERS[slot].name=_capName(msg.playerName);
   netSend({type:'join-response',reqId:msg.reqId,approved:true,
     playerIdx:slot,playerName:PLAYERS[slot].name,playerColor:PLAYERS[slot].color,
     players:PLAYERS.map(p=>({name:p.name,color:p.color,won:p.won||false})),
@@ -14564,7 +14577,7 @@ function bcHostHandlePlayerProfile(msg){
   const idx=msg.playerIdx;
   if(typeof idx!=='number'||idx<=0||idx>=PLAYERS.length)return;
   if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
-  if(msg.name)PLAYERS[idx].name=msg.name;
+  if(msg.name)PLAYERS[idx].name=_capName(msg.name);
   PLAYERS[idx]._profileReady=true; // character, city & dream locked in
   bcUpdateLobbySlots();bcUpdateLobbyStartBtn();bcHostBroadcastLobby();mpUpdateStrip();saveGame();
 }
@@ -14578,7 +14591,7 @@ function bcHostHandlePlayerWon(msg){
   if(idx!==ACTIVE_PLAYER_IDX&&!(PLAYERS[idx].G&&PLAYERS[idx].G._dreamWon))return; // not their turn and no recorded win
   PLAYERS[idx].won=true;
   if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
-  addLog('🏆',PLAYERS[idx].name+' escaped the Rat Race!','gold');
+  addLog('🏆',esc(PLAYERS[idx].name)+' escaped the Rat Race!','gold');
   mpUpdateStrip();saveGame();
   const remaining=PLAYERS.filter(p=>!p.won);
   if(remaining.length===0){mpShowFinalResults();return;}
@@ -14715,12 +14728,12 @@ function bcHandleMessage(msg){
       window._lastPing[msg.playerIdx]=Date.now();
       // Paused for this player? They're back — resume the game immediately.
       if(window._mpPaused&&window._mpPaused.idx===msg.playerIdx){
-        addLog('🔄',PLAYERS[msg.playerIdx].name+' reconnected — resuming!','gold');_mpResumeGame();mpUpdateStrip();
+        addLog('🔄',esc(PLAYERS[msg.playerIdx].name)+' reconnected — resuming!','gold');_mpResumeGame();mpUpdateStrip();
       }
       // A "left" player whose pings resume is back (e.g. tab was suspended, not closed)
       if(PLAYERS[msg.playerIdx]&&PLAYERS[msg.playerIdx]._left){
         PLAYERS[msg.playerIdx]._left=false;PLAYERS[msg.playerIdx]._profileReady=true;_bcJoinedSlots.add(msg.playerIdx);
-        addLog('🔄',PLAYERS[msg.playerIdx].name+' reconnected!','gold');mpUpdateStrip();
+        addLog('🔄',esc(PLAYERS[msg.playerIdx].name)+' reconnected!','gold');mpUpdateStrip();
       }
     }
     return;
@@ -14859,7 +14872,7 @@ function bcJoinerShowLobby(msg){
     wrap.innerHTML=msg.players.map((p,i)=>`
       <div class="mp-lobby-slot${i<=(msg.players.length)?'':''}" style="--slot-color:${p.color}">
         <div class="mp-lobby-slot-dot" style="background:${p.color}"></div>
-        <div class="mp-lobby-slot-name">${p.name}${i===_bcMyIdx?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
+        <div class="mp-lobby-slot-name">${esc(p.name)}${i===_bcMyIdx?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
         <div class="mp-lobby-slot-status">${i===0?'👑 Host':'...'}</div>
       </div>`).join('');
   }
@@ -14874,7 +14887,7 @@ function bcJoinerHandleLobbyUpdate(msg){
     wrap.innerHTML=msg.slots.map((s,i)=>`
       <div class="mp-lobby-slot${s.joined?' joined':''}" style="--slot-color:${s.color}">
         <div class="mp-lobby-slot-dot"></div>
-        <div class="mp-lobby-slot-name">${s.name}${i===_bcMyIdx?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
+        <div class="mp-lobby-slot-name">${esc(s.name)}${i===_bcMyIdx?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
         <div class="mp-lobby-slot-status">${s.joined?(i===0?'👑 Host':(s.ready?'✓ Ready':'🎨 Picking character, city & dream…')):'Waiting...'}</div>
       </div>`).join('');
   }
@@ -14945,7 +14958,7 @@ function bcJoinerHandleGameOver(msg){
   clearInterval(_bcHeartbeatTimer);
   $('mp-wait').style.display='none';hideSpectateToken(); // clear waiting screen so standings are visible
   openModal({band:'gold',title:'🏆 Final Standings',desc:'Game over! (Drag this card aside to view the board & your stats.)',noBlur:true,
-    rows:(msg.standings||[]).map((p,i)=>[`${['🥇','🥈','🥉','  '][i]||'  '} ${p.name}`,
+    rows:(msg.standings||[]).map((p,i)=>[`${['🥇','🥈','🥉','  '][i]||'  '} ${esc(p.name)}`,
       `$${fmt(p.pass)}/mo · $${fmt(p.cash||0)} cash${p.won?' 🏆':''}`]),
     actions:[{label:'New Game',cls:'btn-gold',fn:()=>location.reload()}]});
 }
@@ -15038,7 +15051,7 @@ function bcRefreshWaitScores(){
     const prog=p.won?1:(p.G&&typeof p.G._escapeProg==='number'?p.G._escapeProg:(i===_bcMyIdx?(function(){try{return Math.max(0,Math.min(1,passiveIncome()/Math.max(1,expenses().total)))}catch(e){return 0}})():0));
     const pct=Math.round(prog*100);
     return`<div class="mp-ho-score" style="${isActive?'border:1.5px solid '+p.color:isMe?'border:1.5px solid rgba(255,255,255,.3)':''}">
-      <span style="color:${p.color};font-size:.63rem">● ${p.name}${p.won?' 🏆':''}${isMe?' (you)':''}</span>
+      <span style="color:${p.color};font-size:.63rem">● ${esc(p.name)}${p.won?' 🏆':''}${isMe?' (you)':''}</span>
       <strong>$${fmt(cash)}</strong>
       <span style="color:rgba(200,175,120,.55);font-size:.58rem">$${fmt(pass)}/mo</span>
       <div style="margin-top:3px;height:5px;width:100%;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${prog>=1?'#7ee0a0':p.color};border-radius:3px;transition:width .5s ease"></div></div>
@@ -15762,7 +15775,7 @@ $('btn-dream-go').addEventListener('click',()=>{
     // Multiplayer host: one profile pass, then the lobby opens
     mpAfterDreamGo();
   } else {
-    clearSave();startGame(selectedProf,selectedLocation);
+    startGame(selectedProf,selectedLocation);
   }
 });
 $('btn-dream-random').addEventListener('click',()=>{
@@ -15866,6 +15879,7 @@ function openMysteryBox(){
   for(const p of pool){r-=p.weight;if(r<=0){_mboxPrize=p;break;}}
   const result=_mboxPrize.fn();
   saveGame(); // persist prize state mutation immediately — crash during 460ms reveal would re-apply prize on reload
+  _resumeFn=claimMysteryPrize; // prize is already applied: a die-tap must claim it, never re-offer the box (doubles = 2 prizes)
   const _showPhase2=()=>{
     $('mbox-phase1').style.display='none';
     const TIER={common:'#2a7a2a',uncommon:'#1a5ac0',rare:'#7a10c0',legendary:'#c8910c'};
