@@ -541,7 +541,7 @@ describe('Multiplayer off-turn purchase sync (F-alex-02)', () => {
 });
 
 describe('Multiplayer final standings and waiting ROLL (F-mp-10, F-mp-13)', () => {
-  const pl=(name,won,seq,cf)=>({name,won,_winSeq:seq,G:{assets:[{cf}],cash:0}});
+  const pl=(name,won,seq,cf)=>({name,won,_winOrder:seq,G:{assets:[{cf}],cash:0}});
   test('first escaper ranks first even with lower passive income', () => {
     const r=_mpRankPlayers([pl('Ana',false,undefined,9000),pl('Joel',true,1,2000),pl('Mei',true,2,5000)]);
     expect(r.map(p=>p.name).join(',')).toBe('Joel,Mei,Ana');
@@ -574,10 +574,24 @@ describe('Multiplayer final standings and waiting ROLL (F-mp-10, F-mp-13)', () =
     MP.role='host';MP.me=0;MP.active=2;MP.bc={postMessage(){},close(){}};
     MP.joined.clear();MP.joined.add(1);MP.joined.add(2);
     try{bcHostHandlePlayerWon({playerIdx:2,G:{cash:1}});}catch(e){}
-    expect(MP.players[2]._winSeq).toBe(1);
+    expect(MP.players[2]._winOrder).toBe(1);
     MP.active=1;
     try{bcHostHandlePlayerWon({playerIdx:1,G:{cash:1}});}catch(e){}
-    expect(MP.players[1]._winSeq).toBe(2);
+    expect(MP.players[1]._winOrder).toBe(2);
+  });
+  test('host wins first, joiner second: host ranks first', () => {
+    initGame(PROFS[0],LOCATIONS[0]);
+    const mk=(n)=>({name:n,G:JSON.parse(JSON.stringify(G))});
+    MP.players=[mk('Host'),mk('Joel'),mk('Mei')];
+    MP.role='host';MP.me=0;MP.active=0;MP.bc={postMessage(){},close(){}};
+    MP.joined.clear();MP.joined.add(1);MP.joined.add(2);
+    MP.players[1].G.assets=[{cf:99999}];
+    try{mpMarkPlayerWon();}catch(e){}
+    MP.active=1;
+    try{bcHostHandlePlayerWon({playerIdx:1,G:{cash:1,assets:[{cf:99999}]}});}catch(e){}
+    expect(MP.players[0]._winOrder).toBe(1);
+    expect(MP.players[1]._winOrder).toBe(2);
+    expect(_mpRankPlayers(MP.players)[0].name).toBe('Host');
   });
   test('_mpLockToast shows a toast', () => {
     const real=showToast;let got=null;

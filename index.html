@@ -14000,6 +14000,7 @@ function mpMarkPlayerWon(){
   if(PLAYERS[wonIdx])PLAYERS[wonIdx].won=true;
   // Joiner tab: rotation is host-driven — we just sit on the win screen until game-over arrives.
   if(_bcRole==='joiner'){mpUpdateStrip();return;}
+  if(PLAYERS[wonIdx]&&typeof PLAYERS[wonIdx]._winOrder!=='number')PLAYERS[wonIdx]._winOrder=PLAYERS.filter(p=>p.won).length; // escape order for the final standings
   const remaining=PLAYERS.filter(p=>!p.won);
   if(remaining.length===0){setTimeout(mpShowFinalResults,1500);return;}
   // Inject "Continue for others" button below the win screen actions
@@ -14021,7 +14022,7 @@ function mpMarkPlayerWon(){
 // Final order: escapers first (in the order they escaped), then everyone else by passive income.
 function _mpRankPlayers(players){
   const pass=p=>p.G?((p.G.assets||[]).reduce((s,x)=>s+(x.cf>0?x.cf:0),0)):0;
-  const seq=p=>p.won?(typeof p._winSeq==='number'?p._winSeq:1e9):2e9;
+  const seq=p=>p.won?(typeof p._winOrder==='number'?p._winOrder:1e9):2e9;
   return [...players].sort((a,b)=>(seq(a)-seq(b))||(pass(b)-pass(a)));
 }
 function mpShowFinalResults(){
@@ -14587,7 +14588,7 @@ function bcHostHandlePlayerWon(msg){
   if(PLAYERS[idx].won)return; // duplicate message — already processed
   if(idx!==ACTIVE_PLAYER_IDX&&!(PLAYERS[idx].G&&PLAYERS[idx].G._dreamWon))return; // not their turn and no recorded win
   PLAYERS[idx].won=true;
-  PLAYERS[idx]._winSeq=PLAYERS.filter(p=>p.won).length; // escape order for the final standings
+  PLAYERS[idx]._winOrder=PLAYERS.filter(p=>p.won).length; // escape order for the final standings
   if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
   addLog('🏆',PLAYERS[idx].name+' escaped the Rat Race!','gold');
   mpUpdateStrip();saveGame();
