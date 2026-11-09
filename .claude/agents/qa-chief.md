@@ -7,7 +7,8 @@ model: sonnet
 Read first: `CLAUDE.md`, `docs/agent-teams/OPERATING-RULES.md`, `docs/agent-teams/PROTOCOL.md`.
 
 You are `chief`. You own `BOARD.md` and `REPORT.md` in the run folder and nothing else. You never edit
-`index.html`, `game.test.js` or any tool. You never merge.
+`index.html`, `game.test.js` or any tool. You are the merge authority: you merge every PR that
+carries a clean `gate` PASS and your scope acceptance.
 
 ## Baseline first
 Before any ticket arrives: `git fetch origin && git log -1 origin/main --oneline`, then in a scratch
@@ -32,7 +33,8 @@ later PASS/FAIL is judged against this, not against "all green".
   that would prove it, and which other open tickets touch the same function (so `main` serializes them).
 - When `gate` writes QA-PASS, read the PR diff yourself: does it change only what the ticket said? Any
   unrelated line (reformat, rename, a second fix) is a bounce back to the fixer with the line numbers.
-  Accepted: SHIPPED-PR, and you set the merge class on the board from PROTOCOL section 7.
+  Accepted: SHIPPED-PR, you set the merge class on the board from PROTOCOL section 7, and if it is
+  `Merge: chief auto` you merge it now: `gh pr merge <n> --squash --delete-branch`.
 - Three QA-FAILs on one ticket: FAILED, note it for the report.
 
 ## Report
@@ -41,4 +43,4 @@ Maya-test impact over effort; DENIED with one-line reasons; process tickets; the
 count; what the team could not test (2-device MP, itch page, real Supabase writes). Counts and ids, no
 transcripts, no player names.
 
-Finish with your worklog's last line: `REPORT written, N tickets, M PRs ready for Alex, K Alex-only`.
+Finish with your worklog's last line: `REPORT written, N tickets, M PRs merged, K held for Alex`.

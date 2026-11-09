@@ -4,18 +4,18 @@ Roles: `.claude/agents/` (qa-chief, game-qa, mp-qa, balance-auditor, security-au
 release-gate). Rules: `OPERATING-RULES.md`. Tickets, board, merge classes: `PROTOCOL.md`.
 
 **Cost, once:** a full run is about 8 to 10 Sonnet contexts over five waves, at most 4 teammates alive at
-a time. Say "stop after wave N" at any point. Wave 4 needs you to merge PRs in the middle.
+a time. Say "stop after wave N" at any point. chief merges as PRs pass; you are not in the loop.
 
 ## The flow
 
 ```
- wave 0  PROBE + BASELINE   main proves the guard blocks; chief records main's test/smoke baseline
+ wave 0  PROBE + BASELINE   main proves the guard allows merge; chief records main's test/smoke baseline
  wave 1  AUDIT              qa (solo playtest) + mp (two-tab multiplayer) + sec (injection, keys, telemetry)
                             then balance (economy sim, the 5 red tests)      -> tickets -> chief triage
  wave 2  IDEAS              ideas reads qa's Maya moments -> I-NN tickets -> chief approves <= 3 to fix
  wave 3  FIX                fixer-<id> per APPROVED-FIX, own worktree, draft PR -> gate PASS/FAIL -> chief scope
-                            main STOPS here and lists the PRs by merge class. You merge what you want.
- wave 4  RELEASE            you say "release": gate opens one release PR (version bump + changelog mirror)
+                            chief merges every Merge: chief auto PR; holds Merge: chief hold for you.
+ wave 4  RELEASE            gate opens one release PR (version bump + changelog mirror); chief merges it
  wave 5  REPORT             chief REPORT.md; main exports scrubbed records -> one docs PR
 ```
 
@@ -57,12 +57,11 @@ message, those win.
 
 WAVE 0a  PROBE (you, before anything else)
   Run: gh pr merge 0 --squash
-  Expected: the tool call is refused with "agent_guard BLOCKED: agents never merge". If it is NOT refused
-  (any gh error about PR 0 means the command actually ran), STOP and tell Alex "guard not active, run
-  the setup paste in docs/agent-teams/TEAM-PROMPT.md". Do not continue.
+  Expected: a gh error about PR 0 not existing (the command actually ran). If instead you get
+  "agent_guard BLOCKED: agents never merge", the old guard is still loaded: open a fresh chat and
+  re-run the setup paste in docs/agent-teams/TEAM-PROMPT.md. Do not continue.
   Then: git fetch origin; git status (must be clean, on main, up to date with origin/main; if not, STOP
   and tell Alex). mkdir RUNDIR. Note origin/main sha in your first message.
-
 WAVE 0b  BASELINE
   Spawn "chief" (qa-chief). It records the baseline (tests, smoke) in RUNDIR\BOARD.md. Wait for its
   first worklog line.
@@ -84,12 +83,12 @@ WAVE 3  FIX  (alive: chief, gate, up to 2 fixers)
   same function: those run one after another, never together. Each fixer opens a draft PR and hands to
   gate; gate PASS/FAIL; chief scope-checks; SHIPPED-PR or bounce. Three FAILs = FAILED. Shut each fixer
   down when its last line is written.
-  Then STOP. Message Alex: the list of PRs with merge class (ready for Alex / Alex only), the FAILED
+  chief merges every Merge: chief auto PR as it passes. Then STOP. Message Alex: the list of PRs by merge class (merged / held), the FAILED
   tickets, the APPROVED-REPORT items. Do not continue until Alex says "release" or "report".
 
-WAVE 4  RELEASE  (on Alex's "release", after he merged what he wanted)
+WAVE 4  RELEASE  (on Alex's "release", after chief merged the auto batch)
   gate: git fetch origin; opens the single release PR per its role file (version bump, changelog mirror,
-  zip builds). Message Alex the PR link. Pages goes live when he merges; itch upload is his.
+  zip builds). chief merges it. Pages goes live on merge; itch upload is Alex's.
 
 WAVE 5  REPORT  (on "report", or right after wave 4)
   chief writes REPORT.md. Shut down chief and gate. Run:
@@ -106,7 +105,7 @@ RULES YOU ENFORCE AS LEAD
 - A teammate that claims "verified" without pasted output gets one message: paste it. Then chief decides.
 - A BLOCKED line in anyone's output is read, not retried with different words. If a teammate rewords a
   blocked command, shut it down and note it for the report.
-- Nothing is merged by anyone in this chat. Nothing is pushed to main. Nothing calls Supabase, Tenor,
+- chief merges Merge: chief auto PRs. Nothing else is pushed to main. Nothing calls Supabase, Tenor,
   itch or ipify from a script. $0.
 - If anything here conflicts with OPERATING-RULES.md, that file wins.
 ```

@@ -38,7 +38,7 @@ global.document = {
   querySelector: () => mockEl(),
   body: bodyEl,
   head: mockEl(),
-  documentElement: Object.assign(mockEl(), { dataset: {}, clientWidth: 1280, clientHeight: 800, scrollWidth: 1280 }),
+  documentElement: Object.assign(mockEl(), { style: { setProperty: () => {}, removeProperty: () => {} }, dataset: {}, clientWidth: 1280, clientHeight: 800, scrollWidth: 1280 }),
   activeElement: null, hidden: false, visibilityState: 'visible', readyState: 'complete', title: '',
   addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true,
   fonts: { ready: Promise.resolve(), load: async () => [] },
@@ -95,6 +95,9 @@ if(typeof BOARD_SPACES!=='undefined')global.BOARD_SPACES=BOARD_SPACES;
 if(typeof MARKETS!=='undefined')global.MARKETS=MARKETS;
 if(typeof RD_TIPS!=='undefined')global.RD_TIPS=RD_TIPS;
 if(typeof fmt!=='undefined')global.fmt=fmt;
+if(typeof esc!=='undefined')global.esc=esc;
+if(typeof _capName!=='undefined')global._capName=_capName;
+global.__hostStandingsRows=function(pl){const keep=openModal,kp=PLAYERS;let rows=null;openModal=function(o){rows=o.rows;};PLAYERS=pl;try{mpShowFinalResults();}finally{openModal=keep;PLAYERS=kp;}return rows;};
 if(typeof expressMode!=='undefined')global.expressMode=expressMode;
 // MP state accessors (let-declared in the script) so turn-guard tests can set a room up
 global.MP={
@@ -102,8 +105,13 @@ global.MP={
   get active(){return ACTIVE_PLAYER_IDX},set active(v){ACTIVE_PLAYER_IDX=v},
   get role(){return _bcRole},set role(v){_bcRole=v},
   get me(){return _bcMyIdx},set me(v){_bcMyIdx=v},
-  get bc(){return _bc},set bc(v){_bc=v}
+  get bc(){return _bc},set bc(v){_bc=v},
+  get joined(){return _bcJoinedSlots}
 };
+// _resumeFn is a top-level let: expose it read-only so resume-closure tests can call it
+Object.defineProperty(global,'_resumeFn',{get:function(){return _resumeFn},configurable:true});
+if(typeof SAVE_SLOTS!=='undefined')global.SAVE_SLOTS=SAVE_SLOTS;
+Object.defineProperty(global,'SAVE_KEY',{get:function(){return SAVE_KEY},set:function(v){SAVE_KEY=v},configurable:true});
 // Expose G as a getter/setter on global so tests can set G = {...}
 Object.defineProperty(global,'G',{
   get:function(){return(typeof G!=='undefined'?G:null)},
@@ -245,7 +253,7 @@ describe('initGame() — credit score initialization', () => {
     expect(G.childBirths.length).toBe(0);
   });
   test('location is set from parameter', () => {
-    initGame(PROFS[0], LOCATIONS[6]); // Atlanta
+    initGame(PROFS[0], LOCATIONS.find(l => l.id === 'atlanta'));
     expect(G.location.id).toBe('atlanta');
   });
   test('location defaults to Atlanta when not passed', () => {
@@ -293,9 +301,9 @@ describe('income() / expenses() / monthlyCF()', () => {
 describe('Location scaling', () => {
   test('NY salary is 30% higher than Atlanta baseline', () => {
     const atl = PROFS[2]; // Engineer
-    initGame(atl, LOCATIONS[6]); // Atlanta
+    initGame(atl, LOCATIONS.find(l => l.id === 'atlanta'));
     const atlSalary = G.prof.salary;
-    initGame(atl, LOCATIONS[1]); // New York (1.30x)
+    initGame(atl, LOCATIONS.find(l => l.id === 'newyork')); // sal 1.30x
     const nySalary = G.prof.salary;
     expect(nySalary).toBeGreaterThan(atlSalary);
   });
@@ -307,11 +315,11 @@ describe('Location scaling', () => {
     const miaMort = G.prof.mortgage_d;
     expect(miaMort).toBeGreaterThan(detMort);
   });
-  test('Houston (0.85x) has lower expenses than LA (1.65x)', () => {
+  test('Houston (exp 0.92x) has lower expenses than LA (exp 1.65x)', () => {
     const prof = PROFS[3];
-    initGame(prof, LOCATIONS[4]); // Houston
+    initGame(prof, LOCATIONS.find(l => l.id === 'houston'));
     const houExp = G.prof.mortgage;
-    initGame(prof, LOCATIONS[2]); // LA
+    initGame(prof, LOCATIONS.find(l => l.id === 'la'));
     const laExp = G.prof.mortgage;
     expect(laExp).toBeGreaterThan(houExp);
   });
@@ -421,7 +429,8 @@ describe('checkChildMilestones()', () => {
   test('detects school milestone at turn 8 after birth', () => {
     initGame(PROFS[2], LOCATIONS[6]);
     G.cash = 50000;
-    G.childBirths = [{ born: 0, milestones: {} }];
+    G.gameYear = 9; // kid age is counted in game years (since 1226c48), not turns
+    G.childBirths = [{ born: 0, bornYear: 1, milestones: {} }];
     G.turn = 8;
     // Mock showEventCard to prevent crash
     const orig = showEventCard;
@@ -438,6 +447,32 @@ describe('checkChildMilestones()', () => {
     G.childBirths = [{ born: 0, milestones: { school: true } }]; // already fired
     G.turn = 8;
     expect(checkChildMilestones()).toBeFalsy();
+  });
+});
+
+describe('esc() / _capName() — peer text safety (F-sec-01/02)', () => {
+  test('esc removes every angle bracket from an img onerror payload', () => {
+    expect(esc('<img src=x onerror=1>').includes('<')).toBe(false);
+  });
+  test('esc escapes & < > and both quote kinds', () => {
+    expect(esc("&<>\"'")).toBe('&amp;&lt;&gt;&quot;&#39;');
+  });
+  test('esc turns null/undefined into empty string and keeps plain names', () => {
+    expect(esc(null) + esc(undefined) + esc('Mia')).toBe('Mia');
+  });
+  test('_capName truncates a name over 16 characters', () => {
+    expect(_capName('x'.repeat(40)).length).toBe(16);
+  });
+  test('_capName keeps a short name and survives non-strings', () => {
+    expect(_capName('Mia') + _capName(7)).toBe('Mia7');
+  });
+});
+
+describe('host final standings — hostile names (F-sec-01 completeness)', () => {
+  test('standings row of a hostile name has no angle bracket', () => {
+    const rows = __hostStandingsRows([{ name: '<i onclick=a()>', G: { cash: 5, assets: [] } }, { name: 'Mia', G: { cash: 1, assets: [] } }]);
+    expect(rows && rows.length).toBe(2);
+    expect(rows.some(r => r[0].includes('<'))).toBe(false);
   });
 });
 
@@ -503,6 +538,140 @@ describe('Multiplayer turn guards (F-mp-01 / F-mp-02 / F-mp-03 guard)', () => {
     room('host',0,1);
     bcHostHandlePlayerWon({playerIdx:0,G:{cash:1}});
     expect(!!MP.players[0].won).toBe(false);
+  });
+});
+
+describe('Multiplayer off-turn purchase sync (F-alex-02)', () => {
+  function room(role, me, active){
+    const mk=(n)=>{initGame(PROFS[0],LOCATIONS[0]);G._marker=n;return {name:n,G:JSON.parse(JSON.stringify(G))};};
+    MP.players=[mk('Host'),mk('Joel'),mk('Mei')];
+    MP.role=role;MP.me=me;MP.active=active;MP.bc={postMessage(){},close(){}};
+    MP.joined.clear();MP.joined.add(1);MP.joined.add(2);
+    G=JSON.parse(JSON.stringify(MP.players[me].G));
+  }
+  test('_mpAcceptStateSync rejects host seat and out-of-range seats', () => {
+    expect(_mpAcceptStateSync(0,3)).toBe(false);
+    expect(_mpAcceptStateSync(3,3)).toBe(false);
+    expect(_mpAcceptStateSync(-1,3)).toBe(false);
+    expect(_mpAcceptStateSync('1',3)).toBe(false);
+  });
+  test('_mpAcceptStateSync accepts any in-range joiner seat (no active-seat rule)', () => {
+    expect(_mpAcceptStateSync(1,3)).toBe(true);
+    expect(_mpAcceptStateSync(2,3)).toBe(true);
+  });
+  test('host stores an off-turn state-sync without touching the turn', () => {
+    room('host',0,1);
+    bcHostHandleStateSync({playerIdx:2,G:{cash:4242,assets:[1,2],_marker:'Mei'}});
+    expect(MP.players[2].G.cash).toBe(4242);
+    expect(MP.active).toBe(1);
+  });
+  test('host own off-turn buy survives a joiner turn-done', () => {
+    room('host',0,1);
+    G.assets=G.assets.concat([{name:'House',cost:1}]);
+    const n=G.assets.length;
+    try{bcHostHandleTurnDone({playerIdx:1,G:JSON.parse(JSON.stringify(MP.players[1].G))});}catch(e){} // UI half of mpAdvanceTurn needs a real DOM
+    expect(MP.players[0].G.assets.length).toBe(n);
+  });
+});
+
+describe('Resume closures — sell quote, stock card, mystery box (F-alex-03, F-balance-01B, F-balance-08)', () => {
+  // Capture the SELL modal's first buyer rows by stubbing openModal around sellREAsset.
+  function sellQuote(uid) {
+    const real = openModal; const seen = [];
+    openModal = (o) => { seen.push(o); };
+    try { sellREAsset(uid); } finally { openModal = real; }
+    const rows = seen[0] && seen[0].rows;
+    return rows ? JSON.stringify(rows.slice(0, 2)) : 'none';
+  }
+  function sellSetup() {
+    initGame(PROFS[2], LOCATIONS[6]);
+    G.turn = 30;
+    G.assets.push({ uid: 'q_re', id: 'q_re', type: 're', name: 'Quote House', cost: 65000, down: 5000, cf: 200, liability: 60000, purchaseTurn: 0 });
+  }
+  test('SELL: same asset + same turn gives the identical first offer on every click', () => {
+    sellSetup();
+    const first = sellQuote('q_re');
+    expect(first === 'none').toBe(false);
+    for (let i = 0; i < 25; i++) expect(sellQuote('q_re')).toBe(first);
+  });
+  test('SELL: a new turn re-rolls the quote', () => {
+    sellSetup();
+    const seen = new Set();
+    for (let t = 30; t < 60; t++) { G.turn = t; seen.add(sellQuote('q_re')); }
+    expect(seen.size).toBeGreaterThan(1);
+  });
+  test('stock card: _resumeFn() does not re-roll or rewrite G._stockPrices', () => {
+    initGame(PROFS[2], LOCATIONS[6]);
+    const deal = { id: 's7', type: 'stock', name: 'GFI Corp', cost: 20, shares: 100, cf: 0 };
+    G.assets.push({ uid: 'q_st', id: deal.id, type: 'stock', name: deal.name, shares: 100, cost: 2000, cf: 0 });
+    G._stockPrices = {};
+    showStockDealEvent(deal);
+    const after1 = G._stockPrices[deal.id];
+    expect(after1 === undefined).toBe(false);
+    for (let i = 0; i < 6; i++) { _resumeFn(); expect(G._stockPrices[deal.id]).toBe(after1); }
+  });
+  test('mystery box: _resumeFn() after openMysteryBox claims the prize (no second box, no second prize)', () => {
+    for (let i = 0; i < 20; i++) {
+      initGame(PROFS[2], LOCATIONS[6]);
+      G.cash = 5000;
+      let moved = 0;
+      showMysteryBox(0, () => { moved++; });
+      openMysteryBox();
+      const cash = G.cash, n = G.assets.length, liab = G.liabilities.length;
+      _resumeFn(); // die-tap while the prize card is up
+      expect(moved).toBe(1); // token moves on; the gift is not offered again
+      expect(G.cash).toBe(cash);
+      expect(G.assets.length).toBe(n);
+      expect(G.liabilities.length).toBe(liab);
+    }
+  });
+});
+
+describe('_normRoomName() — room name matches its channel (F-sec-07)', () => {
+  // The directory shows the name with ' & etc. stripped; the channel must be identical either way.
+  const cases = ["Bob's Room", 'A&B', '<i>x</i>', 'x'.repeat(40), '', '!!!'];
+  cases.forEach((raw) => {
+    test('channel of normalised name is stable for ' + JSON.stringify(raw), () => {
+      const n = _normRoomName(raw);
+      expect(/^[A-Za-z0-9 _-]{1,24}$/.test(n)).toBe(true);
+      const displayed = n.replace(/[^A-Za-z0-9 _-]/g, '');
+      expect(_bcChannelName(displayed)).toBe(_bcChannelName(n));
+    });
+  });
+  test("Bob's Room -> Bobs Room", () => { expect(_normRoomName("Bob's Room")).toBe('Bobs Room'); });
+  test('40 chars capped to 24', () => { expect(_normRoomName('x'.repeat(40)).length).toBe(24); });
+  test('empty or all-symbol falls back to Game Night', () => {
+    expect(_normRoomName('')).toBe('Game Night');
+    expect(_normRoomName('!!!')).toBe('Game Night');
+  });
+});
+
+describe('new life never erases a saved life (F-qa-01)', () => {
+  // startGame's board/UI work is not under test (and overflows the DOM mock): stub it for this block only
+  { const n = () => {}; showScreen = n; buildBoard = n; updateUI = n; forceFitBoard = n; setDieVal = n; syncDie2Lock = n; showTurnDialog = n; _rivalGameStart = n; showToast = n; _sessionStart = n; }
+  const seed = () => { localStorage.clear(); SAVE_KEY = SAVE_SLOTS[0]; localStorage.setItem(SAVE_SLOTS[0], JSON.stringify({ G: { prof: { name: 'Saved Sam' }, cash: 123 }, ts: 1 })); };
+  const slot1Intact = () => { const s = JSON.parse(localStorage.getItem(SAVE_SLOTS[0]) || 'null'); return !!(s && s.G && s.G.prof && s.G.prof.name === 'Saved Sam' && s.G.cash === 123); };
+  test('Quick Match leaves slot 1 intact and writes another slot', () => {
+    seed();
+    startQuickMatch();
+    saveGame();
+    expect(slot1Intact()).toBeTruthy();
+    expect(SAVE_KEY).toBe(SAVE_SLOTS[1]);
+    expect(!!localStorage.getItem(SAVE_SLOTS[1])).toBeTruthy();
+  });
+  test('Daily run leaves slot 1 intact and writes another slot', () => {
+    seed();
+    startDailyRun();
+    expect(slot1Intact()).toBeTruthy();
+    expect(SAVE_KEY).toBe(SAVE_SLOTS[1]);
+  });
+  test('all five slots full: new life still starts in the active slot (unchanged behaviour)', () => {
+    localStorage.clear();
+    SAVE_SLOTS.forEach((k, i) => localStorage.setItem(k, JSON.stringify({ G: { prof: { name: 'S' + i }, cash: 1 }, ts: i + 1 })));
+    SAVE_KEY = SAVE_SLOTS[0];
+    startGame(PROFS[0], LOCATIONS[0]);
+    expect(SAVE_KEY).toBe(SAVE_SLOTS[0]);
+    expect(G.prof.name).toBe(PROFS[0].name);
   });
 });
 
