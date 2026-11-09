@@ -5823,9 +5823,9 @@ function rollDice(){
   // Fast Track routing — EVERY roll entry point (die tap, ROLL button, spacebar) funnels
   // here, so guard at the top: on the Fast Track the inner board must never roll (was the
   // "sometimes rolls in Phase 1" bug — the clickable die called rollDice() directly).
+  if(_mpNotMyTurn()){_mpLockToast();return;}
   if(G&&G._onFastTrack){if(typeof ftRoll==='function')ftRoll();return;}
   if(window._mpPaused){return;} // game paused for a dropped player — nobody rolls
-  if(_mpNotMyTurn()){_mpLockToast();return;}
   if(!G||G.rolling){
     // Die-1 always works: resume regardless of what overlay is currently visible
     if(G&&G.rolling&&_resumeFn){_resumeFn();return;}
@@ -11437,7 +11437,7 @@ function enterFastTrack(pass,exp){
   if(document.hidden){showTurnDialog();}else{setTimeout(()=>showTurnDialog(),400);}
 }
 function ftRoll(){
-  if(typeof _mpLocked==='function'&&_mpLocked()){if(typeof _mpLockToast==='function')_mpLockToast();return;}
+  if(typeof _mpNotMyTurn==='function'&&_mpNotMyTurn()){if(typeof _mpLockToast==='function')_mpLockToast();return;}
   if(!G||G.rolling)return;
   G.rolling=true;
   try{if(typeof sfxDiceRoll==='function')sfxDiceRoll();}catch(e){}
@@ -11568,6 +11568,7 @@ function _ftEndRoll(msg){
 // and the new "Buy Dream from any tile" turn-dialog button. Single source of truth so
 // the fragile cross-device (MP) win routing never drifts between the two entry points.
 function ftBuyDream(){
+  if(_mpNotMyTurn())return false; // a waiting player must not buy the dream out of turn
   const dream=G.dream||DREAMS[0];const cost=dream.cost||400000;
   if((G.cash||0)<cost)return false; // guard — never let cash go negative on a buy
   try{if(typeof sfxWinSting==='function')sfxWinSting();spawnWinConfetti&&spawnWinConfetti();}catch(e){}
@@ -14535,7 +14536,8 @@ function bcHostHandleJoinRequest(msg){
 function bcHostHandleTurnDone(msg){
   if(!_bc||_bcRole!=='host')return;
   const idx=msg.playerIdx;
-  if(typeof idx!=='number'||idx<0||idx>=PLAYERS.length)return;
+  if(typeof idx!=='number'||idx<=0||idx>=PLAYERS.length)return;
+  if(idx!==ACTIVE_PLAYER_IDX)return; // only the seat whose turn it is may end it (no forged / stale turn-done)
   PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
   ACTIVE_PLAYER_IDX=idx;
   G=JSON.parse(JSON.stringify(PLAYERS[idx].G));
@@ -14572,6 +14574,7 @@ function bcHostHandlePlayerWon(msg){
   const idx=msg.playerIdx;
   if(typeof idx!=='number'||idx<=0||idx>=PLAYERS.length)return;
   if(PLAYERS[idx].won)return; // duplicate message — already processed
+  if(idx!==ACTIVE_PLAYER_IDX&&!(PLAYERS[idx].G&&PLAYERS[idx].G._dreamWon))return; // not their turn and no recorded win
   PLAYERS[idx].won=true;
   if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
   addLog('🏆',PLAYERS[idx].name+' escaped the Rat Race!','gold');
