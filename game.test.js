@@ -627,6 +627,21 @@ describe('Splash resume button and host turn timer (F-mp-09, F-mp-11)', () => {
     expect(_splashShowResume(meta('host',1))).toBe(null);
     expect(_splashShowResume(null)).toBe(null);
   });
+  test('resumeGame on a saved joiner (roster sliced to 1 by loadSave) opens Join prefilled, not a solo game', () => {
+    const real=joinRoomFromBrowser;let got=null;
+    joinRoomFromBrowser=(n,p)=>{got=[n,p];};
+    const sv={G:JSON.parse(JSON.stringify(G)),PLAYERS:[{name:'Host'},{name:'Joel'}],ACTIVE_PLAYER_IDX:0,_mpCount:1,_mpRoomName:'Maple Test',_bcRole:'joiner'};
+    sv.G.prof=sv.G.prof||{};
+    const realGet=localStorage.getItem;
+    localStorage.getItem=()=>JSON.stringify(sv);
+    const ds=document.documentElement.style;if(!ds.setProperty)ds.setProperty=()=>{};
+    try{
+      expect(loadSave('x')).toBe(true);
+      resumeGame();
+    }finally{localStorage.getItem=realGet;joinRoomFromBrowser=real;}
+    expect(got&&got[0]).toBe('Maple Test');
+    expect(MP.players.length).toBe(0);
+  });
   test('bcHostBroadcastTurnStart sets window._turnTs on the host', () => {
     MP.players=[{name:'Host',color:'#fff',G:{}},{name:'Joel',color:'#000',G:{}}];
     MP.role='host';MP.me=0;MP.bc={postMessage(){},close(){}};

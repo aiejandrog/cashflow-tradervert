@@ -13635,7 +13635,8 @@ function loadSave(key){
 function clearSave(){localStorage.removeItem(SAVE_KEY);}
 function resumeGame(){
   // A saved guest cannot resume solo: reset to the splash and open Join with his room prefilled (F-mp-09)
-  if(PLAYERS.length>1&&window._savedBcRole==='joiner'){
+  // (_savedBcRole is only set for saves with 2+ players; loadSave slices a guest's roster to his _mpCount of 1, so do not test PLAYERS.length here)
+  if(window._savedBcRole==='joiner'){
     const _rn=_mpRoomName,_rp=!!_mpRoomPass;
     PLAYERS=[];ACTIVE_PLAYER_IDX=0;_mpCount=1;
     try{sessionStorage.removeItem('cf_in_game');}catch(e){}
