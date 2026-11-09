@@ -13486,7 +13486,7 @@ function startGame(prof,loc){
     G.creditScore>=620?`Credit ${G.creditScore} (${tier.label}) — pay debts to improve your rate.`:
     `Credit ${G.creditScore} (${tier.label}) — high loan rates. Priority: clear those debts fast.`;
   if(document.hidden){showTurnDialog();}
-  else{setTimeout(()=>{$('fs-panel').classList.add('open');setTimeout(()=>showTurnDialog(),400);},200);}
+  else{setTimeout(()=>showTurnDialog(),600);}
   addLog('🎮',startMsg,'gold');
   setTimeout(()=>addLog('📊',creditMsg,tier.color==='#2a8a2a'?'g':'b'),400);
   if(G.transport){

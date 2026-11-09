@@ -6,6 +6,7 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 ## Unreleased
 - The first-time tutorial now starts after you pick your rival, so "Tap ROLL" shows over the board instead of the rival screen. (I-02)
+- The Life Hub panel no longer slides open over the board when a game starts, so you see the board and the ROLL button first; open it any time from the Life Hub button. (I-01, F-qa-08)
 
 ## v1.29.0 — 2026-06-18 — Custom borrow amount + Fast Track upgrades
 - **Bank Loan — custom amount:** `openBorrow` now has a custom `$` input (adaptive bounds so min never exceeds max near the $75k cap) alongside the $1k/$5k/$10k presets; `borrow()` floors to whole dollars. The modal spells out the recurring monthly payment (auto-deducted every Cashflow Day, auto-pays-down) — the mechanic always existed (`expenses().bankPmt`), it just wasn't surfaced.
