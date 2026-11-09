@@ -5,6 +5,7 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
 ## Unreleased
+- **Phones:** the Continue buttons on the Character, City and Dream screens are back on screen (new games can be finished on a phone) and the dream cards are tall enough to read. (F-qa-02, F-qa-04)
 - **Multiplayer:** waiting on someone else's turn, you can no longer roll the Fast Track dice or buy your dream out of turn, and a stray end-turn or win message can no longer overwrite another player's board. (F-mp-01, F-mp-02, F-mp-03)
 - **Multiplayer:** houses and rentals you buy while it is not your turn are no longer wiped when your turn starts, for the host and for guests. (F-alex-02)
 - **Multiplayer:** the first player to escape now finishes first in the final standings, and while you wait for your turn the ROLL button greys out and tapping the die tells you it is not your turn yet. (F-mp-10, F-mp-13)

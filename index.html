@@ -1183,6 +1183,7 @@ body{
   .loc-detail{max-height:74px;overflow-y:auto;font-size:.62rem}
   #btn-loc-go,#btn-dream-go{min-height:46px;font-size:.85rem!important}
   .dream-grid{max-height:38dvh;overflow-y:auto}
+  .dream-card{min-height:76px}
   #dream-detail{max-height:90px;overflow-y:auto}
   #board-area{padding:4px;overflow:auto}
   /* board scaling handled dynamically by fitBoard() — no override needed */
@@ -1197,6 +1198,8 @@ body{
   .mb-row{font-size:.78rem}
   .mb-actions{flex-direction:column;gap:6px}
   .btn-og{width:100%;font-size:.8rem;padding:9px 10px}
+  /* Setup-screen action rows are side-by-side (Back | Random | Continue): width:100% would push Continue off-screen */
+  #character .btn-og,#location .btn-og,#dream .btn-og{width:auto}
   #top-bar{padding:0 6px;gap:5px}
   .pc-name{font-size:.68rem}
   .pc-status{font-size:.55rem}

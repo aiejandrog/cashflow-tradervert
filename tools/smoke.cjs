@@ -88,13 +88,42 @@ function serve() {
   await page.screenshot({ path: path.join(OUT, 'mobile.png') });
   report.mobileHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1).catch(() => null);
 
+  // Phone setup flow (F-qa-02, F-qa-04): Continue buttons must be on-screen and dream cards readable.
+  // Own offline contexts (only same-origin requests pass); touch emulation like a real phone.
+  report.phoneFlow = [];
+  for (const w of [360, 375, 390]) {
+    const pc = await browser.newContext({ viewport: { width: w, height: 800 }, hasTouch: true, isMobile: true });
+    await pc.route('**/*', (route) => { const u = route.request().url(); return (u.startsWith(origin) || u.startsWith('data:') || u.startsWith('blob:')) ? route.continue() : route.abort('connectionfailed'); });
+    const pp = await pc.newPage(); pp.setDefaultTimeout(8000);
+    const row = { width: w };
+    try {
+      await pp.goto(url, { waitUntil: 'load', timeout: 30000 });
+      await pp.waitForTimeout(1500);
+      await pp.click('#btn-spin'); await pp.waitForTimeout(5500);
+      await pp.click('#btn-begin'); await pp.waitForTimeout(700);
+      const right = (id) => pp.evaluate((i) => { const r = document.getElementById(i).getBoundingClientRect(); return { right: Math.round(r.right), inView: r.right <= window.innerWidth && r.left >= 0 && r.width > 0 }; }, id);
+      row.charGo = await right('btn-char-go');
+      await pp.click('#char-preset-row > *:first-child'); await pp.waitForTimeout(800);
+      await pp.click('.loc-card >> nth=0'); await pp.waitForTimeout(500);
+      row.locGo = await right('btn-loc-go');
+      await pp.evaluate(() => document.getElementById('btn-loc-go').click()); await pp.waitForTimeout(800);
+      await pp.click('.dream-card >> nth=0'); await pp.waitForTimeout(500);
+      row.dreamGo = await right('btn-dream-go');
+      row.dreamCardMinH = await pp.evaluate(() => Math.round(Math.min(...[...document.querySelectorAll('.dream-card')].map((c) => c.getBoundingClientRect().height))));
+      if (w === 375) await pp.screenshot({ path: path.join(OUT, 'phone-dream.png') });
+      row.ok = row.charGo.inView && row.locGo.inView && row.dreamGo.inView && row.dreamCardMinH >= 60;
+    } catch (e) { row.ok = false; row.error = String(e.message).split('\n')[0]; }
+    report.phoneFlow.push(row);
+    await pc.close();
+  }
+
   await browser.close();
   if (own) own.srv.close();
 
   // Drop console errors caused only by the deliberate offline aborts (the page may log them).
   const external = /peerjs|supabase|tenor|ipify|youtube|unpkg|jsdelivr|ERR_CONNECTION|Failed to load resource/i;
   const realConsole = offline ? report.consoleErrors.filter((t) => !external.test(t)) : report.consoleErrors;
-  const failed = report.pageErrors.length > 0 || realConsole.length > 0 || report.failedRequests.length > 0 || !report.version || report.bodyChars < 50 || report.clicks.some((c) => !c.ok || c.newErrors > 0);
+  const failed = report.pageErrors.length > 0 || realConsole.length > 0 || report.failedRequests.length > 0 || !report.version || report.bodyChars < 50 || report.clicks.some((c) => !c.ok || c.newErrors > 0) || report.phoneFlow.some((r) => !r.ok);
   report.verdict = failed ? 'FAIL' : 'PASS';
   report.blockedExternal = [...new Set(report.blockedExternal)];
   fs.writeFileSync(path.join(OUT, 'smoke.json'), JSON.stringify(report, null, 2));
@@ -107,6 +136,7 @@ function serve() {
   realConsole.slice(0, 5).forEach((e) => console.log('  CONSOLE     ' + e));
   report.failedRequests.slice(0, 5).forEach((e) => console.log('  REQUEST     ' + e));
   report.clicks.forEach((c) => console.log(`  click ${c.sel}: ${c.ok ? 'ok, new errors ' + c.newErrors : 'FAILED ' + c.error}`));
+  report.phoneFlow.forEach((r) => console.log(`  phone ${r.width}: char-go right=${r.charGo && r.charGo.right} loc-go right=${r.locGo && r.locGo.right} dream-go right=${r.dreamGo && r.dreamGo.right} dream-card min h=${r.dreamCardMinH}px -> ${r.ok ? 'ok' : 'FAIL' + (r.error ? ' ' + r.error : '')}`));
   console.log(`  screenshots + smoke.json in ${OUT}`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error('smoke could not run:', e.message); process.exit(2); });
