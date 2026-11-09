@@ -99,6 +99,8 @@ if(typeof esc!=='undefined')global.esc=esc;
 if(typeof _capName!=='undefined')global._capName=_capName;
 global.__hostStandingsRows=function(pl){const keep=openModal,kp=PLAYERS;let rows=null;openModal=function(o){rows=o.rows;};PLAYERS=pl;try{mpShowFinalResults();}finally{openModal=keep;PLAYERS=kp;}return rows;};
 if(typeof expressMode!=='undefined')global.expressMode=expressMode;
+// _resumeFn is a top-level let: expose it read-only so resume-closure tests can call it
+Object.defineProperty(global,'_resumeFn',{get:function(){return _resumeFn},configurable:true});
 if(typeof SAVE_SLOTS!=='undefined')global.SAVE_SLOTS=SAVE_SLOTS;
 Object.defineProperty(global,'SAVE_KEY',{get:function(){return SAVE_KEY},set:function(v){SAVE_KEY=v},configurable:true});
 // Expose G as a getter/setter on global so tests can set G = {...}
@@ -477,6 +479,59 @@ describe('fmt() — number formatting', () => {
   });
   test('0 formats as 0', () => {
     expect(fmt(0)).toBe('0');
+  });
+});
+
+describe('Resume closures — sell quote, stock card, mystery box (F-alex-03, F-balance-01B, F-balance-08)', () => {
+  // Capture the SELL modal's first buyer rows by stubbing openModal around sellREAsset.
+  function sellQuote(uid) {
+    const real = openModal; const seen = [];
+    openModal = (o) => { seen.push(o); };
+    try { sellREAsset(uid); } finally { openModal = real; }
+    const rows = seen[0] && seen[0].rows;
+    return rows ? JSON.stringify(rows.slice(0, 2)) : 'none';
+  }
+  function sellSetup() {
+    initGame(PROFS[2], LOCATIONS[6]);
+    G.turn = 30;
+    G.assets.push({ uid: 'q_re', id: 'q_re', type: 're', name: 'Quote House', cost: 65000, down: 5000, cf: 200, liability: 60000, purchaseTurn: 0 });
+  }
+  test('SELL: same asset + same turn gives the identical first offer on every click', () => {
+    sellSetup();
+    const first = sellQuote('q_re');
+    expect(first === 'none').toBe(false);
+    for (let i = 0; i < 25; i++) expect(sellQuote('q_re')).toBe(first);
+  });
+  test('SELL: a new turn re-rolls the quote', () => {
+    sellSetup();
+    const seen = new Set();
+    for (let t = 30; t < 60; t++) { G.turn = t; seen.add(sellQuote('q_re')); }
+    expect(seen.size).toBeGreaterThan(1);
+  });
+  test('stock card: _resumeFn() does not re-roll or rewrite G._stockPrices', () => {
+    initGame(PROFS[2], LOCATIONS[6]);
+    const deal = { id: 's7', type: 'stock', name: 'GFI Corp', cost: 20, shares: 100, cf: 0 };
+    G.assets.push({ uid: 'q_st', id: deal.id, type: 'stock', name: deal.name, shares: 100, cost: 2000, cf: 0 });
+    G._stockPrices = {};
+    showStockDealEvent(deal);
+    const after1 = G._stockPrices[deal.id];
+    expect(after1 === undefined).toBe(false);
+    for (let i = 0; i < 6; i++) { _resumeFn(); expect(G._stockPrices[deal.id]).toBe(after1); }
+  });
+  test('mystery box: _resumeFn() after openMysteryBox claims the prize (no second box, no second prize)', () => {
+    for (let i = 0; i < 20; i++) {
+      initGame(PROFS[2], LOCATIONS[6]);
+      G.cash = 5000;
+      let moved = 0;
+      showMysteryBox(0, () => { moved++; });
+      openMysteryBox();
+      const cash = G.cash, n = G.assets.length, liab = G.liabilities.length;
+      _resumeFn(); // die-tap while the prize card is up
+      expect(moved).toBe(1); // token moves on; the gift is not offered again
+      expect(G.cash).toBe(cash);
+      expect(G.assets.length).toBe(n);
+      expect(G.liabilities.length).toBe(liab);
+    }
   });
 });
 
