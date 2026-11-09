@@ -4,6 +4,11 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
+## Unreleased
+- **Selling a property:** the buyers and offers you see now stay the same for the whole turn, so re-opening SELL no longer lets you re-roll for a better price; a new turn brings new buyers (F-alex-03)
+- **Stocks:** tapping ROLL after dismissing a stock price card no longer re-rolls the price move and stacks it on your shares (F-balance-01)
+- **Mystery Box:** tapping ROLL after opening a box claims your prize instead of letting you open a second one (F-balance-08)
+
 ## v1.29.0 — 2026-06-18 — Custom borrow amount + Fast Track upgrades
 - **Bank Loan — custom amount:** `openBorrow` now has a custom `$` input (adaptive bounds so min never exceeds max near the $75k cap) alongside the $1k/$5k/$10k presets; `borrow()` floors to whole dollars. The modal spells out the recurring monthly payment (auto-deducted every Cashflow Day, auto-pays-down) — the mechanic always existed (`expenses().bankPmt`), it just wasn't surfaced.
 - **Fast Track — buy your dream from any tile:** extracted the dream-purchase/WIN into a shared `ftBuyDream()` (single source of truth for the fragile cross-device win routing); a new "⭐ Buy Dream — WIN!" button in the FT turn dialog (`ftBuyDreamPrompt`) lets you claim the dream the moment you can afford it, not only by landing exactly on a ⭐ corner. Corner landing still auto-prompts.
