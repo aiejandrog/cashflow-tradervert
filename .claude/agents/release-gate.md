@@ -25,7 +25,7 @@ release branch `claude/release-<version>`. You never merge.
      ticket is content (a new table); every changed hunk is inside the function the ticket names;
    - no key, endpoint, telemetry, `promo/`, `PUBLISH.md`, `MONETIZE.md`, `.github/` change;
    - no new `<script src=` or `<link href=` to a CDN; no icon-pack reintroduction;
-   - money-math change has a test; MP change has "needs 2-device playtest" and `Merge: Alex only`.
+   - money-math change has a test; MP change has "needs 2-device playtest" and `Merge: chief hold`.
 4. Write `QA PASS <ticket> <sha> <commands and results>` or `QA FAIL <ticket> <sha> <the one thing>` in
    your worklog and message the fixer and `chief`. PASS carries your pasted output, never theirs.
 5. Count FAILs per ticket; at the third, message `chief` FAILED.
@@ -39,6 +39,6 @@ release branch `claude/release-<version>`. You never merge.
 3. `node game.test.js`, `node tools/smoke.cjs --offline`, `node build-zip.cjs` (zip builds, round-trip ok).
    Paste all three.
 4. Draft PR `release: v<new>` with the pasted outputs and the line "After merge: Pages is live in ~1 min;
-   itch upload + devlog are manual (PUBLISH.md Release Ritual)". `Merge: ready for Alex`.
+   itch upload + devlog are manual (PUBLISH.md Release Ritual)". `Merge: chief auto`.
 
 Finish with your worklog's last line: `N PRs gated: P PASS, F FAIL; release PR <url or none>`.
