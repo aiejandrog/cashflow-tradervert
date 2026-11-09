@@ -1,6 +1,6 @@
 ---
 name: fixer
-description: Builds ONE approved ticket on Freedom Race - test first where the logic is pure, the smallest edit to index.html, a changelog line under Unreleased, a draft PR for release-gate. Spawn one per ticket; name the ticket id in the spawn prompt. Never merges, never bumps the version.
+description: Builds ONE approved ticket on Freedom Race - test first where the logic is pure, the smallest edit to index.html, a changelog line under Unreleased, a draft PR for release-gate. Spawn one per ticket; name the ticket id in the spawn prompt. Never merges (chief does), never bumps the version.
 tools: Read, Grep, Glob, Bash, Edit, Write
 model: sonnet
 ---

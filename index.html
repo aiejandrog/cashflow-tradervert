@@ -4480,7 +4480,6 @@ function startDailyRun(){
   selectedLocation=LOCATIONS[(h>>3)%LOCATIONS.length];
   selectedDream=DREAMS[(h>>6)%DREAMS.length];
   selectedIdentity=selectedIdentity&&selectedIdentity.name?selectedIdentity:{name:'Daily Runner',avatar:'🧑🏽',ethnicityLabel:'',toneLabel:'Medium',ageStart:Math.min(40,Math.max(18,selectedProf.age||25))};
-  clearSave();
   startGame(selectedProf,selectedLocation);
   G._dailyDate=date;saveGame();
   addLog('📅',`DAILY RUN ${date}: ${selectedProf.icon} ${selectedProf.name} in ${selectedLocation.name}, dream: ${selectedDream.name}`,'gold');
@@ -4503,7 +4502,6 @@ function startQuickMatch(){
     try{mpShowRoomSetup();}catch(e){}
     return;
   }
-  clearSave();
   startGame(selectedProf,selectedLocation);
   try{showToast('🎲 Quick Match: '+selectedProf.icon+' '+selectedProf.name+' in '+selectedLocation.name,'linear-gradient(135deg,#3a1d6b,#6b3fa8)',2800);}catch(e){}
 }
@@ -13735,10 +13733,12 @@ function mpShowRoomSetup(){
   setTimeout(()=>{const inp=$('mp-room-name-inp');if(inp){inp.focus();inp.select();}},80);
 }
 
+function _normRoomName(r){return String(r||'').replace(/[^A-Za-z0-9 _-]/g,'').trim().slice(0,24).trim()||'Game Night';}
+
 function mpConfirmRoomSetup(){
   const nameInp=$('mp-room-name-inp');
   const passInp=$('mp-room-pass-inp');
-  _mpRoomName=(nameInp?nameInp.value.trim():'')||'Game Night';
+  _mpRoomName=_normRoomName(nameInp?nameInp.value:'');
   _mpRoomPass=passInp?passInp.value:'';
   const hostInp=document.getElementById('mp-rs-name-0');
   _mpPlayerNames=Array.from({length:_mpCount},(_,i)=>
@@ -15760,7 +15760,7 @@ $('btn-dream-go').addEventListener('click',()=>{
     // Multiplayer host: one profile pass, then the lobby opens
     mpAfterDreamGo();
   } else {
-    clearSave();startGame(selectedProf,selectedLocation);
+    startGame(selectedProf,selectedLocation);
   }
 });
 $('btn-dream-random').addEventListener('click',()=>{

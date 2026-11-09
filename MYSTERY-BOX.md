@@ -15,7 +15,7 @@ The box intercepts the move, lets you claim the prize, then sends your token mov
 
 ## Why It Works
 
-- **Timing is perfect.** Doubles happen ~1 in 6 rolls (16.7%) — frequent enough to feel exciting, rare enough to feel special.  
+- **Timing is perfect.** Doubles happen ~1 in 6 rolls (16.7%), but a 10-turn cooldown limits how often a box opens — frequent enough to feel exciting, rare enough to feel special.  
 - **Anticipation before reveal.** The pulsing gift box waits for the tap — it's a slot machine pull in disguise.  
 - **Variable reward schedule.** Prizes range from $600 cash to a paid-off rental property. You never know which tier you'll hit.  
 - **No downside.** Every box is a win. The only variance is *how big* the win is, which keeps the experience pure dopamine with zero frustration.
@@ -26,12 +26,12 @@ The box intercepts the move, lets you claim the prize, then sends your token mov
 
 | Tier | Weight | ~Frequency | Examples |
 |---|---|---|---|
-| **Common** | 40 | ~51% | Cash windfall ($500-$2k), Tax refund |
-| **Uncommon** | 30 | ~38% | Credit +25, Side hustle payout, Expenses waived |
-| **Rare** | 18 | ~23% | Free paid-off rental ($100-250/mo CF), Business stake, Inheritance |
-| **Legendary** | 2 | ~2.5% | All credit card debt cleared + Credit +35 |
+| **Common** | 40 | ~44% | Cash windfall ($500-$2k), Tax refund |
+| **Uncommon** | 30 | ~33% | Credit +25, Side hustle payout, Expenses waived |
+| **Rare** | 18 | ~20% | Free paid-off rental ($100-250/mo CF), Business stake, Inheritance |
+| **Legendary** | 2 | ~2.2% | All credit card debt cleared + Credit +35 |
 
-*(Weights are relative — total pool = ~90. Actual % shown as share of pool.)*
+*(Weights are relative — total pool = 90. Actual % shown as share of pool.)*
 
 ---
 
@@ -51,7 +51,7 @@ The box intercepts the move, lets you claim the prize, then sends your token mov
 - **🏪 Business Stake** — Equity in a business generating $150–$350/mo distributions. Fully owned.
 - **🏛 Inheritance** — $3,000–$8,000 lump sum. One-time, no strings.
 
-### Legendary (2% pull rate)
+### Legendary (~2.2% pull rate)
 - **💎 Credit Cards Cleared** — Entire CC liability wiped. Credit +35. If no CC debt exists, player receives +50 credit boost instead. This single prize can meaningfully accelerate the debt kill sequence.
 
 ---
@@ -59,7 +59,7 @@ The box intercepts the move, lets you claim the prize, then sends your token mov
 ## UI Flow
 
 ```
-1. Player rolls doubles (v1 === v2, standard mode only)
+1. Player rolls doubles (v1 === v2 in standard mode; any two matching dice in Express), and the 10-turn cooldown has passed
       ↓
 2. Mystery overlay fades in (dark bg + blur)
       ↓
@@ -86,8 +86,10 @@ The box intercepts the move, lets you claim the prize, then sends your token mov
 ## Technical Notes
 
 - **Doubles detection:** `v1 === v2` after dice resolve, checked before `moveTokenSteps()` fires.
-- **Express mode excluded:** 3-dice rolls skip doubles check (triples would be a future tier).
-- **Weighted random:** Each prize has a `weight` field. Pool sum ~90. `Math.random() * total` walks the array — O(n) but pool is small.
+- **Express mode:** 3-dice rolls count as doubles when any two dice match (`v1===v2 || v2===v3 || v1===v3`).
+- **Cooldown:** a box only opens if at least 10 turns have passed since the last one (`G._lastDoublesTurn`); doubles inside the cooldown just move the token.
+- **Other trigger:** the MYSTERY BOX wildcard space on the board also opens a box.
+- **Weighted random:** Each prize has a `weight` field. Pool sum 90. `Math.random() * total` walks the array — O(n) but pool is small.
 - **Waiver flag:** `G._waivedNextPayday = true`. Checked at top of `onPayday()` — adds `expenses().total` back to cash, then clears flag.
 - **Mystery assets:** `purchaseTurn = -999` (bypasses 3-turn hold), `liability = 0`, `cashPurchase = true`. Show up in FS like any other owned asset and contribute CF immediately.
 - **Legendary CC clear:** Removes the liability, zeroes `expenseOverrides.cc`, applies `boostCredit(35)`. Handles edge case where player has no CC debt (bonus credit instead).

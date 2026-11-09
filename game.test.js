@@ -38,7 +38,7 @@ global.document = {
   querySelector: () => mockEl(),
   body: bodyEl,
   head: mockEl(),
-  documentElement: Object.assign(mockEl(), { dataset: {}, clientWidth: 1280, clientHeight: 800, scrollWidth: 1280 }),
+  documentElement: Object.assign(mockEl(), { style: { setProperty: () => {}, removeProperty: () => {} }, dataset: {}, clientWidth: 1280, clientHeight: 800, scrollWidth: 1280 }),
   activeElement: null, hidden: false, visibilityState: 'visible', readyState: 'complete', title: '',
   addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true,
   fonts: { ready: Promise.resolve(), load: async () => [] },
@@ -99,6 +99,8 @@ if(typeof esc!=='undefined')global.esc=esc;
 if(typeof _capName!=='undefined')global._capName=_capName;
 global.__hostStandingsRows=function(pl){const keep=openModal,kp=PLAYERS;let rows=null;openModal=function(o){rows=o.rows;};PLAYERS=pl;try{mpShowFinalResults();}finally{openModal=keep;PLAYERS=kp;}return rows;};
 if(typeof expressMode!=='undefined')global.expressMode=expressMode;
+if(typeof SAVE_SLOTS!=='undefined')global.SAVE_SLOTS=SAVE_SLOTS;
+Object.defineProperty(global,'SAVE_KEY',{get:function(){return SAVE_KEY},set:function(v){SAVE_KEY=v},configurable:true});
 // Expose G as a getter/setter on global so tests can set G = {...}
 Object.defineProperty(global,'G',{
   get:function(){return(typeof G!=='undefined'?G:null)},
@@ -240,7 +242,7 @@ describe('initGame() — credit score initialization', () => {
     expect(G.childBirths.length).toBe(0);
   });
   test('location is set from parameter', () => {
-    initGame(PROFS[0], LOCATIONS[6]); // Atlanta
+    initGame(PROFS[0], LOCATIONS.find(l => l.id === 'atlanta'));
     expect(G.location.id).toBe('atlanta');
   });
   test('location defaults to Atlanta when not passed', () => {
@@ -288,9 +290,9 @@ describe('income() / expenses() / monthlyCF()', () => {
 describe('Location scaling', () => {
   test('NY salary is 30% higher than Atlanta baseline', () => {
     const atl = PROFS[2]; // Engineer
-    initGame(atl, LOCATIONS[6]); // Atlanta
+    initGame(atl, LOCATIONS.find(l => l.id === 'atlanta'));
     const atlSalary = G.prof.salary;
-    initGame(atl, LOCATIONS[1]); // New York (1.30x)
+    initGame(atl, LOCATIONS.find(l => l.id === 'newyork')); // sal 1.30x
     const nySalary = G.prof.salary;
     expect(nySalary).toBeGreaterThan(atlSalary);
   });
@@ -302,11 +304,11 @@ describe('Location scaling', () => {
     const miaMort = G.prof.mortgage_d;
     expect(miaMort).toBeGreaterThan(detMort);
   });
-  test('Houston (0.85x) has lower expenses than LA (1.65x)', () => {
+  test('Houston (exp 0.92x) has lower expenses than LA (exp 1.65x)', () => {
     const prof = PROFS[3];
-    initGame(prof, LOCATIONS[4]); // Houston
+    initGame(prof, LOCATIONS.find(l => l.id === 'houston'));
     const houExp = G.prof.mortgage;
-    initGame(prof, LOCATIONS[2]); // LA
+    initGame(prof, LOCATIONS.find(l => l.id === 'la'));
     const laExp = G.prof.mortgage;
     expect(laExp).toBeGreaterThan(houExp);
   });
@@ -416,7 +418,8 @@ describe('checkChildMilestones()', () => {
   test('detects school milestone at turn 8 after birth', () => {
     initGame(PROFS[2], LOCATIONS[6]);
     G.cash = 50000;
-    G.childBirths = [{ born: 0, milestones: {} }];
+    G.gameYear = 9; // kid age is counted in game years (since 1226c48), not turns
+    G.childBirths = [{ born: 0, bornYear: 1, milestones: {} }];
     G.turn = 8;
     // Mock showEventCard to prevent crash
     const orig = showEventCard;
@@ -474,6 +477,54 @@ describe('fmt() — number formatting', () => {
   });
   test('0 formats as 0', () => {
     expect(fmt(0)).toBe('0');
+  });
+});
+
+describe('_normRoomName() — room name matches its channel (F-sec-07)', () => {
+  // The directory shows the name with ' & etc. stripped; the channel must be identical either way.
+  const cases = ["Bob's Room", 'A&B', '<i>x</i>', 'x'.repeat(40), '', '!!!'];
+  cases.forEach((raw) => {
+    test('channel of normalised name is stable for ' + JSON.stringify(raw), () => {
+      const n = _normRoomName(raw);
+      expect(/^[A-Za-z0-9 _-]{1,24}$/.test(n)).toBe(true);
+      const displayed = n.replace(/[^A-Za-z0-9 _-]/g, '');
+      expect(_bcChannelName(displayed)).toBe(_bcChannelName(n));
+    });
+  });
+  test("Bob's Room -> Bobs Room", () => { expect(_normRoomName("Bob's Room")).toBe('Bobs Room'); });
+  test('40 chars capped to 24', () => { expect(_normRoomName('x'.repeat(40)).length).toBe(24); });
+  test('empty or all-symbol falls back to Game Night', () => {
+    expect(_normRoomName('')).toBe('Game Night');
+    expect(_normRoomName('!!!')).toBe('Game Night');
+  });
+});
+
+describe('new life never erases a saved life (F-qa-01)', () => {
+  // startGame's board/UI work is not under test (and overflows the DOM mock): stub it for this block only
+  { const n = () => {}; showScreen = n; buildBoard = n; updateUI = n; forceFitBoard = n; setDieVal = n; syncDie2Lock = n; showTurnDialog = n; _rivalGameStart = n; showToast = n; _sessionStart = n; }
+  const seed = () => { localStorage.clear(); SAVE_KEY = SAVE_SLOTS[0]; localStorage.setItem(SAVE_SLOTS[0], JSON.stringify({ G: { prof: { name: 'Saved Sam' }, cash: 123 }, ts: 1 })); };
+  const slot1Intact = () => { const s = JSON.parse(localStorage.getItem(SAVE_SLOTS[0]) || 'null'); return !!(s && s.G && s.G.prof && s.G.prof.name === 'Saved Sam' && s.G.cash === 123); };
+  test('Quick Match leaves slot 1 intact and writes another slot', () => {
+    seed();
+    startQuickMatch();
+    saveGame();
+    expect(slot1Intact()).toBeTruthy();
+    expect(SAVE_KEY).toBe(SAVE_SLOTS[1]);
+    expect(!!localStorage.getItem(SAVE_SLOTS[1])).toBeTruthy();
+  });
+  test('Daily run leaves slot 1 intact and writes another slot', () => {
+    seed();
+    startDailyRun();
+    expect(slot1Intact()).toBeTruthy();
+    expect(SAVE_KEY).toBe(SAVE_SLOTS[1]);
+  });
+  test('all five slots full: new life still starts in the active slot (unchanged behaviour)', () => {
+    localStorage.clear();
+    SAVE_SLOTS.forEach((k, i) => localStorage.setItem(k, JSON.stringify({ G: { prof: { name: 'S' + i }, cash: 1 }, ts: i + 1 })));
+    SAVE_KEY = SAVE_SLOTS[0];
+    startGame(PROFS[0], LOCATIONS[0]);
+    expect(SAVE_KEY).toBe(SAVE_SLOTS[0]);
+    expect(G.prof.name).toBe(PROFS[0].name);
   });
 });
 
