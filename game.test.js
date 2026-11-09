@@ -102,7 +102,8 @@ global.MP={
   get active(){return ACTIVE_PLAYER_IDX},set active(v){ACTIVE_PLAYER_IDX=v},
   get role(){return _bcRole},set role(v){_bcRole=v},
   get me(){return _bcMyIdx},set me(v){_bcMyIdx=v},
-  get bc(){return _bc},set bc(v){_bc=v}
+  get bc(){return _bc},set bc(v){_bc=v},
+  get joined(){return _bcJoinedSlots}
 };
 // Expose G as a getter/setter on global so tests can set G = {...}
 Object.defineProperty(global,'G',{
@@ -503,6 +504,39 @@ describe('Multiplayer turn guards (F-mp-01 / F-mp-02 / F-mp-03 guard)', () => {
     room('host',0,1);
     bcHostHandlePlayerWon({playerIdx:0,G:{cash:1}});
     expect(!!MP.players[0].won).toBe(false);
+  });
+});
+
+describe('Multiplayer off-turn purchase sync (F-alex-02)', () => {
+  function room(role, me, active){
+    const mk=(n)=>{initGame(PROFS[0],LOCATIONS[0]);G._marker=n;return {name:n,G:JSON.parse(JSON.stringify(G))};};
+    MP.players=[mk('Host'),mk('Joel'),mk('Mei')];
+    MP.role=role;MP.me=me;MP.active=active;MP.bc={postMessage(){},close(){}};
+    MP.joined.clear();MP.joined.add(1);MP.joined.add(2);
+    G=JSON.parse(JSON.stringify(MP.players[me].G));
+  }
+  test('_mpAcceptStateSync rejects host seat and out-of-range seats', () => {
+    expect(_mpAcceptStateSync(0,3)).toBe(false);
+    expect(_mpAcceptStateSync(3,3)).toBe(false);
+    expect(_mpAcceptStateSync(-1,3)).toBe(false);
+    expect(_mpAcceptStateSync('1',3)).toBe(false);
+  });
+  test('_mpAcceptStateSync accepts any in-range joiner seat (no active-seat rule)', () => {
+    expect(_mpAcceptStateSync(1,3)).toBe(true);
+    expect(_mpAcceptStateSync(2,3)).toBe(true);
+  });
+  test('host stores an off-turn state-sync without touching the turn', () => {
+    room('host',0,1);
+    bcHostHandleStateSync({playerIdx:2,G:{cash:4242,assets:[1,2],_marker:'Mei'}});
+    expect(MP.players[2].G.cash).toBe(4242);
+    expect(MP.active).toBe(1);
+  });
+  test('host own off-turn buy survives a joiner turn-done', () => {
+    room('host',0,1);
+    G.assets=G.assets.concat([{name:'House',cost:1}]);
+    const n=G.assets.length;
+    try{bcHostHandleTurnDone({playerIdx:1,G:JSON.parse(JSON.stringify(MP.players[1].G))});}catch(e){} // UI half of mpAdvanceTurn needs a real DOM
+    expect(MP.players[0].G.assets.length).toBe(n);
   });
 });
 

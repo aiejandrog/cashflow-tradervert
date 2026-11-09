@@ -14538,6 +14538,7 @@ function bcHostHandleTurnDone(msg){
   const idx=msg.playerIdx;
   if(typeof idx!=='number'||idx<=0||idx>=PLAYERS.length)return;
   if(idx!==ACTIVE_PLAYER_IDX)return; // only the seat whose turn it is may end it (no forged / stale turn-done)
+  if(_bcJoinedSlots.has(idx)&&PLAYERS[_bcMyIdx])PLAYERS[_bcMyIdx].G=JSON.parse(JSON.stringify(G)); // G is the host's own file while a remote seat plays: keep its off-turn buys before G is swapped (F-alex-02)
   PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
   ACTIVE_PLAYER_IDX=idx;
   G=JSON.parse(JSON.stringify(PLAYERS[idx].G));
@@ -14549,11 +14550,11 @@ function bcHostHandleTurnDone(msg){
 // that player CURRENT, so a reconnect / pause-resume / AFK skip hands them back what they
 // actually have — not their last completed turn (the "it reset as if I never paid" bug).
 // Only accepted for the currently-active player; never advances or re-broadcasts.
+function _mpAcceptStateSync(idx,playersLen){ return typeof idx==='number'&&idx>0&&idx<playersLen; } // any joiner seat, on or off turn (off-turn Realty buys must sync)
 function bcHostHandleStateSync(msg){
   if(!_bc||_bcRole!=='host')return;
   const idx=msg.playerIdx;
-  if(typeof idx!=='number'||idx<=0||idx>=PLAYERS.length)return;
-  if(ACTIVE_PLAYER_IDX!==idx)return; // ignore late syncs after their turn already passed
+  if(!_mpAcceptStateSync(idx,PLAYERS.length))return; // writes PLAYERS[idx].G only; never advances the turn
   if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
 }
 
@@ -15058,10 +15059,10 @@ function bcJoinerFinishTurn(){
 // never lags behind the player's payments/deals. Without this the host only learned the joiner's
 // state at turn-done, so any mid-turn re-sync (reconnect / AFK skip) reverted their money.
 function bcJoinerPushState(){
-  if(_bcRole!=='joiner'||!_bc||PLAYERS.length<=1||ACTIVE_PLAYER_IDX!==_bcMyIdx)return;
+  if(_bcRole!=='joiner'||!_bc||PLAYERS.length<=1)return;
   clearTimeout(window._statePushTimer);
   window._statePushTimer=setTimeout(()=>{
-    try{ if(_bcRole==='joiner'&&ACTIVE_PLAYER_IDX===_bcMyIdx&&G&&typeof netSend==='function')netSend({type:'state-sync',playerIdx:_bcMyIdx,G:JSON.parse(JSON.stringify(G))}); }catch(e){}
+    try{ if(_bcRole==='joiner'&&G&&typeof netSend==='function')netSend({type:'state-sync',playerIdx:_bcMyIdx,G:JSON.parse(JSON.stringify(G))}); }catch(e){}
   },900);
 }
 
