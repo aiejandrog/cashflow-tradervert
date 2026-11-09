@@ -237,7 +237,7 @@ describe('initGame() — credit score initialization', () => {
     expect(G.childBirths.length).toBe(0);
   });
   test('location is set from parameter', () => {
-    initGame(PROFS[0], LOCATIONS[6]); // Atlanta
+    initGame(PROFS[0], LOCATIONS.find(l => l.id === 'atlanta'));
     expect(G.location.id).toBe('atlanta');
   });
   test('location defaults to Atlanta when not passed', () => {
@@ -285,9 +285,9 @@ describe('income() / expenses() / monthlyCF()', () => {
 describe('Location scaling', () => {
   test('NY salary is 30% higher than Atlanta baseline', () => {
     const atl = PROFS[2]; // Engineer
-    initGame(atl, LOCATIONS[6]); // Atlanta
+    initGame(atl, LOCATIONS.find(l => l.id === 'atlanta'));
     const atlSalary = G.prof.salary;
-    initGame(atl, LOCATIONS[1]); // New York (1.30x)
+    initGame(atl, LOCATIONS.find(l => l.id === 'newyork')); // sal 1.30x
     const nySalary = G.prof.salary;
     expect(nySalary).toBeGreaterThan(atlSalary);
   });
@@ -299,11 +299,11 @@ describe('Location scaling', () => {
     const miaMort = G.prof.mortgage_d;
     expect(miaMort).toBeGreaterThan(detMort);
   });
-  test('Houston (0.85x) has lower expenses than LA (1.65x)', () => {
+  test('Houston (exp 0.92x) has lower expenses than LA (exp 1.65x)', () => {
     const prof = PROFS[3];
-    initGame(prof, LOCATIONS[4]); // Houston
+    initGame(prof, LOCATIONS.find(l => l.id === 'houston'));
     const houExp = G.prof.mortgage;
-    initGame(prof, LOCATIONS[2]); // LA
+    initGame(prof, LOCATIONS.find(l => l.id === 'la'));
     const laExp = G.prof.mortgage;
     expect(laExp).toBeGreaterThan(houExp);
   });
@@ -413,7 +413,8 @@ describe('checkChildMilestones()', () => {
   test('detects school milestone at turn 8 after birth', () => {
     initGame(PROFS[2], LOCATIONS[6]);
     G.cash = 50000;
-    G.childBirths = [{ born: 0, milestones: {} }];
+    G.gameYear = 9; // kid age is counted in game years (since 1226c48), not turns
+    G.childBirths = [{ born: 0, bornYear: 1, milestones: {} }];
     G.turn = 8;
     // Mock showEventCard to prevent crash
     const orig = showEventCard;
