@@ -3,17 +3,21 @@
 Every teammate reads this first. Where it is stricter than a role file, it wins. `CLAUDE.md` holds the
 repo facts; this file holds what a team may and may not do.
 
-## 1. `main` is the live game
+## 1. `main` is the live game — and `chief` ships to it
 
 GitHub Pages deploys the repo root on every push to `main`, to every player, in about 40 seconds.
+That is the point: the team ships.
 
-- Nobody on a team pushes to `main`, merges, force-pushes, rewrites history, closes PRs, touches repo
-  settings, Pages, releases, itch (`butler`), npm or Supabase. `tools/agent_guard.py` refuses these and logs
-  the attempt. A BLOCKED line is not a crash: read the reason and do the allowed thing.
-- Work happens in your own worktree on `claude/<role>-<ticket>` branched from `origin/main`. Push only
-  that branch (`git push -u origin claude/...`). Open a **draft** PR. `gate` writes PASS or FAIL.
-  `chief` accepts scope. Alex merges.
-
+- `chief` is the merge authority. `chief` merges any PR that carries a clean `gate` PASS and `chief`'s own
+  scope acceptance, using `gh pr merge <n> --squash --delete-branch`. No other role merges.
+- Everyone else: work in your own worktree on `claude/<role>-<ticket>` branched from `origin/main`. Push
+  only that branch (`git push -u origin claude/...`). Open a PR. `gate` writes PASS or FAIL. `chief`
+  accepts scope and merges.
+- Force-push and history rewrite stay banned for every role. They destroy other agents' work; a merge does
+  not. `tools/agent_guard.py` still refuses `--force`, `--force-with-lease`, `git reset --hard`,
+  `git rebase -i` and branch deletion.
+- Repo settings, Pages config, GitHub releases, itch (`butler`), npm and Supabase stay Alex-only.
+- A BLOCKED line is not a crash: read the reason and do the allowed thing.
 ## 2. One file, many hands
 
 `index.html` is the whole game. Parallel edits collide unless everyone is disciplined.
@@ -25,16 +29,16 @@ GitHub Pages deploys the repo root on every push to `main`, to every player, in 
   ticket for it. Every unrelated changed line is a conflict for someone else.
 - `git fetch origin && git rebase origin/main` before you open the PR and again before `gate` runs.
   A PR that does not apply cleanly on `origin/main` is QA-FAIL.
-- `chief` merges nothing but decides order: two PRs that touch the same function are serialized, the
+- `chief` decides order and merges: two PRs that touch the same function are serialized, the
   second rebases after the first lands.
 
 ## 3. Versions and changelog
 
 Fix and feature PRs do **not** bump `GAME_VERSION` and do **not** edit the in-game `CHANGELOG` array
 (both are one line that every PR would fight over). They add a line under `## Unreleased` at the top of
-`CHANGELOG.md`. After Alex merges a batch, `gate` opens one release PR: bump `GAME_VERSION`, turn
+`CHANGELOG.md`. After `chief` merges a batch, `gate` opens one release PR: bump `GAME_VERSION`, turn
 `## Unreleased` into `## vX.Y.Z — date — title`, mirror the player-facing lines into the in-game array,
-run tests + smoke. Alex merges that, then does the itch upload and devlog by hand (`PUBLISH.md`).
+run tests + smoke. `chief` merges that, then Alex does the itch upload and devlog by hand (`PUBLISH.md`).
 
 ## 4. Invariants nobody changes without Alex
 
@@ -55,7 +59,7 @@ run tests + smoke. Alex merges that, then does the itch upload and devlog by han
   plus the tests you did not run and why.
 - A pure-logic change (money, credit, deals, turns, win condition) ships with a test in `game.test.js`.
 - Multiplayer: two tabs on one machine via BroadcastChannel is the most a team can prove. Every MP PR
-  says **"needs 2-device playtest"** in its body and is `Merge: Alex only`.
+  says **"needs 2-device playtest"** in its body and is `Merge: chief hold`.
 - "Verified in my head" is not a status. `gate` re-runs your commands itself; PASS carries gate's output.
 
 ## 6. Cost and scope

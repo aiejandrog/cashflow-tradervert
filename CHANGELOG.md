@@ -8,6 +8,15 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 - **Multiplayer:** waiting on someone else's turn, you can no longer roll the Fast Track dice or buy your dream out of turn, and a stray end-turn or win message can no longer overwrite another player's board. (F-mp-01, F-mp-02, F-mp-03)
 - **Multiplayer:** houses and rentals you buy while it is not your turn are no longer wiped when your turn starts, for the host and for guests. (F-alex-02)
 - **Multiplayer:** the first player to escape now finishes first in the final standings, and while you wait for your turn the ROLL button greys out and tapping the die tells you it is not your turn yet. (F-mp-10, F-mp-13)
+- **Selling a property:** the buyers and offers you see now stay the same for the whole turn, so re-opening SELL no longer lets you re-roll for a better price; a new turn brings new buyers (F-alex-03)
+- **Stocks:** tapping ROLL after dismissing a stock price card no longer re-rolls the price move and stacks it on your shares (F-balance-01)
+- **Mystery Box:** tapping ROLL after opening a box claims your prize instead of letting you open a second one (F-balance-08)
+- The first-time tutorial now starts after you pick your rival, so "Tap ROLL" shows over the board instead of the rival screen. (I-02)
+- The Life Hub panel no longer slides open over the board when a game starts, so you see the board and the ROLL button first; open it any time from the Life Hub button. (I-01, F-qa-08)
+- The profession card now says in one line what "escape" means, and the Change Path button only shows when you have the credits for it. (I-03)
+- Player names and reactions can no longer inject page code, and joiner names are capped at 16 characters (F-sec-01, F-sec-02, F-mp-05)
+- Room names now drop apostrophes, & and other symbols when you create the room (max 24 characters), so the name in the room list always matches the room you join. (F-sec-07)
+- Starting a new life from Spin, Quick Match or Today's Challenge no longer erases the life saved in slot 1; it now goes into a free slot. (F-qa-01)
 
 ## v1.29.0 — 2026-06-18 — Custom borrow amount + Fast Track upgrades
 - **Bank Loan — custom amount:** `openBorrow` now has a custom `$` input (adaptive bounds so min never exceeds max near the $75k cap) alongside the $1k/$5k/$10k presets; `borrow()` floors to whole dollars. The modal spells out the recurring monthly payment (auto-deducted every Cashflow Day, auto-pays-down) — the mechanic always existed (`expenses().bankPmt`), it just wasn't surfaced.
