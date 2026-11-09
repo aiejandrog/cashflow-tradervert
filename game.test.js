@@ -95,6 +95,8 @@ if(typeof BOARD_SPACES!=='undefined')global.BOARD_SPACES=BOARD_SPACES;
 if(typeof MARKETS!=='undefined')global.MARKETS=MARKETS;
 if(typeof RD_TIPS!=='undefined')global.RD_TIPS=RD_TIPS;
 if(typeof fmt!=='undefined')global.fmt=fmt;
+if(typeof esc!=='undefined')global.esc=esc;
+if(typeof _capName!=='undefined')global._capName=_capName;
 if(typeof expressMode!=='undefined')global.expressMode=expressMode;
 // Expose G as a getter/setter on global so tests can set G = {...}
 Object.defineProperty(global,'G',{
@@ -430,6 +432,24 @@ describe('checkChildMilestones()', () => {
     G.childBirths = [{ born: 0, milestones: { school: true } }]; // already fired
     G.turn = 8;
     expect(checkChildMilestones()).toBeFalsy();
+  });
+});
+
+describe('esc() / _capName() — peer text safety (F-sec-01/02)', () => {
+  test('esc removes every angle bracket from an img onerror payload', () => {
+    expect(esc('<img src=x onerror=1>').includes('<')).toBe(false);
+  });
+  test('esc escapes & < > and both quote kinds', () => {
+    expect(esc("&<>\"'")).toBe('&amp;&lt;&gt;&quot;&#39;');
+  });
+  test('esc turns null/undefined into empty string and keeps plain names', () => {
+    expect(esc(null) + esc(undefined) + esc('Mia')).toBe('Mia');
+  });
+  test('_capName truncates a name over 16 characters', () => {
+    expect(_capName('x'.repeat(40)).length).toBe(16);
+  });
+  test('_capName keeps a short name and survives non-strings', () => {
+    expect(_capName('Mia') + _capName(7)).toBe('Mia7');
   });
 });
 

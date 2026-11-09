@@ -5341,6 +5341,8 @@ window._ytCurrentName=window._ytCurrentName||'';
 function _musicHostOrSolo(){return PLAYERS.length<=1||!_bcRole||_bcRole==='host';}
 function _musMyName(){return (typeof PLAYERS!=='undefined'&&PLAYERS[_bcMyIdx]&&PLAYERS[_bcMyIdx].name)||('Player '+((_bcMyIdx|0)+1));}
 function _mesc(s){return String(s==null?'':s).replace(/[<>&"]/g,'');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function _capName(n){return String(n==null?'':n).slice(0,16);}
 function musicRequest(vid,name,from){
   if(!vid)return;
   name=name||_musMyName(); from=(typeof from==='number')?from:(_bcMyIdx|0);
@@ -13094,7 +13096,7 @@ function _showTurnEvent(msg){
   const row=document.createElement('div');
   row.style.cssText='font-size:.72rem;color:rgba(240,232,200,.85);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:5px 10px;font-family:Arial,sans-serif;animation:fadeIn .25s ease';
   const who=PLAYERS[msg.from]?.name||'They';
-  row.innerHTML=`<span style="margin-right:5px">${msg.icon||'•'}</span><b style="color:#f0c020">${who}:</b> ${msg.txt||''}`;
+  row.innerHTML=`<span style="margin-right:5px">${esc(msg.icon||'•')}</span><b style="color:#f0c020">${esc(who)}:</b> ${esc(msg.txt||'')}`;
   feed.insertBefore(row,feed.firstChild);
   while(feed.children.length>8)feed.removeChild(feed.lastChild);
 }
@@ -13148,8 +13150,8 @@ function _renderReaction(name,emo){
     const x=window.innerWidth*0.5+(Math.random()*160-80);
     const el=document.createElement('div');
     el.style.cssText='position:fixed;left:'+x+'px;bottom:120px;z-index:9400;pointer-events:none;text-align:center;will-change:transform,opacity';
-    el.innerHTML='<div style="font-size:2.6rem;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))">'+emo+'</div>'+
-      '<div style="font-size:.6rem;font-weight:800;color:rgba(255,255,255,.85);font-family:Arial,sans-serif;text-shadow:0 1px 3px #000">'+String(name).replace(/</g,'&lt;')+'</div>';
+    el.innerHTML='<div style="font-size:2.6rem;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))">'+esc(emo)+'</div>'+
+      '<div style="font-size:.6rem;font-weight:800;color:rgba(255,255,255,.85);font-family:Arial,sans-serif;text-shadow:0 1px 3px #000">'+esc(name)+'</div>';
     document.body.appendChild(el);
     el.animate([
       {transform:'translateY(0) scale(.6)',opacity:0},
@@ -13157,7 +13159,7 @@ function _renderReaction(name,emo){
       {transform:'translateY(-200px) scale(1)',opacity:1,offset:.75},
       {transform:'translateY(-280px) scale(.9)',opacity:0}
     ],{duration:2200,easing:'ease-out'}).onfinish=()=>el.remove();
-    addLog(emo,name+' reacted','');
+    addLog(esc(emo),esc(name)+' reacted','');
     if(!window._muted)try{_tone(880+Math.random()*220,.1,'sine',.08,0);}catch(e){}
   }catch(e){}
 }
@@ -13701,7 +13703,7 @@ function mpRefreshSetupHdr(){
   if(!hdr||_mpCount<=1)return;
   const name=_mpPlayerNames[0]||'Player 1';
   const roomTag=_mpRoomName?`<span style="color:rgba(200,175,120,.5);font-weight:400"> · ${_mpRoomName}</span>`:'';
-  hdr.innerHTML=`<span style="color:${MP_COLORS[0]};font-weight:900">● ${name}</span>${roomTag} — choose YOUR profession, city &amp; dream. Friends pick theirs when they join.`;
+  hdr.innerHTML=`<span style="color:${MP_COLORS[0]};font-weight:900">● ${esc(name)}</span>${roomTag} — choose YOUR profession, city &amp; dream. Friends pick theirs when they join.`;
   hdr.style.display='';
   const btn=$('btn-dream-go');
   if(btn)btn.textContent='Create Room — Open Lobby →';
@@ -13958,7 +13960,7 @@ function mpShowHandoff(){
       const cash=pl.G?pl.G.cash||0:0;
       const turn=pl.G?pl.G.turn||0:0;
       return`<div class="mp-ho-score" style="${isActive?'border:1.5px solid '+pl.color:''}">
-        <span style="color:${pl.color};font-size:.65rem">● ${pl.name}${pl.won?' 🏆':''}</span>
+        <span style="color:${pl.color};font-size:.65rem">● ${esc(pl.name)}${pl.won?' 🏆':''}</span>
         <strong>$${fmt(cash)}</strong>
         <span style="color:rgba(200,175,120,.65);font-size:.6rem">$${fmt(pass)}/mo · T${turn}</span>
       </div>`;
@@ -13980,7 +13982,7 @@ function mpUpdateStrip(){
   if(!strip)return;
   if(PLAYERS.length<=1){strip.style.display='none';return;}
   strip.style.display='flex';
-  strip.innerHTML=PLAYERS.map((p,i)=>`<div class="mp-pip${i===ACTIVE_PLAYER_IDX?' active':''}" style="color:${p.color}"><div class="mp-pip-dot"></div>${p.name}${p.won?' 🏆':''}</div>`).join('');
+  strip.innerHTML=PLAYERS.map((p,i)=>`<div class="mp-pip${i===ACTIVE_PLAYER_IDX?' active':''}" style="color:${p.color}"><div class="mp-pip-dot"></div>${esc(p.name)}${p.won?' 🏆':''}</div>`).join('');
 }
 
 function mpMarkPlayerWon(){
@@ -14353,7 +14355,7 @@ function bcUpdateLobbySlots(){
     return`<div class="mp-lobby-slot${joined?' joined':''}"
       style="--slot-color:${p.color}">
       <div class="mp-lobby-slot-dot"></div>
-      <div class="mp-lobby-slot-name">${p.name}${isMe?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
+      <div class="mp-lobby-slot-name">${esc(p.name)}${isMe?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
       <div class="mp-lobby-slot-status">${statusTxt}</div>
     </div>`;
   }).join('');
@@ -14517,7 +14519,7 @@ function bcHostHandleJoinRequest(msg){
   if(PLAYERS[slot])PLAYERS[slot]._profileReady=false; // joined the room, still building their life
   if(PLAYERS[slot])PLAYERS[slot]._left=false; // rejoining clears any "left the game" mark
   window._lastPing=window._lastPing||{};window._lastPing[slot]=Date.now();
-  if(msg.playerName&&PLAYERS[slot])PLAYERS[slot].name=msg.playerName;
+  if(msg.playerName&&PLAYERS[slot])PLAYERS[slot].name=_capName(msg.playerName);
   netSend({type:'join-response',reqId:msg.reqId,approved:true,
     playerIdx:slot,playerName:PLAYERS[slot].name,playerColor:PLAYERS[slot].color,
     players:PLAYERS.map(p=>({name:p.name,color:p.color,won:p.won||false})),
@@ -14561,7 +14563,7 @@ function bcHostHandlePlayerProfile(msg){
   const idx=msg.playerIdx;
   if(typeof idx!=='number'||idx<=0||idx>=PLAYERS.length)return;
   if(msg.G)PLAYERS[idx].G=JSON.parse(JSON.stringify(msg.G));
-  if(msg.name)PLAYERS[idx].name=msg.name;
+  if(msg.name)PLAYERS[idx].name=_capName(msg.name);
   PLAYERS[idx]._profileReady=true; // character, city & dream locked in
   bcUpdateLobbySlots();bcUpdateLobbyStartBtn();bcHostBroadcastLobby();mpUpdateStrip();saveGame();
 }
@@ -14855,7 +14857,7 @@ function bcJoinerShowLobby(msg){
     wrap.innerHTML=msg.players.map((p,i)=>`
       <div class="mp-lobby-slot${i<=(msg.players.length)?'':''}" style="--slot-color:${p.color}">
         <div class="mp-lobby-slot-dot" style="background:${p.color}"></div>
-        <div class="mp-lobby-slot-name">${p.name}${i===_bcMyIdx?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
+        <div class="mp-lobby-slot-name">${esc(p.name)}${i===_bcMyIdx?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
         <div class="mp-lobby-slot-status">${i===0?'👑 Host':'...'}</div>
       </div>`).join('');
   }
@@ -14870,7 +14872,7 @@ function bcJoinerHandleLobbyUpdate(msg){
     wrap.innerHTML=msg.slots.map((s,i)=>`
       <div class="mp-lobby-slot${s.joined?' joined':''}" style="--slot-color:${s.color}">
         <div class="mp-lobby-slot-dot"></div>
-        <div class="mp-lobby-slot-name">${s.name}${i===_bcMyIdx?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
+        <div class="mp-lobby-slot-name">${esc(s.name)}${i===_bcMyIdx?' <span style="font-size:.65rem;opacity:.6">(you)</span>':''}</div>
         <div class="mp-lobby-slot-status">${s.joined?(i===0?'👑 Host':(s.ready?'✓ Ready':'🎨 Picking character, city & dream…')):'Waiting...'}</div>
       </div>`).join('');
   }
@@ -14941,7 +14943,7 @@ function bcJoinerHandleGameOver(msg){
   clearInterval(_bcHeartbeatTimer);
   $('mp-wait').style.display='none';hideSpectateToken(); // clear waiting screen so standings are visible
   openModal({band:'gold',title:'🏆 Final Standings',desc:'Game over! (Drag this card aside to view the board & your stats.)',noBlur:true,
-    rows:(msg.standings||[]).map((p,i)=>[`${['🥇','🥈','🥉','  '][i]||'  '} ${p.name}`,
+    rows:(msg.standings||[]).map((p,i)=>[`${['🥇','🥈','🥉','  '][i]||'  '} ${esc(p.name)}`,
       `$${fmt(p.pass)}/mo · $${fmt(p.cash||0)} cash${p.won?' 🏆':''}`]),
     actions:[{label:'New Game',cls:'btn-gold',fn:()=>location.reload()}]});
 }
@@ -15034,7 +15036,7 @@ function bcRefreshWaitScores(){
     const prog=p.won?1:(p.G&&typeof p.G._escapeProg==='number'?p.G._escapeProg:(i===_bcMyIdx?(function(){try{return Math.max(0,Math.min(1,passiveIncome()/Math.max(1,expenses().total)))}catch(e){return 0}})():0));
     const pct=Math.round(prog*100);
     return`<div class="mp-ho-score" style="${isActive?'border:1.5px solid '+p.color:isMe?'border:1.5px solid rgba(255,255,255,.3)':''}">
-      <span style="color:${p.color};font-size:.63rem">● ${p.name}${p.won?' 🏆':''}${isMe?' (you)':''}</span>
+      <span style="color:${p.color};font-size:.63rem">● ${esc(p.name)}${p.won?' 🏆':''}${isMe?' (you)':''}</span>
       <strong>$${fmt(cash)}</strong>
       <span style="color:rgba(200,175,120,.55);font-size:.58rem">$${fmt(pass)}/mo</span>
       <div style="margin-top:3px;height:5px;width:100%;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${prog>=1?'#7ee0a0':p.color};border-radius:3px;transition:width .5s ease"></div></div>
