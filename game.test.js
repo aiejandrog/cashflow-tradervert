@@ -95,6 +95,9 @@ if(typeof BOARD_SPACES!=='undefined')global.BOARD_SPACES=BOARD_SPACES;
 if(typeof MARKETS!=='undefined')global.MARKETS=MARKETS;
 if(typeof RD_TIPS!=='undefined')global.RD_TIPS=RD_TIPS;
 if(typeof fmt!=='undefined')global.fmt=fmt;
+if(typeof esc!=='undefined')global.esc=esc;
+if(typeof _capName!=='undefined')global._capName=_capName;
+global.__hostStandingsRows=function(pl){const keep=openModal,kp=PLAYERS;let rows=null;openModal=function(o){rows=o.rows;};PLAYERS=pl;try{mpShowFinalResults();}finally{openModal=keep;PLAYERS=kp;}return rows;};
 if(typeof expressMode!=='undefined')global.expressMode=expressMode;
 if(typeof SAVE_SLOTS!=='undefined')global.SAVE_SLOTS=SAVE_SLOTS;
 Object.defineProperty(global,'SAVE_KEY',{get:function(){return SAVE_KEY},set:function(v){SAVE_KEY=v},configurable:true});
@@ -433,6 +436,32 @@ describe('checkChildMilestones()', () => {
     G.childBirths = [{ born: 0, milestones: { school: true } }]; // already fired
     G.turn = 8;
     expect(checkChildMilestones()).toBeFalsy();
+  });
+});
+
+describe('esc() / _capName() — peer text safety (F-sec-01/02)', () => {
+  test('esc removes every angle bracket from an img onerror payload', () => {
+    expect(esc('<img src=x onerror=1>').includes('<')).toBe(false);
+  });
+  test('esc escapes & < > and both quote kinds', () => {
+    expect(esc("&<>\"'")).toBe('&amp;&lt;&gt;&quot;&#39;');
+  });
+  test('esc turns null/undefined into empty string and keeps plain names', () => {
+    expect(esc(null) + esc(undefined) + esc('Mia')).toBe('Mia');
+  });
+  test('_capName truncates a name over 16 characters', () => {
+    expect(_capName('x'.repeat(40)).length).toBe(16);
+  });
+  test('_capName keeps a short name and survives non-strings', () => {
+    expect(_capName('Mia') + _capName(7)).toBe('Mia7');
+  });
+});
+
+describe('host final standings — hostile names (F-sec-01 completeness)', () => {
+  test('standings row of a hostile name has no angle bracket', () => {
+    const rows = __hostStandingsRows([{ name: '<i onclick=a()>', G: { cash: 5, assets: [] } }, { name: 'Mia', G: { cash: 1, assets: [] } }]);
+    expect(rows && rows.length).toBe(2);
+    expect(rows.some(r => r[0].includes('<'))).toBe(false);
   });
 });
 
