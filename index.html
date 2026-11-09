@@ -13731,10 +13731,12 @@ function mpShowRoomSetup(){
   setTimeout(()=>{const inp=$('mp-room-name-inp');if(inp){inp.focus();inp.select();}},80);
 }
 
+function _normRoomName(r){return String(r||'').replace(/[^A-Za-z0-9 _-]/g,'').trim().slice(0,24).trim()||'Game Night';}
+
 function mpConfirmRoomSetup(){
   const nameInp=$('mp-room-name-inp');
   const passInp=$('mp-room-pass-inp');
-  _mpRoomName=(nameInp?nameInp.value.trim():'')||'Game Night';
+  _mpRoomName=_normRoomName(nameInp?nameInp.value:'');
   _mpRoomPass=passInp?passInp.value:'';
   const hostInp=document.getElementById('mp-rs-name-0');
   _mpPlayerNames=Array.from({length:_mpCount},(_,i)=>

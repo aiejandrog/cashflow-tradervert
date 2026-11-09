@@ -5,6 +5,7 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 > On every release: bump `GAME_VERSION` in `index.html`, add an entry here + in the in-game `CHANGELOG`, then run the **Release Ritual** in `PUBLISH.md`.
 
 ## Unreleased
+- Room names now drop apostrophes, & and other symbols when you create the room (max 24 characters), so the name in the room list always matches the room you join. (F-sec-07)
 - Starting a new life from Spin, Quick Match or Today's Challenge no longer erases the life saved in slot 1; it now goes into a free slot. (F-qa-01)
 
 ## v1.29.0 — 2026-06-18 — Custom borrow amount + Fast Track upgrades

@@ -451,6 +451,25 @@ describe('fmt() — number formatting', () => {
   });
 });
 
+describe('_normRoomName() — room name matches its channel (F-sec-07)', () => {
+  // The directory shows the name with ' & etc. stripped; the channel must be identical either way.
+  const cases = ["Bob's Room", 'A&B', '<i>x</i>', 'x'.repeat(40), '', '!!!'];
+  cases.forEach((raw) => {
+    test('channel of normalised name is stable for ' + JSON.stringify(raw), () => {
+      const n = _normRoomName(raw);
+      expect(/^[A-Za-z0-9 _-]{1,24}$/.test(n)).toBe(true);
+      const displayed = n.replace(/[^A-Za-z0-9 _-]/g, '');
+      expect(_bcChannelName(displayed)).toBe(_bcChannelName(n));
+    });
+  });
+  test("Bob's Room -> Bobs Room", () => { expect(_normRoomName("Bob's Room")).toBe('Bobs Room'); });
+  test('40 chars capped to 24', () => { expect(_normRoomName('x'.repeat(40)).length).toBe(24); });
+  test('empty or all-symbol falls back to Game Night', () => {
+    expect(_normRoomName('')).toBe('Game Night');
+    expect(_normRoomName('!!!')).toBe('Game Night');
+  });
+});
+
 describe('new life never erases a saved life (F-qa-01)', () => {
   // startGame's board/UI work is not under test (and overflows the DOM mock): stub it for this block only
   { const n = () => {}; showScreen = n; buildBoard = n; updateUI = n; forceFitBoard = n; setDieVal = n; syncDie2Lock = n; showTurnDialog = n; _rivalGameStart = n; showToast = n; _sessionStart = n; }
