@@ -646,6 +646,47 @@ describe('Multiplayer final standings and waiting ROLL (F-mp-10, F-mp-13)', () =
   });
 });
 
+describe('Splash resume button and host turn timer (F-mp-09, F-mp-11)', () => {
+  const meta=(role,n)=>({G:{prof:{}},PLAYERS:new Array(n===undefined?2:n).fill({}),_bcRole:role});
+  test('_splashShowResume: saved joiner gets rejoin, not resume', () => {
+    expect(_splashShowResume(meta('joiner'))).toBe('rejoin');
+  });
+  test('_splashShowResume: saved host gets resume', () => {
+    expect(_splashShowResume(meta('host'))).toBe('resume');
+  });
+  test('_splashShowResume: same-device (no role) MP save gets resume', () => {
+    expect(_splashShowResume(meta(null))).toBe('resume');
+  });
+  test('_splashShowResume: solo or empty save gets no button', () => {
+    expect(_splashShowResume(meta('host',1))).toBe(null);
+    expect(_splashShowResume(null)).toBe(null);
+  });
+  test('resumeGame on a saved joiner (roster sliced to 1 by loadSave) opens Join prefilled, not a solo game', () => {
+    const real=joinRoomFromBrowser;let got=null;
+    joinRoomFromBrowser=(n,p)=>{got=[n,p];};
+    const sv={G:JSON.parse(JSON.stringify(G)),PLAYERS:[{name:'Host'},{name:'Joel'}],ACTIVE_PLAYER_IDX:0,_mpCount:1,_mpRoomName:'Maple Test',_bcRole:'joiner'};
+    sv.G.prof=sv.G.prof||{};
+    const realGet=localStorage.getItem;
+    localStorage.getItem=()=>JSON.stringify(sv);
+    const ds=document.documentElement.style;if(!ds.setProperty)ds.setProperty=()=>{};
+    try{
+      expect(loadSave('x')).toBe(true);
+      resumeGame();
+    }finally{localStorage.getItem=realGet;joinRoomFromBrowser=real;}
+    expect(got&&got[0]).toBe('Maple Test');
+    expect(MP.players.length).toBe(0);
+  });
+  test('bcHostBroadcastTurnStart sets window._turnTs on the host', () => {
+    MP.players=[{name:'Host',color:'#fff',G:{}},{name:'Joel',color:'#000',G:{}}];
+    MP.role='host';MP.me=0;MP.bc={postMessage(){},close(){}};
+    delete window._turnTs;
+    const t0=Date.now();
+    try{bcHostBroadcastTurnStart(1);}catch(e){}
+    expect(typeof window._turnTs).toBe('number');
+    expect(window._turnTs>=t0).toBe(true);
+  });
+});
+
 describe('Resume closures — sell quote, stock card, mystery box (F-alex-03, F-balance-01B, F-balance-08)', () => {
   // Capture the SELL modal's first buyer rows by stubbing openModal around sellREAsset.
   function sellQuote(uid) {
