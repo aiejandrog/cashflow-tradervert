@@ -612,6 +612,32 @@ describe('Multiplayer final standings and waiting ROLL (F-mp-10, F-mp-13)', () =
   });
 });
 
+describe('Splash resume button and host turn timer (F-mp-09, F-mp-11)', () => {
+  const meta=(role,n)=>({G:{prof:{}},PLAYERS:new Array(n===undefined?2:n).fill({}),_bcRole:role});
+  test('_splashShowResume: saved joiner gets rejoin, not resume', () => {
+    expect(_splashShowResume(meta('joiner'))).toBe('rejoin');
+  });
+  test('_splashShowResume: saved host gets resume', () => {
+    expect(_splashShowResume(meta('host'))).toBe('resume');
+  });
+  test('_splashShowResume: same-device (no role) MP save gets resume', () => {
+    expect(_splashShowResume(meta(null))).toBe('resume');
+  });
+  test('_splashShowResume: solo or empty save gets no button', () => {
+    expect(_splashShowResume(meta('host',1))).toBe(null);
+    expect(_splashShowResume(null)).toBe(null);
+  });
+  test('bcHostBroadcastTurnStart sets window._turnTs on the host', () => {
+    MP.players=[{name:'Host',color:'#fff',G:{}},{name:'Joel',color:'#000',G:{}}];
+    MP.role='host';MP.me=0;MP.bc={postMessage(){},close(){}};
+    delete window._turnTs;
+    const t0=Date.now();
+    try{bcHostBroadcastTurnStart(1);}catch(e){}
+    expect(typeof window._turnTs).toBe('number');
+    expect(window._turnTs>=t0).toBe(true);
+  });
+});
+
 // ── Summary ───────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);

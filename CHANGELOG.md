@@ -8,6 +8,8 @@ All notable changes, newest first. Versioning: **patch** (1.0.x) = fixes/polish,
 - **Multiplayer:** waiting on someone else's turn, you can no longer roll the Fast Track dice or buy your dream out of turn, and a stray end-turn or win message can no longer overwrite another player's board. (F-mp-01, F-mp-02, F-mp-03)
 - **Multiplayer:** houses and rentals you buy while it is not your turn are no longer wiped when your turn starts, for the host and for guests. (F-alex-02)
 - **Multiplayer:** the first player to escape now finishes first in the final standings, and while you wait for your turn the ROLL button greys out and tapping the die tells you it is not your turn yet. (F-mp-10, F-mp-13)
+- **Multiplayer:** after a reload, a guest's saved room now shows "Rejoin" with the room name filled in instead of "Resume", which used to drop them into a solo game. (F-mp-09)
+- **Multiplayer:** the host's waiting timer now counts down and the host gets the "Vote to skip" button when a guest is idle. (F-mp-11)
 
 ## v1.29.0 — 2026-06-18 — Custom borrow amount + Fast Track upgrades
 - **Bank Loan — custom amount:** `openBorrow` now has a custom `$` input (adaptive bounds so min never exceeds max near the $75k cap) alongside the $1k/$5k/$10k presets; `borrow()` floors to whole dollars. The modal spells out the recurring monthly payment (auto-deducted every Cashflow Day, auto-pays-down) — the mechanic always existed (`expenses().bankPmt`), it just wasn't surfaced.

@@ -13634,6 +13634,14 @@ function loadSave(key){
 }
 function clearSave(){localStorage.removeItem(SAVE_KEY);}
 function resumeGame(){
+  // A saved guest cannot resume solo: reset to the splash and open Join with his room prefilled (F-mp-09)
+  if(PLAYERS.length>1&&window._savedBcRole==='joiner'){
+    const _rn=_mpRoomName,_rp=!!_mpRoomPass;
+    PLAYERS=[];ACTIVE_PLAYER_IDX=0;_mpCount=1;
+    try{sessionStorage.removeItem('cf_in_game');}catch(e){}
+    joinRoomFromBrowser(_rn,_rp);
+    return;
+  }
   try{_sessionStart();}catch(e){} // 📊 refresh-into-game restarts the session timer
   try{sessionStorage.setItem('cf_in_game',PLAYERS.length>1?'mp':SAVE_KEY);}catch(e){}
   // Password gate: MP save with a room password must be unlocked first
@@ -14314,6 +14322,7 @@ function bcHostBroadcastTurnStart(idx){
   const p=PLAYERS[idx];
   window._skipVotes=null; // new turn — clear any skip-vote tally
   window._turnStartTs=Date.now();window._turnStartIdx=idx; // AFK watchdog reference
+  window._turnTs=window._turnStartTs; // drives the host's waiting-banner timer and skip-vote button (F-mp-11)
   netSend({type:'turn-start',activeIdx:idx,playerName:p.name,
     playerColor:p.color,G:JSON.parse(JSON.stringify(p.G)),ts:Date.now()});
 }
@@ -15152,17 +15161,29 @@ _renderCreditChips();
 applyCosmetics(); // equipped felt/dice colors apply from boot
 try{const _p=loadProfile();const tc=document.getElementById('menu-trophy-count');if(tc)tc.textContent=_p.trophies.filter(id=>TROPHIES.some(t=>t.id===id)).length+'/'+TROPHIES.length;}catch(e){}
 // Separate MP save slot: offer its own resume button if a room save exists
+// Pure filter for that button: 'resume' (host / same-device), 'rejoin' (saved guest), or null (no MP save).
+function _splashShowResume(meta){
+  if(!meta||!meta.G||!meta.PLAYERS||meta.PLAYERS.length<2)return null;
+  return meta._bcRole==='joiner'?'rejoin':'resume';
+}
 try{
   const rawMP=localStorage.getItem(SAVE_KEY_MP);
   if(rawMP){
     const sMP=JSON.parse(rawMP);
-    if(sMP&&sMP.G&&sMP.PLAYERS&&sMP.PLAYERS.length>1){
+    const _sMode=_splashShowResume(sMP);
+    if(_sMode){
       setTimeout(()=>{
         const b=document.createElement('button');
         b.className='btn-spin';
         b.style.cssText='margin-top:8px;background:linear-gradient(135deg,#0a4a5e,#22d3ee44,#0a4a5e);border-color:rgba(34,211,238,.4);color:#aef;box-shadow:0 5px 18px rgba(34,211,238,.25);font-size:.85rem';
+        if(_sMode==='rejoin'){
+          // A saved guest cannot "resume": his seat lives in the host's room. Offer Rejoin with the room prefilled.
+          b.textContent=`👥 MULTIPLAYER — Rejoin "${sMP._mpRoomName||'Room'}"`;
+          b.onclick=()=>joinRoomFromBrowser(sMP._mpRoomName||'Game Night',!!sMP._mpRoomPass);
+        } else {
         b.textContent=`👥 MULTIPLAYER — Resume "${sMP._mpRoomName||'Room'}" · ${sMP.PLAYERS.length} Players (Turn ${sMP.G.turn||0})`;
         b.onclick=()=>{if(loadSave(SAVE_KEY_MP))resumeGame();};
+        }
         const spCard=document.querySelector('.sp-card');if(spCard)spCard.appendChild(b);
       },150);
     }
