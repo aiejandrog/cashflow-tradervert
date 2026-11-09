@@ -67,12 +67,13 @@ Below the table, `## Conversation`: one line per message that changed a state
 Append, never rewrite. One line per meaningful step: `ts  <verb>  <what>  <proof>`
 (`18:40 RAN node game.test.js -> 41 pass 5 fail (known)`). Every hand-off gets a line (`-> chief F-qa-04 READY`).
 
-## 7. Merge classes (on every PR body; no agent ever merges)
+## 7. Merge classes (on every PR body; `chief` merges)
 
-- `Merge: Alex only`: the diff touches money math, multiplayer, save format, balance numbers, keys or
-  telemetry, player-facing copy about money or following, or the PR needs a 2-device playtest.
-- `Merge: ready for Alex`: clean QA PASS from `gate`, scope accepted by `chief`, none of the above.
-
+- `Merge: chief hold`: the diff touches money math, multiplayer, save format, balance numbers, keys or
+  telemetry, player-facing copy about money or following, or the PR needs a 2-device playtest. `chief`
+  does not merge these until Alex says go in the run prompt.
+- `Merge: chief auto`: clean QA PASS from `gate`, scope accepted by `chief`, none of the above. `chief`
+  merges it without asking.
 Every PR body also carries: plain-English summary, the ticket id, pasted output of `node game.test.js`
 and `node tools/smoke.cjs --offline`, tests not run and why, `Touches:`, and the line
 "Merged is live on Pages within a minute; itch needs the manual upload (PUBLISH.md)".
