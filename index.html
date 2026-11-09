@@ -1840,6 +1840,7 @@ html.cf-reduce-motion #player-token{transition-duration:.32s!important}
     <div class="rev-sal" id="rev-sal"></div>
     <div class="rev-cf" id="rev-cf2"></div>
     <div class="rev-desc" id="rev-desc"></div>
+    <div id="rev-esc" class="rev-desc" style="color:rgba(255,255,255,.78)">To escape: earn more passive income (money that arrives without you working) than your monthly bills.</div>
     <div class="rev-btns">
       <button class="btn-og btn-tan" onclick="resetToSpin()" title="Back to the main menu — doesn't change your path, just returns to the menu">← Main Menu</button>
       <button class="btn-og btn-tan" id="btn-change-prof" style="display:none" onclick="changeProfession()">🔄 Change Path</button>
@@ -4885,7 +4886,7 @@ function revealProf(p){
   const _cp=$('btn-change-prof');
   if(_cp){
     const cr=(loadProfile().credits||0);
-    _cp.style.display='inline-block';
+    _cp.style.display=cr>=CHANGE_PROF_COST?'inline-block':'none';
     _cp.textContent=`🔄 Change Path — ✦${CHANGE_PROF_COST}`;
     _cp.style.opacity=cr>=CHANGE_PROF_COST?'1':'.5';
     _cp.title=cr>=CHANGE_PROF_COST?`Spend ✦${CHANGE_PROF_COST} to spin a new profession`:`Need ✦${CHANGE_PROF_COST} (you have ✦${fmt(cr)})`;
